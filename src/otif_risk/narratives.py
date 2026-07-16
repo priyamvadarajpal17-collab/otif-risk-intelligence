@@ -99,6 +99,66 @@ def _resource_status_text(order: Mapping[str, Any]) -> str:
     return f"resource status: {status.lower()}"
 
 
+def _mechanism_text(order: Mapping[str, Any]) -> str:
+    """Optional 'dominant mechanism' clause when mechanism probabilities are present."""
+    late = order.get("late_delivery_probability")
+    in_full = order.get("in_full_failure_probability")
+    try:
+        late_value = float(late)
+        in_full_value = float(in_full)
+    except (TypeError, ValueError):
+        return ""
+    if math.isnan(late_value) or math.isnan(in_full_value):
+        return ""
+    if late_value >= in_full_value:
+        label, value = "late delivery", late_value
+    else:
+        label, value = "in-full failure", in_full_value
+    return f"dominant mechanism: {label} ({value:.0%})"
+
+
+def _top_intervention_text(order: Mapping[str, Any]) -> str:
+    """Optional 'highest-potential structural intervention' clause, when available.
+
+    Only ever describes a *fixed-structure scenario*, explicitly labeled as
+    such -- never a proven treatment effect -- and never affects the score or
+    decision it is attached to.
+    """
+    raw = order.get("intervention_scenarios_json")
+    if not raw or (isinstance(raw, float) and math.isnan(raw)):
+        return ""
+    parsed = raw
+    if isinstance(raw, str):
+        try:
+            parsed = json.loads(raw)
+        except json.JSONDecodeError:
+            return ""
+    if not isinstance(parsed, list) or not parsed:
+        return ""
+    single_node = [
+        item
+        for item in parsed
+        if isinstance(item, Mapping) and item.get("type") == "single_node_mitigation"
+    ]
+    if not single_node:
+        return ""
+    best = max(single_node, key=lambda item: item.get("absolute_risk_reduction", 0.0))
+    nodes = best.get("intervened_nodes") or []
+    reduction = best.get("absolute_risk_reduction")
+    if not nodes or reduction is None or float(reduction) <= 0:
+        # Only narrate a scenario that actually reduces the modeled posterior;
+        # a non-positive "best" (every active node screened off or, at a
+        # collider node, structurally increasing risk) has nothing genuinely
+        # mitigating to report, so stay silent rather than mislabel it.
+        return ""
+    node_text = str(nodes[0]).replace("_", " ").title()
+    return (
+        f"top structural scenario: mitigating {node_text} could cut the modeled "
+        f"posterior by {float(reduction):.0%} (fixed-structure scenario analysis, "
+        "not a proven treatment effect)"
+    )
+
+
 def order_narrative(order: Mapping[str, Any]) -> str:
     """One-line summary: risk -> evidence -> pathway -> SKUs -> action -> resource status."""
 
@@ -119,9 +179,13 @@ def order_narrative(order: Mapping[str, Any]) -> str:
     )
     status = _display(order.get("decision_status"), "MONITOR")
     resource_text = _resource_status_text(order)
+    optional_clauses = "; ".join(
+        clause for clause in (_mechanism_text(order), _top_intervention_text(order)) if clause
+    )
+    tail = f"; {optional_clauses}" if optional_clauses else ""
     return (
         f"Order {order_id} has {risk:.0%} OTIF risk, led by {cause}; "
         f"top factors: {factor_text}; pathway: {pathway}; "
         f"{affected_text}; "
-        f"{status.lower()} action: {action}; {resource_text}."
+        f"{status.lower()} action: {action}; {resource_text}{tail}."
     )

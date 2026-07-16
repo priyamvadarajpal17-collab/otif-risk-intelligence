@@ -34,6 +34,9 @@ ACCEPTANCE_GATES: dict[str, tuple[float, float]] = {
 def _extract_seed_metrics(report: dict[str, Any]) -> dict[str, Any]:
     test_metrics = report["test_metrics"]
     line_evidence = report["line_evidence"]
+    mechanism = report["mechanism_metrics"]
+    confidence = report["causal_confidence_diagnostics"]
+    consistency = report["causal_consistency"]
     return {
         "seed": report["config"]["seed"],
         "otif_miss_rate": report["data"]["otif_miss_rate"],
@@ -57,6 +60,20 @@ def _extract_seed_metrics(report: dict[str, Any]) -> dict[str, Any]:
         "alert_rate": test_metrics["flagged_orders"] / max(report["config"]["n_orders"] * 0.2, 1),
         "threshold": report["threshold"],
         "run_directory": report["provenance"]["run_directory"],
+        "late_delivery_pr_auc": mechanism["late_delivery"]["pr_auc"],
+        "late_delivery_brier": mechanism["late_delivery"]["brier"],
+        "in_full_failure_pr_auc": mechanism["in_full_failure"]["pr_auc"],
+        "in_full_failure_brier": mechanism["in_full_failure"]["brier"],
+        "evidence_coverage_mean": confidence["evidence_coverage"]["mean"],
+        "low_confidence_rate": confidence["low_confidence_rate"],
+        "top_attribution_vs_rule_cause": consistency["top_attribution_vs_rule_cause"],
+        "top_intervention_vs_rule_cause": consistency["top_intervention_vs_rule_cause"],
+        "top_attribution_vs_simulator_cause": consistency[
+            "top_attribution_vs_simulator_responsive_cause"
+        ],
+        "top_intervention_vs_simulator_cause": consistency[
+            "top_intervention_vs_simulator_responsive_cause"
+        ],
     }
 
 
@@ -102,6 +119,16 @@ def run_benchmark(
             "line_evidence_precision",
             "line_evidence_recall",
             "alert_rate",
+            "late_delivery_pr_auc",
+            "late_delivery_brier",
+            "in_full_failure_pr_auc",
+            "in_full_failure_brier",
+            "evidence_coverage_mean",
+            "low_confidence_rate",
+            "top_attribution_vs_rule_cause",
+            "top_intervention_vs_rule_cause",
+            "top_attribution_vs_simulator_cause",
+            "top_intervention_vs_simulator_cause",
         )
     }
 

@@ -114,7 +114,8 @@ def test_bayesian_inference_mode_is_recorded(tmp_path):
         "pgmpy_exact",
         "brute_force_exact",
     }
-    assert len(report["architecture"]["bayesian_chain_edges"]) == 9
+    assert len(report["architecture"]["bayesian_chain_edges"]) == 11
+    assert report["architecture"]["mechanism_nodes"] == ["IN_FULL_FAILURE", "LATE_DELIVERY"]
 
 
 def test_provenance_and_schema_metadata_are_persisted(tmp_path):
@@ -171,9 +172,67 @@ def test_bayesian_training_history_excludes_validation_and_test_order_ids():
             "stage_CUSTOMER_DELIVERY": [0, 0, 0, 0],
         }
     )
-    outcomes = pd.DataFrame({"order_id": ["a", "b", "c", "d"], "otif_miss": [1, 1, 0, 0]})
+    outcomes = pd.DataFrame(
+        {
+            "order_id": ["a", "b", "c", "d"],
+            "otif_miss": [1, 1, 0, 0],
+            "on_time": [0, 0, 1, 1],
+            "in_full": [1, 0, 1, 1],
+        }
+    )
 
     history = bayesian_training_history(causes, outcomes, {"a", "b"})
 
     assert set(history["order_id"]) == {"a", "b"}
     assert len(history) == 2
+    assert {"on_time", "in_full", "otif_miss"} <= set(history.columns)
+
+
+def test_scored_orders_carry_the_new_causal_intelligence_columns(tmp_path):
+    report = run_pipeline(
+        PrototypeConfig(seed=31, n_orders=300, output_dir=tmp_path / "artifacts")
+    )
+    scored_orders = pd.read_csv(
+        next((tmp_path / "artifacts").glob("run-*/data/scored_orders.csv"))
+    )
+    expected_columns = {
+        "causal_attribution_json",
+        "intervention_scenarios_json",
+        "causal_confidence",
+        "evidence_coverage",
+        "late_delivery_probability",
+        "in_full_failure_probability",
+    }
+    assert expected_columns <= set(scored_orders.columns)
+    assert set(scored_orders["causal_confidence"]) <= {"LOW", "MEDIUM", "HIGH"}
+    assert scored_orders["evidence_coverage"].between(0, 1).all()
+    assert scored_orders["late_delivery_probability"].between(0, 1).all()
+    assert scored_orders["in_full_failure_probability"].between(0, 1).all()
+    for value in scored_orders["causal_attribution_json"]:
+        assert isinstance(json.loads(value), list)
+    for value in scored_orders["intervention_scenarios_json"]:
+        assert isinstance(json.loads(value), list)
+    assert report["provenance"]["artifact_schema_version"] == "3.0"
+
+
+def test_metrics_json_reports_mechanism_confidence_and_consistency_diagnostics(tmp_path):
+    report = run_pipeline(
+        PrototypeConfig(seed=37, n_orders=300, output_dir=tmp_path / "artifacts")
+    )
+
+    mechanism = report["mechanism_metrics"]
+    assert {"late_delivery", "in_full_failure"} <= set(mechanism)
+    for mechanism_name in ("late_delivery", "in_full_failure"):
+        assert 0 <= mechanism[mechanism_name]["brier"] <= 1
+
+    confidence = report["causal_confidence_diagnostics"]
+    assert set(confidence["confidence_band_counts"]) == {"LOW", "MEDIUM", "HIGH"}
+    assert 0 <= confidence["low_confidence_rate"] <= 1
+    assert confidence["total_orders"] == len(
+        pd.read_csv(next((tmp_path / "artifacts").glob("run-*/data/scored_orders.csv")))
+    )
+
+    consistency = report["causal_consistency"]
+    assert "top_attribution_vs_rule_cause" in consistency
+    assert "top_intervention_vs_simulator_responsive_cause" in consistency
+    assert "validated causal effect" in consistency["note"]

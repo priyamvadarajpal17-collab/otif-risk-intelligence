@@ -15,7 +15,7 @@ import joblib
 import numpy as np
 import pandas as pd
 
-from otif_risk.bayesian import CHAIN_PARENTS, BayesianBundle, fit_bayesian_network
+from otif_risk.bayesian import CHAIN_PARENTS, MECHANISM_NODES, BayesianBundle, fit_bayesian_network
 from otif_risk.contracts import CAUSE_CATEGORIES, PrototypeConfig, PrototypeDataset
 from otif_risk.data import generate_dataset
 from otif_risk.decisions import (
@@ -24,10 +24,14 @@ from otif_risk.decisions import (
     service_impact_summary,
 )
 from otif_risk.evaluation import (
+    causal_consistency_report,
     cause_fidelity_report,
+    confidence_diagnostics,
     evaluate_at_threshold,
+    mechanism_metrics,
     prevalence_baseline_metrics,
     score_space_metrics,
+    simulator_responsive_causes,
 )
 from otif_risk.explain import explain_predictions
 from otif_risk.features import (
@@ -49,7 +53,7 @@ from otif_risk.root_causes import calculate_outcomes, derive_root_causes
 from otif_risk.validation import validate_dataset
 
 #: Increment when persisted artifact columns or semantics change.
-ARTIFACT_SCHEMA_VERSION = "2.0"
+ARTIFACT_SCHEMA_VERSION = "3.0"
 
 
 def _package_version() -> str:
@@ -84,6 +88,42 @@ def _probable_cause(row: pd.Series) -> str:
     return active[0]
 
 
+def _top_attribution_cause(value: Any) -> str | None:
+    """Parse `causal_attribution_json` and return its top |contribution| node."""
+    try:
+        parsed = json.loads(value)
+    except (TypeError, ValueError):
+        return None
+    if not isinstance(parsed, list) or not parsed:
+        return None
+    top = parsed[0]
+    return str(top["node"]) if isinstance(top, dict) and "node" in top else None
+
+
+def _top_intervention_cause(value: Any) -> str | None:
+    """Parse `intervention_scenarios_json` and return the single-node scenario
+
+    with the largest absolute risk reduction (the combined-mitigation scenario
+    is excluded, since it is not attributable to one node).
+    """
+    try:
+        parsed = json.loads(value)
+    except (TypeError, ValueError):
+        return None
+    if not isinstance(parsed, list):
+        return None
+    single_node = [
+        item
+        for item in parsed
+        if isinstance(item, dict) and item.get("type") == "single_node_mitigation"
+    ]
+    if not single_node:
+        return None
+    best = max(single_node, key=lambda item: item.get("absolute_risk_reduction", 0.0))
+    nodes = best.get("intervened_nodes") or []
+    return str(nodes[0]) if nodes else None
+
+
 def _enrich_business_context(scored: pd.DataFrame, dataset: PrototypeDataset) -> pd.DataFrame:
     lines_with_value = dataset.order_lines.merge(
         dataset.skus[["sku_id", "base_unit_value"]],
@@ -115,10 +155,20 @@ def bayesian_training_history(
     outcomes: pd.DataFrame,
     train_order_ids: set[str],
 ) -> pd.DataFrame:
-    """Restrict Bayesian fitting evidence to the training split's order IDs only."""
+    """Restrict Bayesian fitting evidence to the training split's order IDs only.
+
+    Carries ``on_time``/``in_full`` alongside ``otif_miss`` so the mechanism
+    nodes (``IN_FULL_FAILURE = 1 - in_full``, ``LATE_DELIVERY = 1 - on_time``)
+    are fit directly from this split's own resolved outcomes, not inferred
+    from the seven-category failure-only cause labels.
+    """
     history = causes[
         ["order_id", *(f"stage_{category}" for category in CAUSE_CATEGORIES)]
-    ].merge(outcomes[["order_id", "otif_miss"]], on="order_id", validate="one_to_one")
+    ].merge(
+        outcomes[["order_id", "otif_miss", "on_time", "in_full"]],
+        on="order_id",
+        validate="one_to_one",
+    )
     return history.loc[history["order_id"].isin(train_order_ids)].reset_index(drop=True)
 
 
@@ -140,6 +190,9 @@ class TrainedBundle:
     bbn_test_metrics: dict[str, Any]
     prevalence_metrics: dict[str, Any]
     cause_fidelity: dict[str, Any]
+    mechanism_metrics: dict[str, Any]
+    confidence_diagnostics: dict[str, Any]
+    causal_consistency: dict[str, Any]
 
 
 def train_full_bundle(
@@ -247,6 +300,36 @@ def train_full_bundle(
         test_truth_causes.loc[missed_order_mask],
     )
 
+    test_bbn_indexed = test_bbn_full.set_index("order_id").reindex(test_fused["order_id"])
+    test_outcomes = outcomes.set_index("order_id").reindex(test_fused["order_id"])
+    mechanism = mechanism_metrics(
+        late_delivery_truth=1 - test_outcomes["on_time"].astype(int).to_numpy(),
+        late_delivery_probability=test_bbn_indexed["late_delivery_probability"].to_numpy(),
+        in_full_failure_truth=1 - test_outcomes["in_full"].astype(int).to_numpy(),
+        in_full_failure_probability=test_bbn_indexed["in_full_failure_probability"].to_numpy(),
+    )
+    confidence = confidence_diagnostics(
+        test_bbn_indexed["evidence_coverage"], test_bbn_indexed["causal_confidence"]
+    )
+    responsive_causes = simulator_responsive_causes(
+        outcomes, dataset.simulator_truth, dataset.orders
+    ).reindex(test_fused["order_id"])
+    comparisons = pd.DataFrame(
+        {
+            "top_attribution_cause": test_bbn_indexed["causal_attribution_json"].map(
+                _top_attribution_cause
+            ),
+            "top_intervention_cause": test_bbn_indexed["intervention_scenarios_json"].map(
+                _top_intervention_cause
+            ),
+            "rule_primary_cause": test_truth_causes.reindex(test_fused["order_id"]).to_numpy(),
+            "simulator_responsive_cause": responsive_causes.to_numpy(),
+        }
+    )
+    causal_consistency = causal_consistency_report(
+        comparisons.loc[missed_order_mask].reset_index(drop=True)
+    )
+
     return TrainedBundle(
         risk_training=risk_training,
         bayesian_bundle=bayesian_bundle,
@@ -258,6 +341,9 @@ def train_full_bundle(
         bbn_test_metrics=bbn_test_metrics,
         prevalence_metrics=prevalence_metrics,
         cause_fidelity=cause_fidelity,
+        mechanism_metrics=mechanism,
+        confidence_diagnostics=confidence,
+        causal_consistency=causal_consistency,
     )
 
 
@@ -280,9 +366,19 @@ def score_orders(
     explanations = explain_predictions(
         risk_bundle, features, background=explain_background, top_n=4
     )
+    bbn_extra_columns = [
+        "order_id",
+        "causal_pathway",
+        "causal_attribution_json",
+        "intervention_scenarios_json",
+        "causal_confidence",
+        "evidence_coverage",
+        "late_delivery_probability",
+        "in_full_failure_probability",
+    ]
     scored = (
         features.drop(columns=["otif_miss"], errors="ignore")
-        .merge(bbn_scores[["order_id", "causal_pathway"]], on="order_id", validate="one_to_one")
+        .merge(bbn_scores[bbn_extra_columns], on="order_id", validate="one_to_one")
         .merge(fused, on="order_id", validate="one_to_one")
         .merge(explanations, on="order_id", validate="one_to_one")
     )
@@ -391,14 +487,25 @@ def run_pipeline(config: PrototypeConfig) -> dict[str, Any]:
             ],
             "bayesian_inference_mode": trained.bayesian_bundle.inference_mode,
             "bayesian_engine_build_error": trained.bayesian_bundle.engine_build_error,
+            "mechanism_nodes": list(MECHANISM_NODES),
             "fusion": trained.fusion_selection.rationale,
             "fusion_chosen_weight": trained.fusion_selection.chosen_weight,
             "fusion_chosen_label": trained.fusion_selection.chosen_label,
             "explanation": "SHAP with local perturbation fallback",
             "endpoint_design_note": (
-                "The predictive endpoint is binary OTIF miss risk; seven-category "
-                "root-cause and compact-causal-chain pathway outputs are retained "
-                "and evaluated separately (see cause_fidelity)."
+                "The predictive endpoint is binary OTIF miss risk. The 10-node "
+                "Bayesian mechanism graph splits it into IN_FULL_FAILURE (quantity) "
+                "and LATE_DELIVERY (timing) sub-mechanisms feeding OTIF_MISS, "
+                "matching the actual OTIF definition; seven-category root-cause and "
+                "mechanism-route pathway outputs are retained and evaluated "
+                "separately (see cause_fidelity, mechanism_metrics)."
+            ),
+            "intervention_note": (
+                "intervention_scenarios_json on every scored order reports exact "
+                "structural do(node=0) scenarios under the fixed Bayesian network -- "
+                "fixed-structure scenario analysis, not proven treatment effects. "
+                "They are decision-support diagnostics only and never feed the "
+                "XGBoost score or the operational recommend/contest decision."
             ),
             "vendor_fairness_note": (
                 "vendor_rolling_fault_rate_* is conditioned on vendor_fault (only "
@@ -423,6 +530,9 @@ def run_pipeline(config: PrototypeConfig) -> dict[str, Any]:
         "model_scores": model_scores,
         "fusion_comparison": trained.fusion_selection.comparison.to_dict(orient="records"),
         "cause_fidelity": trained.cause_fidelity,
+        "mechanism_metrics": trained.mechanism_metrics,
+        "causal_confidence_diagnostics": trained.confidence_diagnostics,
+        "causal_consistency": trained.causal_consistency,
         "line_evidence": line_evidence_eval,
         "validation_metrics": trained.validation_metrics,
         "test_metrics": trained.test_metrics,
