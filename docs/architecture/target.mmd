@@ -1,0 +1,49 @@
+%% OTIF Risk Intelligence -- enhanced architecture.
+%% Canonical source: kept in sync with docs/architecture/diagrams.py and rendered
+%% to docs/architecture/target.svg by docs/architecture/generate.py.
+flowchart TB
+    subgraph SIM[Noisy supply-chain digital twin]
+      A1[Stable vendor, SKU, lane, DC, customer traits]
+      A2[Seasonality, demand, capacity and disruption shocks]
+      A3[Partial observability, missing events and measurement noise]
+      A1 --> A4[Line and order lifecycle simulation]
+      A2 --> A4
+      A3 --> A4
+      A4 --> A5[Ground-truth causes, outcomes and intervention response]
+    end
+
+    A4 --> B[Data contracts + quality report]
+    B --> C1[Retrospective multi-cause derivation]
+    B --> C2[Point-in-time feature snapshots]
+    C1 --> C3[Cause and line-evidence truth]
+    C2 --> D[Rolling-origin train / validation / test]
+
+    D --> E1[XGBoost order-risk model]
+    E1 --> E2[Calibration + SHAP]
+    D --> F1[Compact causal Bayesian chain]
+    F1 --> F2[Exact posterior + pathway contribution]
+
+    E1 --> G[Validated score fusion]
+    F2 --> G
+    G --> H[Capacity-aware operating threshold]
+
+    C3 --> I1[Affected-SKU evidence]
+    E2 --> I2[Order explanation]
+    F2 --> I2
+    H --> I3[Resource-aware intervention policy]
+    I1 --> J[Unified intervention record]
+    I2 --> J
+    I3 --> J
+
+    J --> K1[Order desk]
+    J --> K2[Portfolio and hotspot views]
+    J --> K3[Model health and causal pathway view]
+
+    subgraph LOOP[Local operating-loop simulation]
+      L1[Daily open-order scoring] --> L2[Orders close]
+      L2 --> L3[Actual outcomes and derived causes]
+      L3 --> L4[Feedback + drift + performance]
+      L4 -->|scheduled or triggered| L5[Versioned retraining]
+      L5 --> L1
+    end
+    J --> L1

@@ -38,6 +38,45 @@ PERSISTED_DECISION_COLUMNS = {
 }
 
 
+def _find_latest_ops_directory(artifacts_root: str | Path) -> Path | None:
+    root = Path(artifacts_root)
+    candidates = [
+        path
+        for path in root.glob("ops-*")
+        if path.is_dir() and (path / "operations_summary.json").is_file()
+    ]
+    if not candidates:
+        return None
+    return max(candidates, key=lambda path: (path.stat().st_mtime_ns, path.name))
+
+
+def _find_benchmark_path(artifacts_root: str | Path) -> Path | None:
+    candidate = Path(artifacts_root) / "benchmark.json"
+    return candidate if candidate.is_file() else None
+
+
+def _parse_pathway_route(value: Any) -> list[str]:
+    if not isinstance(value, str) or not value.strip():
+        return []
+    try:
+        parsed = json.loads(value)
+    except json.JSONDecodeError:
+        return []
+    if isinstance(parsed, dict):
+        return [str(node) for node in parsed.get("route", [])]
+    return []
+
+
+def _parse_affected_skus(value: Any) -> list[dict[str, Any]]:
+    if not isinstance(value, str) or not value.strip():
+        return []
+    try:
+        parsed = json.loads(value)
+    except json.JSONDecodeError:
+        return []
+    return parsed if isinstance(parsed, list) else []
+
+
 def latest_run_directory(artifacts_root: str | Path) -> Path:
     """Return the newest complete run directory."""
 
@@ -170,11 +209,26 @@ def _order_lookup(decisions: pd.DataFrame, run_directory: str) -> None:
     st.info(order_narrative(order.to_dict()))
     left, right = st.columns([3, 2])
     with left:
-        st.subheader("Evidence")
+        st.subheader("Evidence + causal pathway")
         st.write(f"**Primary cause:** {str(order['primary_cause']).replace('_', ' ').title()}")
-        st.write(f"**Causal pathway:** {order.get('causal_pathway', 'Not available')}")
+        route = _parse_pathway_route(order.get("causal_pathway"))
+        if route:
+            st.markdown(
+                " → ".join(f"`{node}`" for node in route),
+            )
+        else:
+            st.caption("No active evidence route (order shows no elevated leading signals).")
         st.write(f"**Recommended action:** {order['recommended_action']}")
         st.caption(f"Accountable owner: {order['action_owner']}")
+        if str(order["decision_status"]) == "CONTESTED" and order.get("contested_with"):
+            st.warning(f"Contested resource — competing with: {order['contested_with']}")
+
+        st.subheader("Affected SKUs")
+        affected = _parse_affected_skus(order.get("affected_skus_json"))
+        if affected:
+            st.dataframe(pd.DataFrame(affected), hide_index=True, use_container_width=True)
+        else:
+            st.caption("No line-level evidence flags this order's SKUs as likely affected.")
     with right:
         st.subheader("Planner feedback")
         action = st.radio("Disposition", ["ACCEPT", "REJECT", "OVERRIDE"], horizontal=True)
@@ -258,8 +312,128 @@ def _hotspots_and_impact(decisions: pd.DataFrame, run_directory: str) -> None:
         st.write(impact["assumptions"]["service_impact"])
 
 
+def _operations_view(artifacts_root: str) -> None:
+    st.header("Operations")
+    ops_dir = _find_latest_ops_directory(artifacts_root)
+    if ops_dir is None:
+        st.info(
+            "No completed operations replay found under this artifacts directory. "
+            "Run `uv run python -m otif_risk.operations` to generate one."
+        )
+        return
+    summary = json.loads((ops_dir / "operations_summary.json").read_text(encoding="utf-8"))
+    columns = st.columns(4)
+    columns[0].metric("Replay days completed", summary["replay_days_completed"])
+    columns[1].metric("Model versions trained", summary["model_versions_trained"])
+    columns[2].metric("Retrain events", len(summary["retrain_events"]))
+    columns[3].metric("Drift warning days", len(summary["drift_warning_days"]))
+    st.caption(
+        f"Replay directory: {ops_dir.name} · simulated cutoff {summary['initial_cutoff']} · "
+        f"current model v{summary['final_model_version']} (threshold "
+        f"{summary['final_threshold']:.3f}, fusion weight {summary['final_fusion_weight']:.1f})"
+    )
+
+    daily_log_path = ops_dir / "daily_log.json"
+    if daily_log_path.is_file():
+        daily = pd.DataFrame(json.loads(daily_log_path.read_text(encoding="utf-8")))
+        st.subheader("Daily open-order timeline")
+        display_columns = [
+            "simulated_day",
+            "open_orders",
+            "newly_closed_orders",
+            "recommended",
+            "contested",
+            "monitor",
+            "model_version",
+            "retrained",
+            "retrain_trigger",
+        ]
+        st.dataframe(
+            daily[[column for column in display_columns if column in daily]],
+            hide_index=True,
+            use_container_width=True,
+        )
+        if "open_orders" in daily:
+            chart_columns = ["open_orders", "recommended", "contested"]
+            st.line_chart(daily.set_index("simulated_day")[chart_columns])
+
+    registry_path = ops_dir / "model_registry.json"
+    if registry_path.is_file():
+        st.subheader("Model registry")
+        registry = pd.DataFrame(json.loads(registry_path.read_text(encoding="utf-8")))
+        st.dataframe(
+            registry[
+                [
+                    column
+                    for column in (
+                        "version",
+                        "trained_at_simulated_day",
+                        "n_training_orders",
+                        "threshold",
+                        "fusion_weight",
+                        "fusion_label",
+                        "trigger",
+                    )
+                    if column in registry
+                ]
+            ],
+            hide_index=True,
+            use_container_width=True,
+        )
+
+
+def _model_health_view(artifacts_root: str, metrics: dict[str, Any]) -> None:
+    st.header("Model health")
+    benchmark_path = _find_benchmark_path(artifacts_root)
+    if benchmark_path is not None:
+        benchmark = json.loads(benchmark_path.read_text(encoding="utf-8"))
+        st.caption(
+            f"Multi-seed benchmark across seeds {benchmark['seeds']} "
+            f"({benchmark['n_orders']} orders each)."
+        )
+        summary_rows = [
+            {"metric": name, **stats} for name, stats in benchmark["summary"].items()
+        ]
+        st.dataframe(pd.DataFrame(summary_rows), hide_index=True, use_container_width=True)
+        st.subheader("Acceptance gates")
+        gate_rows = [
+            {"gate": name, **(value if isinstance(value, dict) else {"pass": value})}
+            for name, value in benchmark["acceptance_gates"].items()
+        ]
+        st.dataframe(pd.DataFrame(gate_rows), hide_index=True, use_container_width=True)
+        st.caption(benchmark["note"])
+    else:
+        st.info("No benchmark.json found; showing this run's own model comparison instead.")
+
+    model_scores = metrics.get("model_scores")
+    if model_scores:
+        st.subheader("This run: XGBoost vs. Bayesian vs. fused")
+        rows = []
+        for label in ("xgb", "bbn", "fused"):
+            space = model_scores.get(label, {})
+            test_metrics = space.get("test_metrics", {})
+            rows.append(
+                {
+                    "model": label,
+                    "pr_auc": test_metrics.get("pr_auc"),
+                    "roc_auc": test_metrics.get("roc_auc"),
+                    "precision": test_metrics.get("precision"),
+                    "recall": test_metrics.get("recall"),
+                    "brier": test_metrics.get("brier"),
+                }
+            )
+        st.dataframe(pd.DataFrame(rows), hide_index=True, use_container_width=True)
+    fusion_comparison = metrics.get("fusion_comparison")
+    if fusion_comparison:
+        st.subheader("Fusion weight comparison (validation)")
+        st.dataframe(pd.DataFrame(fusion_comparison), hide_index=True, use_container_width=True)
+    architecture = metrics.get("architecture", {})
+    if architecture.get("fusion"):
+        st.caption(architecture["fusion"])
+
+
 def main(artifacts_root: str | Path | None = None) -> None:
-    """Render the three-view prototype application."""
+    """Render the control-tower prototype application."""
 
     st.set_page_config(page_title="OTIF Intervention Desk", page_icon="▦", layout="wide")
     _inject_style()
@@ -280,7 +454,13 @@ def main(artifacts_root: str | Path | None = None) -> None:
         st.subheader("Control tower")
         view = st.radio(
             "View",
-            ["Order lookup", "Ranked portfolio", "Hotspots + impact"],
+            [
+                "Order lookup",
+                "Ranked portfolio",
+                "Hotspots + impact",
+                "Operations",
+                "Model health",
+            ],
             label_visibility="collapsed",
         )
         st.caption(f"Loaded {len(decisions):,} scored orders")
@@ -288,8 +468,12 @@ def main(artifacts_root: str | Path | None = None) -> None:
         _order_lookup(decisions, run_directory)
     elif view == "Ranked portfolio":
         _portfolio(decisions)
-    else:
+    elif view == "Hotspots + impact":
         _hotspots_and_impact(decisions, run_directory)
+    elif view == "Operations":
+        _operations_view(str(root.resolve()))
+    else:
+        _model_health_view(str(root.resolve()), metrics)
 
 
 if __name__ == "__main__":

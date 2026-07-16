@@ -1,0 +1,16 @@
+%% OTIF Risk Intelligence -- current (first-release) architecture.
+%% Canonical source: kept in sync with docs/architecture/diagrams.py and rendered
+%% to docs/architecture/current.svg by docs/architecture/generate.py.
+flowchart LR
+    A[Deterministic synthetic tables] --> B[Validation]
+    B --> C[Retrospective OTIF and 7-cause rules]
+    C --> D[Point-in-time order features]
+    D --> E[Chronological 60/20/20 split]
+    E --> F[XGBoost + calibration + SHAP]
+    E --> G[7 causes directly to OTIF Bayesian network]
+    F --> H[70/30 score fusion]
+    G --> H
+    H --> I[Fused threshold]
+    I --> J[Mitigations + conflict checks + impact]
+    J --> K[Order queue + rollups + Streamlit]
+    K --> L[Append-only planner feedback]
