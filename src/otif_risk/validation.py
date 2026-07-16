@@ -42,6 +42,7 @@ REQUIRED_COLUMNS = {
     "dcs": {"dc_id", "daily_capacity_units"},
     "lanes": {"lane_id", "origin_dc_id", "planned_transit_days"},
     "customers": {"customer_id"},
+    "skus": {"sku_id", "criticality_tier", "base_unit_value"},
     "capacity_snapshots": {
         "dc_id",
         "snapshot_date",
@@ -72,6 +73,7 @@ def validate_dataset(dataset: PrototypeDataset) -> None:
         "dcs": "dc_id",
         "lanes": "lane_id",
         "customers": "customer_id",
+        "skus": "sku_id",
     }
     for table_name, key in unique_keys.items():
         frame = getattr(dataset, table_name)
@@ -111,6 +113,10 @@ def validate_dataset(dataset: PrototypeDataset) -> None:
         set(dataset.lanes["origin_dc_id"]).issubset(set(dataset.dcs["dc_id"])),
         "lanes contains unknown origin_dc_id references",
     )
+    _require(
+        set(dataset.order_lines["sku_id"]).issubset(set(dataset.skus["sku_id"])),
+        "order_lines contains unknown sku_id references",
+    )
 
     lines = dataset.order_lines
     _require((lines["requested_qty"] > 0).all(), "requested_qty must be positive")
@@ -120,8 +126,8 @@ def validate_dataset(dataset: PrototypeDataset) -> None:
         "allocated_qty cannot exceed requested_qty",
     )
     _require(
-        (lines["shipped_qty"] <= lines["allocated_qty"]).all(),
-        "shipped_qty cannot exceed allocated_qty",
+        (lines["shipped_qty"] <= lines["requested_qty"]).all(),
+        "shipped_qty cannot exceed requested_qty",
     )
     summed = lines.groupby("order_id")["requested_qty"].sum()
     declared = dataset.orders.set_index("order_id")["total_order_qty"]
