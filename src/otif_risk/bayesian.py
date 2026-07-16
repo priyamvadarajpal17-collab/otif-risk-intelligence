@@ -10,7 +10,9 @@ with a small propagation graph that tells a clearer compounding-risk story:
     CUSTOMER_DELIVERY -------------------------------------------------+
 
 CPTs are learned (with additive smoothing) from the *training split's*
-resolved root-cause history only. Scoring uses point-in-time evidence: a
+resolved operational stage history. Stage failures are recorded for every
+closed order, including orders that still achieved OTIF, so the network can
+learn whether disruption propagated or was absorbed. Scoring uses point-in-time evidence: a
 node's binary leading signal is only used as *hard* evidence once its stage
 has actually been observed (``vendor_ready_observed``, ``shipped_observed``,
 ``transit_observed``); unobserved intermediate nodes are marginalized out via
@@ -47,7 +49,13 @@ CHAIN_PARENTS: dict[str, tuple[str, ...]] = {
     "INVENTORY_SHORTAGE": ("VENDOR_FAILURE",),
     "WAREHOUSE_OPS": ("INVENTORY_SHORTAGE", "DC_CAPACITY"),
     "TRANSPORT": ("WAREHOUSE_OPS",),
-    ENDPOINT: ("ORDER_CAPTURE", "TRANSPORT", "CUSTOMER_DELIVERY"),
+    ENDPOINT: (
+        "ORDER_CAPTURE",
+        "INVENTORY_SHORTAGE",
+        "WAREHOUSE_OPS",
+        "TRANSPORT",
+        "CUSTOMER_DELIVERY",
+    ),
 }
 #: Topological order (parents always precede children).
 CHAIN_NODES: tuple[str, ...] = (
@@ -197,17 +205,27 @@ def fit_bayesian_network(
     smoothing: float = 1.0,
 ) -> BayesianBundle:
     """Fit smoothed binary CPTs for the compact causal chain."""
-    required = {f"cause_{cause}" for cause in CAUSE_NODES} | {TARGET_COLUMN}
-    missing = sorted(required - set(historical.columns))
-    if missing:
+    stage_columns = {f"stage_{cause}" for cause in CAUSE_NODES}
+    cause_columns = {f"cause_{cause}" for cause in CAUSE_NODES}
+    if stage_columns <= set(historical.columns):
+        source_prefix = "stage_"
+    elif cause_columns <= set(historical.columns):
+        source_prefix = "cause_"
+    else:
+        missing = sorted(stage_columns - set(historical.columns))
         raise ValueError(f"historical frame is missing columns: {missing}")
+    if TARGET_COLUMN not in historical:
+        raise ValueError(f"historical frame is missing columns: ['{TARGET_COLUMN}']")
     if historical.empty:
         raise ValueError("historical frame must not be empty")
     if smoothing <= 0:
         raise ValueError("smoothing must be positive")
 
     binary = pd.DataFrame(
-        {cause: historical[f"cause_{cause}"].map(_as_binary) for cause in CAUSE_NODES}
+        {
+            cause: historical[f"{source_prefix}{cause}"].map(_as_binary)
+            for cause in CAUSE_NODES
+        }
     )
     binary[ENDPOINT] = historical[TARGET_COLUMN].map(_as_binary)
 

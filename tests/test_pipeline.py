@@ -114,7 +114,7 @@ def test_bayesian_inference_mode_is_recorded(tmp_path):
         "pgmpy_exact",
         "brute_force_exact",
     }
-    assert len(report["architecture"]["bayesian_chain_edges"]) == 7
+    assert len(report["architecture"]["bayesian_chain_edges"]) == 9
 
 
 def test_provenance_and_schema_metadata_are_persisted(tmp_path):
@@ -162,13 +162,13 @@ def test_bayesian_training_history_excludes_validation_and_test_order_ids():
     causes = pd.DataFrame(
         {
             "order_id": ["a", "b", "c", "d"],
-            "cause_ORDER_CAPTURE": [1, 0, 1, 0],
-            "cause_VENDOR_FAILURE": [0, 1, 0, 1],
-            "cause_INVENTORY_SHORTAGE": [0, 0, 0, 0],
-            "cause_DC_CAPACITY": [0, 0, 0, 0],
-            "cause_WAREHOUSE_OPS": [0, 0, 0, 0],
-            "cause_TRANSPORT": [0, 0, 0, 0],
-            "cause_CUSTOMER_DELIVERY": [0, 0, 0, 0],
+            "stage_ORDER_CAPTURE": [1, 0, 1, 0],
+            "stage_VENDOR_FAILURE": [0, 1, 0, 1],
+            "stage_INVENTORY_SHORTAGE": [0, 0, 0, 0],
+            "stage_DC_CAPACITY": [0, 0, 0, 0],
+            "stage_WAREHOUSE_OPS": [0, 0, 0, 0],
+            "stage_TRANSPORT": [0, 0, 0, 0],
+            "stage_CUSTOMER_DELIVERY": [0, 0, 0, 0],
         }
     )
     outcomes = pd.DataFrame({"order_id": ["a", "b", "c", "d"], "otif_miss": [1, 1, 0, 0]})

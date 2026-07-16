@@ -93,8 +93,11 @@ Targeted evidence is ~6.5x more precise than the naive baseline at comparable re
 network with
 `ORDER_CAPTURE→OTIF_MISS`, `VENDOR_FAILURE→INVENTORY_SHORTAGE`,
 `{INVENTORY_SHORTAGE, DC_CAPACITY}→WAREHOUSE_OPS`, `WAREHOUSE_OPS→TRANSPORT`,
-`TRANSPORT→OTIF_MISS`, `CUSTOMER_DELIVERY→OTIF_MISS`. CPTs are smoothed counts fit on the
-training split's resolved root causes only. A node is only given as *hard* evidence
+and direct OTIF paths from inventory shortage, warehouse delay, transport, and customer
+delivery. The inventory path represents an in-full miss; warehouse/transport paths
+represent lateness. CPTs are smoothed counts fit on training-only operational stage
+history, including disruptions absorbed by orders that still achieved OTIF. A node is
+only given as *hard* evidence
 once its stage has actually been observed as of the as-of timestamp; unobserved
 intermediate stages (e.g., `WAREHOUSE_OPS`/`TRANSPORT` before those events post) are
 marginalized out via exact inference, so an early vendor-failure signal can raise OTIF
@@ -112,28 +115,27 @@ mechanism."
 
 `fusion.py` compares XGBoost-only, Bayesian-only, the fixed 70/30 blend, and every other
 convex weight in 10% increments — one line search, no stacking model. The weight is
-selected on **validation only**: lowest Brier score among candidates whose
-top-15%-capacity recall is within 0.03 of the best candidate's capacity recall (a fixed,
-comparable operating point, not each candidate's own idiosyncratic recall-floor
-threshold). The final decision threshold is then tuned separately, once, for the chosen
-weight, via the configured recall/precision/capacity strategy.
+selected on **validation only**: candidates must keep top-15%-capacity recall within
+0.03 of the best candidate and Brier score within 0.002 of the best eligible candidate.
+Among those practically equivalent candidates, the policy prefers more Bayesian
+contribution. The final decision threshold is then tuned separately for the chosen weight.
 
-On the 5-seed benchmark, XGBoost alone was Brier-best in every seed tested (median
-Bayesian PR-AUC 0.18 vs. XGBoost/fused median 0.66) — an honest result, not a forced one;
-the comparison table (`fusion_comparison.csv`, `metrics.json.fusion_comparison`) is
-always persisted regardless of which weight wins.
+On the 5-seed benchmark, validation selected 20–30% Bayesian contribution; the seed-42
+canonical run selected 10%. Median Bayesian PR-AUC is 0.472 and fused median PR-AUC is
+0.705. The full comparison table (`fusion_comparison.csv`,
+`metrics.json.fusion_comparison`) is always persisted.
 
 ## Measured performance (5-seed benchmark, 2,500 orders/seed)
 
 | Metric | Median | Range | Target |
 |---|---|---|---|
 | OTIF miss rate | 0.170 | 0.154–0.199 | 0.15–0.25 |
-| Fused PR-AUC (test) | 0.700 | 0.533–0.771 | 0.65–0.80 |
-| Fused recall (test) | 0.680 | 0.654–0.865 | 0.65–0.80 |
-| Fused precision (test) | 0.571 | 0.510–0.654 | — |
-| Fused Brier | 0.094 | 0.073–0.098 | lower is better |
+| Fused PR-AUC (test) | 0.705 | 0.537–0.757 | 0.65–0.80 |
+| Fused recall (test) | 0.705 | 0.633–0.856 | 0.65–0.80 |
+| Fused precision (test) | 0.608 | 0.509–0.629 | — |
+| Fused Brier | 0.097 | 0.074–0.099 | lower is better |
 | XGBoost-only PR-AUC | 0.700 | 0.533–0.771 | — |
-| Bayesian-only PR-AUC | 0.171 | 0.153–0.210 | — |
+| Bayesian-only PR-AUC | 0.472 | 0.348–0.484 | — |
 | Cause consistency (held-out misses) | 0.630 | 0.571–0.676 | beats majority-cause baseline (median 0.520) |
 | Line-evidence precision | 0.536 | 0.507–0.602 | beats naive all-lines baseline |
 | Line-evidence recall | 0.627 | 0.560–0.726 | — |
@@ -144,8 +146,9 @@ the prevalence baseline, and targeted line evidence beats the naive all-lines ba
 
 ## Canonical single run (seed 42, 2,500 orders)
 
-- Threshold 0.273, fused PR-AUC 0.684, recall 0.655, precision 0.538, Brier 0.091.
-- 495 test orders reviewed: 61 RECOMMENDED, 45 CONTESTED, 389 MONITOR.
+- Validation-selected blend: 90% XGBoost, 10% Bayesian.
+- Threshold 0.261, fused PR-AUC 0.684, recall 0.667, precision 0.558, Brier 0.090.
+- 495 test orders reviewed: 62 RECOMMENDED, 42 CONTESTED, 391 MONITOR.
 - Bayesian inference mode: `pgmpy_exact`.
 - The reserved resource-contention pair (`O002497`, `O002498`) both land in the held-out
   test split for this seed: one is RECOMMENDED, the other CONTESTED on the same shared
@@ -163,13 +166,9 @@ directory.
 
 ## Honest limitations
 
-- **Cause-label semantics**: retrospective `cause_X` flags are only ever 1 for orders
-  that *missed* OTIF and matched that rule; they are not an independent "did this stage
-  fail" signal for on-time orders. This simplification affects Bayesian calibration
-  (some evidence combinations push the posterior close to 0/1) more than ranking.
-- **Bayesian standalone quality is weak** (PR-AUC ~0.18): the compact chain is designed
-  for an interpretable propagation story and pathway output, not to out-predict
-  XGBoost; fusion selection honestly reflects this rather than forcing a blend.
+- **Bayesian standalone quality remains below XGBoost** (median PR-AUC 0.472 vs. 0.700):
+  the compact chain prioritizes interpretable propagation, but contributes 10–30% when
+  validation shows practically equivalent calibration under the recall guardrail.
 - **Synthetic data only**: entity counts (12 vendors, 5 DCs, 15 lanes, 40 customers, 120
   SKUs) are modest; real deployments would need materially more data-quality validation,
   monitoring, and governance before any production use.

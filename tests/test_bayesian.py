@@ -57,7 +57,13 @@ def test_chain_topology_matches_the_compact_causal_design():
     assert CHAIN_PARENTS["INVENTORY_SHORTAGE"] == ("VENDOR_FAILURE",)
     assert set(CHAIN_PARENTS["WAREHOUSE_OPS"]) == {"INVENTORY_SHORTAGE", "DC_CAPACITY"}
     assert CHAIN_PARENTS["TRANSPORT"] == ("WAREHOUSE_OPS",)
-    assert set(CHAIN_PARENTS["OTIF_MISS"]) == {"ORDER_CAPTURE", "TRANSPORT", "CUSTOMER_DELIVERY"}
+    assert set(CHAIN_PARENTS["OTIF_MISS"]) == {
+        "ORDER_CAPTURE",
+        "INVENTORY_SHORTAGE",
+        "WAREHOUSE_OPS",
+        "TRANSPORT",
+        "CUSTOMER_DELIVERY",
+    }
     assert CHAIN_PARENTS["ORDER_CAPTURE"] == ()
     assert "OTIF_MISS" in CHAIN_NODES
     # Parents must precede children in the topological order.
@@ -188,3 +194,14 @@ def test_fit_requires_all_cause_columns_and_target():
 def test_cause_lifts_cover_every_cause_category():
     bundle = fit_bayesian_network(_history())
     assert set(bundle.cause_lifts) == set(CAUSE_CATEGORIES)
+
+
+def test_stage_history_is_preferred_over_failure_only_cause_labels() -> None:
+    history = _history()
+    for cause in CAUSE_NODES:
+        history[f"stage_{cause}"] = history[f"cause_{cause}"]
+        history[f"cause_{cause}"] = 0
+
+    bundle = fit_bayesian_network(history)
+
+    assert any(abs(lift) > 0 for lift in bundle.cause_lifts.values())

@@ -30,6 +30,20 @@ def test_all_rules_are_evaluated_and_multicauses_are_retained() -> None:
     assert row["primary_cause"] == matched[0]
 
 
+def test_stage_failures_are_recorded_even_when_otif_is_recovered() -> None:
+    dataset = generate_dataset(PrototypeConfig(seed=3, n_orders=600))
+    outcomes = calculate_outcomes(dataset)
+    causes = derive_root_causes(dataset, outcomes)
+    stage_columns = [f"stage_{cause}" for cause in CAUSE_CATEGORIES]
+    merged = causes.merge(outcomes[["order_id", "otif_miss"]], on="order_id")
+
+    recovered = merged.loc[
+        (merged["otif_miss"] == 0) & (merged[stage_columns].sum(axis=1) > 0)
+    ]
+    assert not recovered.empty
+    assert recovered.filter(like="cause_").sum(axis=1).eq(0).all()
+
+
 def test_unexplained_miss_is_unknown() -> None:
     dataset = generate_dataset(PrototypeConfig(seed=5, n_orders=300))
     outcomes = calculate_outcomes(dataset)

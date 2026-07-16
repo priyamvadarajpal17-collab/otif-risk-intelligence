@@ -149,6 +149,9 @@ def derive_root_causes(
             "confidence": 0.95 if matched else (0.25 if primary == "UNKNOWN" else 1.0),
             "vendor_fault": int("VENDOR_FAILURE" in matched),
         }
+        row.update(
+            {f"stage_{cause}": int(evidence[cause][row_index]) for cause in CAUSE_CATEGORIES}
+        )
         row.update({f"cause_{cause}": int(cause in matched) for cause in CAUSE_CATEGORIES})
         rows.append(row)
     return pd.DataFrame(rows)

@@ -34,6 +34,9 @@ WEIGHT_GRID = tuple(round(value, 1) for value in np.arange(0.0, 1.0001, 0.1))
 #: A candidate must not fall more than this far below the best individual
 #: candidate's recall to be eligible for Brier-based selection.
 DEFAULT_RECALL_TOLERANCE = 0.03
+#: Treat validation Brier differences within this narrow band as practically
+#: equivalent, then prefer the blend with more causal-model contribution.
+DEFAULT_BRIER_TOLERANCE = 0.002
 
 
 @dataclass
@@ -130,8 +133,9 @@ def select_fusion_weight(
     target_recall: float = 0.55,
     min_precision: float = 0.35,
     recall_tolerance: float = DEFAULT_RECALL_TOLERANCE,
+    brier_tolerance: float = DEFAULT_BRIER_TOLERANCE,
 ) -> FusionSelection:
-    """Select the fusion weight on validation only: Brier-best under a recall guardrail.
+    """Select validation-only fusion under Brier and recall tolerances.
 
     The guardrail compares recall at a *fixed, comparable* operating point --
     the top ``capacity_fraction`` of orders by score -- rather than each
@@ -148,6 +152,8 @@ def select_fusion_weight(
     bbn_scores = np.asarray(bbn_scores, dtype=float)
     if len(labels) != len(xgb_scores) or len(labels) != len(bbn_scores):
         raise ValueError("labels, xgb_scores, and bbn_scores must be the same length")
+    if brier_tolerance < 0:
+        raise ValueError("brier_tolerance must be non-negative")
 
     rows: list[dict[str, float]] = []
     for weight in WEIGHT_GRID:
@@ -172,7 +178,9 @@ def select_fusion_weight(
     eligible = comparison.loc[comparison["capacity_recall"] >= best_recall - recall_tolerance]
     if eligible.empty:  # pragma: no cover - defensive, cannot happen given max() membership
         eligible = comparison
-    ranked = eligible.sort_values(["brier", "xgb_weight"], ascending=[True, True])
+    best_brier = float(eligible["brier"].min())
+    near_best = eligible.loc[eligible["brier"] <= best_brier + brier_tolerance]
+    ranked = near_best.sort_values(["xgb_weight", "brier"], ascending=[True, True])
     chosen = ranked.iloc[0]
     chosen_weight = float(chosen["xgb_weight"])
 
@@ -204,8 +212,10 @@ def select_fusion_weight(
         comparison.loc[chosen_mask, metric_name] = final_selection["metrics"][metric_name]
 
     rationale = (
-        f"Selected xgb_weight={chosen_weight:.1f} ({label}) on validation: lowest Brier "
-        f"({float(chosen['brier']):.4f}) among candidates whose top-{capacity_fraction:.0%}-"
+        f"Selected xgb_weight={chosen_weight:.1f} ({label}) on validation: Brier "
+        f"({float(chosen['brier']):.4f}) within {brier_tolerance:.3f} of the best "
+        f"eligible Brier ({best_brier:.4f}), preferring causal-model contribution among "
+        f"practically equivalent candidates whose top-{capacity_fraction:.0%}-"
         f"capacity recall is within {recall_tolerance:.2f} of the best candidate's capacity "
         f"recall ({best_recall:.3f}). The operating threshold "
         f"({final_selection['threshold']:.3f}) is then tuned separately via "

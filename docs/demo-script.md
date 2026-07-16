@@ -94,7 +94,7 @@ table and every acceptance gate (miss rate, fused PR-AUC, fused recall, calibrat
 naive-baseline comparisons) with a pass/fail flag — all currently passing. It also shows
 this run's own XGBoost-vs-Bayesian-vs-fused comparison and the full 11-row fusion-weight
 search table (`fusion_comparison.csv`), so a judge can see *why* a particular weight won
-(XGBoost alone, in this case) rather than taking it on faith.
+(90% XGBoost / 10% Bayesian in the canonical run) rather than taking it on faith.
 
 ## 6. Operations
 

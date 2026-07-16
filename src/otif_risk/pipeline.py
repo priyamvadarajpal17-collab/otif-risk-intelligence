@@ -117,7 +117,7 @@ def bayesian_training_history(
 ) -> pd.DataFrame:
     """Restrict Bayesian fitting evidence to the training split's order IDs only."""
     history = causes[
-        ["order_id", *(f"cause_{category}" for category in CAUSE_CATEGORIES)]
+        ["order_id", *(f"stage_{category}" for category in CAUSE_CATEGORIES)]
     ].merge(outcomes[["order_id", "otif_miss"]], on="order_id", validate="one_to_one")
     return history.loc[history["order_id"].isin(train_order_ids)].reset_index(drop=True)
 

@@ -191,8 +191,32 @@ def test_streamlit_five_view_smoke(tmp_path, monkeypatch) -> None:
     for label, expected_header in (
         ("Operations", "Operations"),
         ("Model health", "Model health"),
+        ("Bayesian network", "Bayesian network"),
     ):
         navigation = next(radio for radio in app.radio if label in radio.options)
         navigation.set_value(label).run()
         assert not app.exception
         assert any(header.value == expected_header for header in app.header)
+
+
+def test_bayesian_graph_svg_highlights_active_route() -> None:
+    from otif_risk.app import _bayesian_graph_svg
+
+    svg = _bayesian_graph_svg(
+        {
+            "evidence": {"VENDOR_FAILURE": 1, "INVENTORY_SHORTAGE": 1},
+            "active_evidence": ["VENDOR_FAILURE", "INVENTORY_SHORTAGE"],
+            "route": [
+                "VENDOR_FAILURE",
+                "INVENTORY_SHORTAGE",
+                "WAREHOUSE_OPS",
+                "TRANSPORT",
+                "OTIF_MISS",
+            ],
+        }
+    )
+
+    assert "Bayesian causal network" in svg
+    assert "VENDOR FAILURE" in svg
+    assert "ACTIVE EVIDENCE" in svg
+    assert "arrow-hot" in svg

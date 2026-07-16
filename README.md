@@ -64,8 +64,9 @@ only, no Mermaid CLI or other internet tooling installed or invoked. Regenerate 
    star network:
    `ORDER_CAPTURE→OTIF_MISS`, `VENDOR_FAILURE→INVENTORY_SHORTAGE`,
    `{INVENTORY_SHORTAGE, DC_CAPACITY}→WAREHOUSE_OPS`, `WAREHOUSE_OPS→TRANSPORT`,
-   `TRANSPORT→OTIF_MISS`, `CUSTOMER_DELIVERY→OTIF_MISS`. CPTs are smoothed counts fit on
-   the *training split's* resolved root causes only; a node is only given as hard
+   with direct OTIF paths for inventory shortfall, warehouse delay, transport, and
+   customer delivery. CPTs are smoothed counts fit on training-only operational stage
+   history, including disruptions absorbed by orders that still achieved OTIF; a node is only given as hard
    evidence once its stage has actually been observed as of the as-of timestamp, so
    unobserved intermediate stages are marginalized out via exact inference rather than
    assumed absent. Exact inference uses `pgmpy` variable elimination when available, or
@@ -73,8 +74,10 @@ only, no Mermaid CLI or other internet tooling installed or invoked. Regenerate 
    otherwise (see "Bayesian inference mode" below).
 8. Evidence-based fusion (`fusion.py`): compares XGBoost-only, Bayesian-only, the fixed
    70/30 blend, and every other convex weight in 10% increments on validation, selecting
-   the lowest-Brier candidate under a fixed-capacity recall guardrail (no stacking
-   model); the operating threshold is then tuned separately for the chosen weight. See
+   a blend within 0.002 Brier score of the best eligible candidate under a
+   fixed-capacity recall guardrail, then preferring more Bayesian contribution among
+   practically equivalent candidates (no stacking model). The operating threshold is
+   tuned separately for the chosen weight. See
    "Fusion weight selection" below.
 9. Generic resource-aware interventions (`decisions.py` / `resources.py`): a lookup-table
    mitigation policy plus a capacity-aware conflict check (DC recovery units, lane
@@ -113,22 +116,20 @@ proves: (a) `leading_signal_*` is not present on the raw generator output, (b) i
 a lossless proxy for the ground-truth cause, and (c) mutating *every* future
 event/outcome cannot change an earlier as-of snapshot's row.
 
-Cause fidelity is evaluated only on held-out OTIF misses (successful orders have no
-failure cause to recover). **Remaining honest caveat**: retrospective `cause_X` flags
-are only ever 1 for orders that missed OTIF and matched that rule, which is a real
-simplification affecting Bayesian calibration more than ranking — see
-`docs/model-card.md`.
+Cause consistency is evaluated only on held-out OTIF misses (successful orders have no
+failure cause to recover). Bayesian CPTs use separate `stage_X` incident flags that are
+recorded for every closed order, including disruptions that were absorbed without an
+OTIF miss.
 
 ## Threshold and fusion-weight selection
 
 1. Scores validation/test with XGBoost, Bayesian, and every fused weight on a
    0.0–1.0 grid in 0.1 increments.
-2. Selects the fusion weight on **validation only**: lowest Brier score among
-   candidates whose top-planner-capacity recall is within a small tolerance of the best
-   candidate's capacity recall — a fixed, comparable operating point, not each
-   candidate's own independently re-tuned recall-floor threshold (using each candidate's
-   own threshold search here would let a miscalibrated candidate win purely by having an
-   inflated F1-fallback recall; `tests/test_fusion.py` proves this can't happen).
+2. Selects the fusion weight on **validation only**: candidates must satisfy the
+   top-planner-capacity recall guardrail and fall within 0.002 Brier score of the best
+   eligible candidate. Among those practically equivalent candidates, the policy
+   prefers more Bayesian contribution. The comparison uses a fixed operating point,
+   not each candidate's independently re-tuned threshold.
 3. Tunes the final decision threshold separately, once, for the chosen weight, using the
    configured strategy (`recall_floor` by default) on the chosen weight's fused
    validation scores.
