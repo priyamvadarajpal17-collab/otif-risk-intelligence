@@ -5,7 +5,7 @@ from types import SimpleNamespace
 import pandas as pd
 import pytest
 
-from otif_pdf.fusion import FusionBundle, fuse_scores
+from otif_risk.fusion import FusionBundle, fuse_scores
 
 
 def test_fuse_scores_applies_fixed_transparent_weights_by_order_id():

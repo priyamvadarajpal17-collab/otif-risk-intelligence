@@ -352,7 +352,7 @@ def _add_entity_rolling_features(
     that historical order) rather than the raw ``otif_miss`` outcome. Without
     this, a vendor would be penalized in its own rolling score for misses it did
     not cause (for example a DC capacity overload or a customer's own scheduling
-    exception), which is the vendor-fault fairness issue the PDF calls out.
+    exception), preserving fair vendor attribution.
     DC/lane/customer rolling rates keep the raw OTIF-miss rate because this
     prototype does not generate a symmetric per-stage "fault" attribution for
     those dimensions.

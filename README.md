@@ -1,15 +1,13 @@
-# PDF-Aligned OTIF Prototype
+# OTIF Risk Intelligence
 
-Standalone implementation of the complete architecture described in the OTIF project
-PDF. It is intentionally a clear demonstration prototype rather than a production
-reliability research platform.
+An explainable supply-chain intelligence prototype that predicts open orders at risk
+of missing On-Time-In-Full delivery, identifies likely contributing factors, and
+recommends resource-aware mitigation actions.
 
-It follows the PDF’s complete demonstration flow while retaining necessary,
-disclosed corrections:
+The implementation makes several deliberate modeling choices:
 
-- the predictive target is whether an open order will miss OTIF (binary), not the
-  PDF's inconsistently worded seven-class root-cause classifier — root-cause/pathway
-  output is still produced and evaluated separately (see "Cause fidelity" below);
+- the predictive target is whether an open order will miss OTIF, while seven-category
+  root-cause and pathway outputs are produced and evaluated separately;
 - features must be available at the declared scoring timestamp;
 - the decision threshold is selected on, and applied to, the **fused** risk score —
   the score space decisions/UI actually use — not the standalone XGBoost score;
@@ -131,9 +129,8 @@ count-based fallback.
 
 ## Rollups and SKU representation
 
-Rollups now cover vendor, DC, lane, customer, order type (the closest correctly
-modeled proxy for the PDF's "order type" — this prototype only models order
-*priority*, STANDARD/EXPEDITE), and SKU. Every rollup reports order count,
+Rollups cover vendor, DC, lane, customer, order type (represented by the modeled
+order *priority*: STANDARD/EXPEDITE), and SKU. Every rollup reports order count,
 actionable orders, `pct_at_risk`, average risk, penalty exposure, `value_at_risk`
 (order value weighted by risk — a broader revenue-exposure figure than the
 penalty-rate-scaled `penalty_exposure`), quantity at risk, and the dominant primary
@@ -152,8 +149,8 @@ the available Python 3.14 runtime.
 ```bash
 uv sync --extra dev
 brew install libomp  # macOS only, required for XGBoost
-uv run otif-pdf --orders 2500 --seed 42
-uv run streamlit run src/otif_pdf/app.py
+uv run otif-risk --orders 2500 --seed 42
+uv run streamlit run src/otif_risk/app.py
 ```
 
 Threshold tuning defaults to `recall_floor` with `target_recall=0.55` and

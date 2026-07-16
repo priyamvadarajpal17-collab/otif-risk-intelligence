@@ -7,8 +7,8 @@ from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 
-from otif_pdf.bayesian import BayesianBundle
-from otif_pdf.model import ENDPOINT, RiskBundle
+from otif_risk.bayesian import BayesianBundle
+from otif_risk.model import ENDPOINT, RiskBundle
 
 RISK_MODEL_WEIGHT = 0.7
 BBN_WEIGHT = 0.3

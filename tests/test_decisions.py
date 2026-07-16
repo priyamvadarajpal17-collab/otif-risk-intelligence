@@ -3,7 +3,7 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
-from otif_pdf.decisions import (
+from otif_risk.decisions import (
     CONTESTED,
     MONITOR,
     RECOMMENDED,

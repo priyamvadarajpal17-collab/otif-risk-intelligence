@@ -7,7 +7,7 @@ import json
 import numpy as np
 import pandas as pd
 
-from otif_pdf.model import RiskBundle
+from otif_risk.model import RiskBundle
 
 
 def explain_predictions(

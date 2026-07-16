@@ -1,4 +1,4 @@
-"""End-to-end implementation of the PDF-aligned OTIF prototype."""
+"""End-to-end OTIF risk intelligence pipeline."""
 
 from __future__ import annotations
 
@@ -14,28 +14,28 @@ from typing import Any
 import joblib
 import pandas as pd
 
-from otif_pdf.bayesian import fit_bayesian_network
-from otif_pdf.contracts import CAUSE_CATEGORIES, PrototypeConfig
-from otif_pdf.data import generate_dataset
-from otif_pdf.decisions import (
+from otif_risk.bayesian import fit_bayesian_network
+from otif_risk.contracts import CAUSE_CATEGORIES, PrototypeConfig
+from otif_risk.data import generate_dataset
+from otif_risk.decisions import (
     build_rollups,
     recommend_orders,
     service_impact_summary,
 )
-from otif_pdf.evaluation import (
+from otif_risk.evaluation import (
     cause_fidelity_report,
     evaluate_at_threshold,
     prevalence_baseline_metrics,
     score_space_metrics,
 )
-from otif_pdf.explain import explain_predictions
-from otif_pdf.features import build_feature_table, temporal_split
-from otif_pdf.feedback import FEEDBACK_COLUMNS
-from otif_pdf.fusion import FusionBundle, fuse_scores
-from otif_pdf.model import train_risk_model
-from otif_pdf.narratives import order_narrative
-from otif_pdf.root_causes import calculate_outcomes, derive_root_causes
-from otif_pdf.validation import validate_dataset
+from otif_risk.explain import explain_predictions
+from otif_risk.features import build_feature_table, temporal_split
+from otif_risk.feedback import FEEDBACK_COLUMNS
+from otif_risk.fusion import FusionBundle, fuse_scores
+from otif_risk.model import train_risk_model
+from otif_risk.narratives import order_narrative
+from otif_risk.root_causes import calculate_outcomes, derive_root_causes
+from otif_risk.validation import validate_dataset
 
 #: Bumped whenever a change alters the shape/semantics of persisted artifacts
 #: (columns added/removed/renamed, decision/threshold semantics changed, etc.),
@@ -46,7 +46,7 @@ ARTIFACT_SCHEMA_VERSION = "2.0"
 
 def _package_version() -> str:
     try:
-        return version("otif-pdf-prototype")
+        return version("otif-risk-intelligence")
     except PackageNotFoundError:  # pragma: no cover - editable/local checkouts
         return "0.0.0+local"
 
@@ -329,10 +329,9 @@ def run_pipeline(config: PrototypeConfig) -> dict[str, Any]:
             "fusion": "0.70 risk model + 0.30 Bayesian network",
             "explanation": "SHAP with local perturbation fallback",
             "endpoint_design_note": (
-                "Binary OTIF-miss classification is an intentional correction to "
-                "the PDF's inconsistent seven-class-classifier wording; the "
-                "seven-category root-cause/pathway output is retained and "
-                "evaluated separately (see cause_fidelity)."
+                "The predictive endpoint is binary OTIF miss risk; seven-category "
+                "root-cause and pathway outputs are retained and evaluated "
+                "separately (see cause_fidelity)."
             ),
             "vendor_fairness_note": (
                 "vendor_rolling_fault_rate is conditioned on vendor_fault (only "

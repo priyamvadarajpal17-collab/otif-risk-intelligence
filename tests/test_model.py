@@ -8,8 +8,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-import otif_pdf.explain as explain_module
-from otif_pdf.model import (
+import otif_risk.explain as explain_module
+from otif_risk.model import (
     capacity_threshold,
     select_threshold,
     train_risk_model,

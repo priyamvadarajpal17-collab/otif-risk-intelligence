@@ -4,11 +4,11 @@ import json
 
 import pandas as pd
 
-from otif_pdf.contracts import PrototypeConfig
-from otif_pdf.pipeline import _bayesian_training_history, _run_directory, run_pipeline
+from otif_risk.contracts import PrototypeConfig
+from otif_risk.pipeline import _bayesian_training_history, _run_directory, run_pipeline
 
 
-def test_run_pipeline_writes_complete_pdf_artifacts(tmp_path):
+def test_run_pipeline_writes_complete_artifacts(tmp_path):
     report = run_pipeline(
         PrototypeConfig(seed=7, n_orders=300, output_dir=tmp_path / "artifacts")
     )

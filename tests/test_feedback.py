@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 import pandas as pd
 import pytest
 
-from otif_pdf.feedback import append_feedback
+from otif_risk.feedback import append_feedback
 
 
 def test_feedback_is_appended_without_rewriting_prior_rows(tmp_path) -> None:

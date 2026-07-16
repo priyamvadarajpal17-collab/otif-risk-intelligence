@@ -9,12 +9,12 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from otif_pdf.bayesian import (
+from otif_risk.bayesian import (
     CAUSE_NODES,
     SIGNAL_COLUMNS,
     fit_bayesian_network,
 )
-from otif_pdf.contracts import CAUSE_CATEGORIES
+from otif_risk.contracts import CAUSE_CATEGORIES
 
 
 def _history() -> pd.DataFrame:
@@ -82,7 +82,7 @@ def test_empirical_fallback_matches_fitted_cpt():
 
 def test_engine_construction_failure_is_recorded_explicitly(monkeypatch):
     """Item 3: the only legitimate fallback trigger is explicit engine-build failure."""
-    import otif_pdf.bayesian as bayesian_module
+    import otif_risk.bayesian as bayesian_module
 
     def _fail_to_build(priors, probabilities, combinations):
         return None, "pgmpy is unavailable in this environment: simulated ImportError"

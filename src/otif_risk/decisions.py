@@ -229,10 +229,9 @@ def recommend_orders(
     return result
 
 
-#: Maps each rollup name to the column it groups by. ``order_type`` is the PDF's
-#: requested "order type" rollup; this prototype only models order priority
-#: (STANDARD/EXPEDITE), which is documented here as the closest correctly
-#: modeled proxy rather than inventing an unmodeled order-type taxonomy.
+#: Maps each rollup name to the column it groups by. This prototype represents
+#: ``order_type`` using the modeled order priority (STANDARD/EXPEDITE) rather
+#: than inventing an additional taxonomy.
 ROLLUP_ENTITY_COLUMNS = {
     "vendor": "vendor_id",
     "dc": "dc_id",

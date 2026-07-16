@@ -1,4 +1,4 @@
-"""Small shared contracts for the standalone PDF prototype."""
+"""Shared contracts for the OTIF risk intelligence pipeline."""
 
 from __future__ import annotations
 

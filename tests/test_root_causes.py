@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import json
 
-from otif_pdf.contracts import CAUSE_CATEGORIES, PrototypeConfig
-from otif_pdf.data import generate_dataset
-from otif_pdf.root_causes import calculate_outcomes, derive_root_causes
+from otif_risk.contracts import CAUSE_CATEGORIES, PrototypeConfig
+from otif_risk.data import generate_dataset
+from otif_risk.root_causes import calculate_outcomes, derive_root_causes
 
 
 def test_outcomes_are_one_row_per_order_and_match_components() -> None:

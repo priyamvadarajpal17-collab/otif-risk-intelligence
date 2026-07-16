@@ -3,9 +3,9 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "otif-pdf-prototype"
+name = "otif-risk-intelligence"
 version = "0.1.0"
-description = "PDF-aligned OTIF performance intelligence prototype"
+description = "Explainable OTIF risk intelligence and intervention prototype"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
@@ -25,10 +25,10 @@ dependencies = [
 dev = ["build>=1.2", "pytest>=8.3", "ruff>=0.9"]
 
 [project.scripts]
-otif-pdf = "otif_pdf.pipeline:main"
+otif-risk = "otif_risk.pipeline:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/otif_pdf"]
+packages = ["src/otif_risk"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

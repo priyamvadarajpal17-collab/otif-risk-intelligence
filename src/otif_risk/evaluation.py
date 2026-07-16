@@ -15,8 +15,8 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from otif_pdf.contracts import CAUSE_CATEGORIES
-from otif_pdf.model import ThresholdStrategy, evaluate_predictions, select_threshold
+from otif_risk.contracts import CAUSE_CATEGORIES
+from otif_risk.model import ThresholdStrategy, evaluate_predictions, select_threshold
 
 
 def score_space_metrics(

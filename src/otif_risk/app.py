@@ -1,4 +1,4 @@
-"""Streamlit presentation layer for the standalone OTIF PDF prototype."""
+"""Streamlit presentation layer for OTIF risk intelligence."""
 
 from __future__ import annotations
 
@@ -10,14 +10,14 @@ from typing import Any
 import pandas as pd
 import streamlit as st
 
-from otif_pdf.decisions import (
+from otif_risk.decisions import (
     DEFAULT_RISK_THRESHOLD,
     build_rollups,
     recommend_orders,
     service_impact_summary,
 )
-from otif_pdf.feedback import append_feedback
-from otif_pdf.narratives import order_narrative
+from otif_risk.feedback import append_feedback
+from otif_risk.narratives import order_narrative
 
 SCORED_ORDERS_FILENAME = "scored_orders.csv"
 ORDER_LINES_FILENAME = "order_lines.csv"

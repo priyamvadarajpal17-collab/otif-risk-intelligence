@@ -10,8 +10,8 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from otif_pdf.contracts import CAUSE_CATEGORIES
-from otif_pdf.model import ENDPOINT, TARGET_COLUMN
+from otif_risk.contracts import CAUSE_CATEGORIES
+from otif_risk.model import ENDPOINT, TARGET_COLUMN
 
 CAUSE_NODES = tuple(f"cause_{category}" for category in CAUSE_CATEGORIES)
 SIGNAL_COLUMNS = tuple(f"leading_signal_{category}" for category in CAUSE_CATEGORIES)

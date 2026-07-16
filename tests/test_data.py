@@ -3,10 +3,10 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
-from otif_pdf.contracts import PrototypeConfig
-from otif_pdf.data import generate_dataset
-from otif_pdf.root_causes import calculate_outcomes
-from otif_pdf.validation import validate_dataset
+from otif_risk.contracts import PrototypeConfig
+from otif_risk.data import generate_dataset
+from otif_risk.root_causes import calculate_outcomes
+from otif_risk.validation import validate_dataset
 
 
 def test_generator_is_reproducible_and_has_expected_miss_rate() -> None:

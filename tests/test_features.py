@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import pandas as pd
 
-from otif_pdf.contracts import CAUSE_CATEGORIES, PrototypeConfig
-from otif_pdf.data import generate_dataset
-from otif_pdf.features import LEAKAGE_BLOCKLIST, build_feature_table, temporal_split
-from otif_pdf.root_causes import calculate_outcomes, derive_root_causes
+from otif_risk.contracts import CAUSE_CATEGORIES, PrototypeConfig
+from otif_risk.data import generate_dataset
+from otif_risk.features import LEAKAGE_BLOCKLIST, build_feature_table, temporal_split
+from otif_risk.root_causes import calculate_outcomes, derive_root_causes
 
 
 def _feature_inputs(seed: int = 13):

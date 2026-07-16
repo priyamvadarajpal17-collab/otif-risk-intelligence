@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from otif_pdf.narratives import order_narrative, parse_top_factors
+from otif_risk.narratives import order_narrative, parse_top_factors
 
 
 def test_parse_top_factors_supports_pipeline_json_shapes() -> None:

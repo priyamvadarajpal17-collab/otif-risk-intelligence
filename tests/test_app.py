@@ -6,8 +6,8 @@ from pathlib import Path
 import pandas as pd
 from streamlit.testing.v1 import AppTest
 
-import otif_pdf.app
-from otif_pdf.app import latest_run_directory, load_run_artifacts
+import otif_risk.app
+from otif_risk.app import latest_run_directory, load_run_artifacts
 
 
 def _write_fake_run(root: Path) -> Path:
@@ -121,7 +121,7 @@ def test_load_run_artifacts_computes_from_persisted_fused_threshold_when_absent(
 def test_streamlit_three_view_smoke(tmp_path, monkeypatch) -> None:
     _write_fake_run(tmp_path)
     monkeypatch.setenv("OTIF_ARTIFACTS_DIR", str(tmp_path))
-    app_path = Path(otif_pdf.app.__file__)
+    app_path = Path(otif_risk.app.__file__)
 
     app = AppTest.from_file(str(app_path), default_timeout=10).run()
 
