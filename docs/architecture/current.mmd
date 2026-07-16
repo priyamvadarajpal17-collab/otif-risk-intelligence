@@ -1,16 +1,54 @@
-%% OTIF Risk Intelligence -- current (first-release) architecture.
+%% OTIF Risk Intelligence -- current (shipped, pre-causal-intelligence-studio) architecture.
 %% Canonical source: kept in sync with docs/architecture/diagrams.py and rendered
 %% to docs/architecture/current.svg by docs/architecture/generate.py.
-flowchart LR
-    A[Deterministic synthetic tables] --> B[Validation]
-    B --> C[Retrospective OTIF and 7-cause rules]
-    C --> D[Point-in-time order features]
-    D --> E[Chronological 60/20/20 split]
-    E --> F[XGBoost + calibration + SHAP]
-    E --> G[7 causes directly to OTIF Bayesian network]
-    F --> H[70/30 score fusion]
-    G --> H
-    H --> I[Fused threshold]
-    I --> J[Mitigations + conflict checks + impact]
-    J --> K[Order queue + rollups + Streamlit]
-    K --> L[Append-only planner feedback]
+%% This is the realistic-OTIF-demo iteration's architecture: a noisy digital
+%% twin, an 8-node compact causal Bayesian chain (one flat OTIF_MISS endpoint),
+%% evidence-based fusion, and a resource-aware operating loop. The next
+%% iteration (see target.mmd) replaces the 8-node chain with a 10-node
+%% mechanism graph and adds structural-intervention scenario analysis.
+flowchart TB
+    subgraph SIM[Noisy supply-chain digital twin]
+      A1[Stable vendor, SKU, lane, DC, customer traits]
+      A2[Seasonality, demand, capacity and disruption shocks]
+      A3[Partial observability, missing events and measurement noise]
+      A1 --> A4[Line and order lifecycle simulation]
+      A2 --> A4
+      A3 --> A4
+      A4 --> A5[Ground-truth causes, outcomes and intervention response]
+    end
+
+    A4 --> B[Data contracts + quality report]
+    B --> C1[Retrospective multi-cause derivation]
+    B --> C2[Point-in-time feature snapshots]
+    C1 --> C3[Cause and line-evidence truth]
+    C2 --> D[Rolling-origin train / validation / test]
+
+    D --> E1[XGBoost order-risk model]
+    E1 --> E2[Calibration + SHAP]
+    D --> F1[Compact causal Bayesian chain, 8 nodes, one OTIF_MISS endpoint]
+    F1 --> F2[Exact posterior + pathway contribution]
+
+    E1 --> G[Validated score fusion]
+    F2 --> G
+    G --> H[Capacity-aware operating threshold]
+
+    C3 --> I1[Affected-SKU evidence]
+    E2 --> I2[Order explanation]
+    F2 --> I2
+    H --> I3[Resource-aware intervention policy]
+    I1 --> J[Unified intervention record]
+    I2 --> J
+    I3 --> J
+
+    J --> K1[Order desk]
+    J --> K2[Portfolio and hotspot views]
+    J --> K3[Model health and Bayesian network view]
+
+    subgraph LOOP[Local operating-loop simulation]
+      L1[Daily open-order scoring] --> L2[Orders close]
+      L2 --> L3[Actual outcomes and derived causes]
+      L3 --> L4[Feedback + drift + performance]
+      L4 -->|scheduled or triggered| L5[Versioned retraining]
+      L5 --> L1
+    end
+    J --> L1
