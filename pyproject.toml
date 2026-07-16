@@ -1,0 +1,42 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "otif-pdf-prototype"
+version = "0.1.0"
+description = "PDF-aligned OTIF performance intelligence prototype"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "joblib>=1.4",
+  "llvmlite>=0.43",
+  "numba>=0.60",
+  "numpy>=2.0",
+  "pandas>=2.2",
+  "pgmpy>=1.0",
+  "scikit-learn>=1.5",
+  "shap>=0.48",
+  "streamlit>=1.50",
+  "xgboost>=3.0",
+]
+
+[project.optional-dependencies]
+dev = ["build>=1.2", "pytest>=8.3", "ruff>=0.9"]
+
+[project.scripts]
+otif-pdf = "otif_pdf.pipeline:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/otif_pdf"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = ["--import-mode=importlib", "--strict-markers", "--strict-config", "-q"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
