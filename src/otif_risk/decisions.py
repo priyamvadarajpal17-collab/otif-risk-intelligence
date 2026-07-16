@@ -20,7 +20,7 @@ DEFAULT_RISK_THRESHOLD = 0.50
 # data exists). DC conflicts instead use real quantity/capacity data below
 # whenever `dc_daily_capacity_units` is present on the scored frame; this count
 # is only the fallback for DC when that column is absent.
-DEFAULT_RESOURCE_LIMITS = {"vendor": 2, "dc": 3, "lane": 2, "customer": 2}
+DEFAULT_RESOURCE_LIMITS = {"vendor": 1, "dc": 3, "lane": 2, "customer": 2}
 #: Fraction of a DC's daily throughput capacity assumed available for
 #: concurrent expedited-recovery actions (the remainder runs normal operations).
 DEFAULT_DC_RECOVERY_CAPACITY_FRACTION = 0.20
@@ -214,6 +214,7 @@ def recommend_orders(
         ascending=[False, False, True],
         kind="stable",
     )
+    result["contested_with"] = ""
     for (kind, _resource_id), group in ranked_candidates.groupby(
         ["resource_type", "resource_id"], sort=False
     ):
@@ -221,6 +222,13 @@ def recommend_orders(
             group, kind, limits, dc_capacity_recovery_fraction
         )
         result.loc[overflow, "decision_status"] = CONTESTED
+        if len(overflow):
+            all_ids = group["order_id"].tolist()
+            for index in overflow:
+                competitors = [
+                    order_id for order_id in all_ids if order_id != result.at[index, "order_id"]
+                ]
+                result.at[index, "contested_with"] = ",".join(competitors)
 
     result["estimated_avoidable_penalty"] = (
         result["estimated_penalty_exposure"] * assumptions.avoided_risk_fraction
