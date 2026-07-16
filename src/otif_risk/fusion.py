@@ -72,7 +72,7 @@ def fuse_risk_scores(
     risk_endpoint: str = ENDPOINT,
     bbn_endpoint: str = ENDPOINT,
 ) -> pd.DataFrame:
-    """Compatibility alias for score fusion."""
+    """Convenience alias for score fusion."""
     return fuse_scores(
         risk_scores,
         bbn_scores,

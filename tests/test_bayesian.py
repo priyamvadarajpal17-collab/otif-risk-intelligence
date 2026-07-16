@@ -60,7 +60,7 @@ def test_bayesian_bundle_scores_seven_leading_signals_and_pathway():
 
 
 def test_fitted_bundle_reports_pgmpy_exact_inference_mode():
-    """Item 3: the report/metrics must be able to say which inference mode was used."""
+    """The report must identify which inference mode was used."""
     bundle = fit_bayesian_network(_history())
 
     assert bundle.inference_mode == "pgmpy_exact"
@@ -81,7 +81,7 @@ def test_empirical_fallback_matches_fitted_cpt():
 
 
 def test_engine_construction_failure_is_recorded_explicitly(monkeypatch):
-    """Item 3: the only legitimate fallback trigger is explicit engine-build failure."""
+    """The only legitimate fallback trigger is explicit engine-build failure."""
     import otif_risk.bayesian as bayesian_module
 
     def _fail_to_build(priors, probabilities, combinations):
@@ -99,7 +99,7 @@ def test_engine_construction_failure_is_recorded_explicitly(monkeypatch):
 
 
 def test_query_time_error_from_an_available_engine_surfaces():
-    """Item 3: an available engine's runtime error must not be silently swallowed."""
+    """An available engine's runtime error must not be silently swallowed."""
     bundle = fit_bayesian_network(_history())
     broken_engine = SimpleNamespace(query=MagicMock(side_effect=RuntimeError("boom")))
     bundle.inference_engine = broken_engine
@@ -123,4 +123,3 @@ def test_continuous_and_boolean_signals_are_binarized():
     scored = bundle.score(_evidence(tuple(values)))
 
     assert np.isfinite(scored.loc[0, "bbn_risk_score"])
-

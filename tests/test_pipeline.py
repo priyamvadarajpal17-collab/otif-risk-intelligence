@@ -33,7 +33,7 @@ def test_run_pipeline_writes_complete_artifacts(tmp_path):
 
 
 def test_fused_threshold_drives_decisions_and_is_not_the_raw_xgb_threshold(tmp_path):
-    """Item 1: threshold must be selected on, and applied to, the fused score space."""
+    """Threshold selection and application use the fused score space."""
     report = run_pipeline(
         PrototypeConfig(seed=11, n_orders=400, output_dir=tmp_path / "artifacts")
     )
@@ -63,9 +63,7 @@ def test_fused_threshold_drives_decisions_and_is_not_the_raw_xgb_threshold(tmp_p
     scored_orders = pd.read_csv(
         next((tmp_path / "artifacts").glob("run-*/data/scored_orders.csv"))
     )
-    # The pipeline's own fused threshold, applied to the pipeline's own fused
-    # score, must actually recommend orders (the original defect produced 0
-    # RECOMMENDED/0 CONTESTED and all MONITOR).
+    # The pipeline's fused threshold must produce an actionable work queue.
     assert (scored_orders["decision_status"] != "MONITOR").any()
 
 
@@ -112,7 +110,7 @@ def test_provenance_and_schema_metadata_are_persisted(tmp_path):
 
 
 def test_rerunning_identical_config_does_not_overwrite_prior_run(tmp_path):
-    """Item 9: canonical reruns must be distinguishable and non-destructive."""
+    """Canonical reruns must be distinguishable and non-destructive."""
     config = PrototypeConfig(seed=23, n_orders=300, output_dir=tmp_path / "artifacts")
 
     first_report = run_pipeline(config)
@@ -140,7 +138,7 @@ def test_run_directory_appends_distinguishing_suffix_without_deleting(tmp_path):
 
 
 def test_bayesian_training_history_excludes_validation_and_test_order_ids():
-    """Item 3: Bayesian fitting must only see the training split's resolved history."""
+    """Bayesian fitting must only see the training split's resolved history."""
     causes = pd.DataFrame(
         {
             "order_id": ["a", "b", "c", "d"],

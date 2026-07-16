@@ -184,7 +184,7 @@ def train_model(
     planner_capacity_fraction: float = 0.15,
     random_state: int = 42,
 ) -> TrainingResult:
-    """Compatibility alias for callers using a shorter name."""
+    """Convenience alias using a shorter name."""
     return train_risk_model(
         train, validation, test, planner_capacity_fraction, random_state=random_state
     )

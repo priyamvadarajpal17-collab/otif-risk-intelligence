@@ -94,7 +94,7 @@ def test_latest_run_requires_metrics_and_selects_newest(tmp_path) -> None:
 
 
 def test_load_run_artifacts_reuses_persisted_decisions_without_recomputing(tmp_path) -> None:
-    """Item 5: the UI must not silently override a persisted pipeline decision."""
+    """The UI must not silently override a persisted pipeline decision."""
     _write_fake_run_with_persisted_decisions(tmp_path, fused_threshold=0.90)
 
     _, _, decisions = load_run_artifacts(str(tmp_path.resolve()))
@@ -138,4 +138,3 @@ def test_streamlit_three_view_smoke(tmp_path, monkeypatch) -> None:
     navigation.set_value("Hotspots + impact").run()
     assert not app.exception
     assert any(header.value == "Hotspots + impact" for header in app.header)
-

@@ -128,15 +128,10 @@ def generate_dataset(config: PrototypeConfig) -> PrototypeDataset:
             "capture_delay_hours": capture_delay,
         }
     )
-    # NOTE: `leading_signal_*` columns are intentionally NOT generated here. Earlier
-    # prototype code produced them as a noisy function of the *latent* disruption
-    # cause (`has(cause)`), which any order could see regardless of whether that
-    # cause had actually become observable by `prediction_timestamp`. That directly
-    # leaked the label-adjacent generator state into model features (see the
-    # near-perfect historical AUCs this caused). Leading signals are now derived
-    # in `features.py`, strictly from operational fields/events already filtered to
-    # `event_timestamp <= prediction_timestamp`, so a cause can only contribute a
-    # signal once it is genuinely knowable.
+    # Leading signals are derived in `features.py`, not generated from latent
+    # disruption causes. Operational events are filtered to
+    # `event_timestamp <= prediction_timestamp`, so a cause contributes a signal
+    # only once it is genuinely knowable.
 
     planned_vendor = order_dates + pd.to_timedelta(2, unit="D")
     vendor_ready = planned_vendor + pd.to_timedelta(np.where(has("VENDOR_FAILURE"), 2, 0), unit="D")

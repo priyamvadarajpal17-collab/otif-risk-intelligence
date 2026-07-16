@@ -64,7 +64,7 @@ def test_temporal_split_preserves_order_and_60_20_20_sizes() -> None:
 
 
 def test_leading_signals_are_not_generated_columns_on_raw_orders() -> None:
-    """Item 2: leading_signal_* must not be raw generator output on the orders table.
+    """Leading signals must not be raw generator output on the orders table.
 
     They are derived downstream in features.py from observable operational
     fields/events, not produced directly from the latent disruption cause at
@@ -79,12 +79,9 @@ def test_leading_signals_are_not_generated_columns_on_raw_orders() -> None:
 def test_leading_signals_are_not_a_lossless_proxy_for_ground_truth_cause() -> None:
     """A cause whose evidence has not yet posted by prediction time must show no signal.
 
-    This is the concrete leakage check: if leading_signal_* were still built
-    directly from the latent cause (as before this fix), every order matching a
-    cause would show its signal regardless of observability. Point-in-time
-    derivation means at least one order exists per cause where the ground-truth
-    cause is present but the observable signal is still 0 (evidence not yet
-    posted, or attenuated by construction for CUSTOMER_DELIVERY).
+    Point-in-time derivation means at least one order exists per cause where the
+    ground-truth cause is present but the observable signal is still 0 because
+    evidence has not posted or the proxy is intentionally attenuated.
     """
     dataset, outcomes, causes = _feature_inputs(seed=22)
     features = build_feature_table(dataset, outcomes, causes)
@@ -128,7 +125,7 @@ def test_post_prediction_event_mutation_cannot_change_an_orders_own_features() -
 
 
 def test_vendor_rolling_rate_is_fault_attributed_not_raw_miss_rate() -> None:
-    """Item 8: a vendor must not be penalized in its own rolling score for others' faults.
+    """A vendor must not be penalized in its rolling score for others' faults.
 
     This independently recomputes, per order, the vendor's prior matured raw
     OTIF-miss rate and prior matured vendor-fault rate using the same maturity

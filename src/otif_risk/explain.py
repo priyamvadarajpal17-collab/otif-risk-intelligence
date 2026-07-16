@@ -41,7 +41,7 @@ def explain_risk(
     background: pd.DataFrame | None = None,
     top_n: int = 5,
 ) -> pd.DataFrame:
-    """Compatibility alias for risk explanation."""
+    """Convenience alias for risk explanation."""
     return explain_predictions(bundle, frame, background=background, top_n=top_n)
 
 

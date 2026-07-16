@@ -46,14 +46,7 @@ The implementation makes several deliberate modeling choices:
 
 ## Point-in-time signals and leakage
 
-Earlier prototype code generated `leading_signal_*` columns directly from the
-generator's *latent* disruption cause (a noisy function of `has(cause)`), so a
-signal could appear on an order regardless of whether that cause had actually
-become observable by `prediction_timestamp`. That leaked the label-adjacent
-generator state into model features and produced near-perfect held-out AUCs that
-were a leakage artifact, not evidence of model quality.
-
-`leading_signal_*` is now derived entirely in `features.py` from operational
+`leading_signal_*` is derived entirely in `features.py` from operational
 fields/events already filtered to `event_timestamp <= prediction_timestamp` (vendor
 ready delay/exception, warehouse/transport exceptions), from fields known at order
 capture (`capture_delay_hours`), from allocation/stockout state known at order time
@@ -82,11 +75,8 @@ production-grade predictive skill.
 
 ## Threshold and score-space consistency
 
-A prior version selected the decision threshold on the calibrated XGBoost
-probability (`risk_model_score`) but applied it to the fused probability
-(`combined_risk_score`), which on one run pushed the threshold to ~0.999 and
-classified all 500 test orders as `MONITOR` with zero business impact. The
-pipeline now:
+The operating policy keeps model evaluation and decision thresholds in consistent
+score spaces:
 
 1. Scores validation and test with XGBoost, Bayesian, and fused probabilities.
 2. Selects a threshold independently in *each* score space via
@@ -96,7 +86,7 @@ pipeline now:
    and flagged-order count for all three, at their own thresholds, on the same
    held-out labels — persisted under `metrics.json`'s `model_scores.xgb/bbn/fused`.
 4. Uses **only the fused threshold** (`model_scores.fused.threshold`, also mirrored
-   at the top level as `threshold` for backward compatibility) to build decisions
+   at the top level as `threshold` for convenient access) to build decisions
    and drive the Streamlit UI. The standalone XGB/BBN thresholds are reported for
    comparison only and never used for decisions.
 

@@ -347,7 +347,7 @@ def _add_entity_rolling_features(
 ) -> pd.DataFrame:
     """Add matured, time-windowed rolling reliability rates per entity.
 
-    Vendor fairness correction: a vendor's rolling rate is conditioned on
+    Vendor fairness: a vendor's rolling rate is conditioned on
     ``vendor_fault`` (whether the *vendor* was among the matched root causes for
     that historical order) rather than the raw ``otif_miss`` outcome. Without
     this, a vendor would be penalized in its own rolling score for misses it did

@@ -37,11 +37,8 @@ from otif_risk.narratives import order_narrative
 from otif_risk.root_causes import calculate_outcomes, derive_root_causes
 from otif_risk.validation import validate_dataset
 
-#: Bumped whenever a change alters the shape/semantics of persisted artifacts
-#: (columns added/removed/renamed, decision/threshold semantics changed, etc.),
-#: so downstream readers (and this README) can tell reruns apart from the
-#: pre-remediation artifact generation.
-ARTIFACT_SCHEMA_VERSION = "2.0"
+#: Increment when persisted artifact columns or semantics change.
+ARTIFACT_SCHEMA_VERSION = "1.0"
 
 
 def _package_version() -> str:
@@ -127,7 +124,7 @@ def _bayesian_training_history(
     Fitting on the full dataset (including validation/test outcomes) would let
     the Bayesian network see resolved future-relative-to-scoring-time outcomes,
     breaking the same chronological boundary already enforced for the risk
-    model. This mirrors that boundary for the Bayesian network (item 3's fix).
+    model. The Bayesian network uses the same chronological boundary.
     """
     history = causes[
         ["order_id", *(f"cause_{category}" for category in CAUSE_CATEGORIES)]
@@ -156,9 +153,8 @@ def run_pipeline(config: PrototypeConfig) -> dict[str, Any]:
         random_state=config.seed,
     )
 
-    # Bayesian fitting uses only the training split's resolved history — not
-    # validation/test outcomes — matching the chronological boundary already
-    # enforced for the risk model (item 3's fix).
+    # Bayesian fitting uses only the training split's resolved history, matching
+    # the chronological boundary enforced for the risk model.
     train_order_ids = set(split.train["order_id"])
     bayesian_history = _bayesian_training_history(causes, outcomes, train_order_ids)
     bayesian_bundle = fit_bayesian_network(bayesian_history)
@@ -167,11 +163,8 @@ def run_pipeline(config: PrototypeConfig) -> dict[str, Any]:
     # avoid redundant re-scoring through `FusionBundle.score`.
     FusionBundle(training.bundle, bayesian_bundle)
 
-    # Score every split with all three score spaces (XGB, BBN, fused) so each
-    # can be evaluated — and thresholded — entirely within its own probability
-    # space. This is the fix for the threshold-selected-on-XGB-but-applied-to
-    # -fused defect: the fused threshold below is selected on fused validation
-    # scores and is the only threshold used for decisions/UI.
+    # Score every split with all three score spaces so each can be evaluated and
+    # thresholded independently. Only the fused threshold drives decisions/UI.
     validation_labels = split.validation.set_index("order_id")["otif_miss"].astype(int)
     test_labels = split.test.set_index("order_id")["otif_miss"].astype(int)
 
@@ -360,9 +353,7 @@ def run_pipeline(config: PrototypeConfig) -> dict[str, Any]:
         },
         "model_scores": model_scores,
         "cause_fidelity": cause_fidelity,
-        # Backward-compatible top-level aliases: these now describe the FUSED
-        # score space (the one actually used for decisions), not the XGB-only
-        # values a prior version of this pipeline reported here.
+        # Top-level metrics describe the fused score space used for decisions.
         "validation_metrics": fused_selection["metrics"],
         "test_metrics": fused_test_metrics,
         "threshold": fused_selection["threshold"],

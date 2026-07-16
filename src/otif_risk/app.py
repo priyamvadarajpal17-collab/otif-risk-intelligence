@@ -74,8 +74,8 @@ def load_run_artifacts(artifacts_root: str) -> tuple[str, dict[str, Any], pd.Dat
     recommended action, exposure, etc.) whenever `scored_orders.csv` already
     carries them, so the UI reflects exactly the decisions the pipeline
     computed and wrote to disk. `recommend_orders` is only invoked as a
-    fallback for artifacts that lack a persisted decision (for example an
-    older run), using the fused decision threshold recorded in metrics.json —
+    fallback for artifacts that lack a persisted decision, using the fused
+    decision threshold recorded in metrics.json —
     never a hardcoded default silently overriding the run's own policy.
     """
 

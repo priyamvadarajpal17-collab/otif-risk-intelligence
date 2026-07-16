@@ -1,11 +1,8 @@
 """Held-out evaluation shared across the risk model, Bayesian network, and fusion.
 
-Item 4 of the remediation plan requires XGBoost, Bayesian, and fused probabilities
-to be evaluated independently on the *same* held-out labels with the *same* metric
-set, a simple prevalence baseline for context, and a cause/pathway fidelity check
-against the generator's ground truth. This module intentionally contains no
-model-fitting logic; it only scores already-produced probability columns so the
-same functions can be reused for validation and test splits.
+XGBoost, Bayesian, and fused probabilities are evaluated independently on the
+same held-out labels with the same metrics. This module also provides a prevalence
+baseline and cause/pathway fidelity diagnostics.
 """
 
 from __future__ import annotations
@@ -30,10 +27,8 @@ def score_space_metrics(
 ) -> dict[str, Any]:
     """Select a threshold on ``probabilities`` and return validation metrics.
 
-    Used identically for the XGBoost, Bayesian, and fused score spaces so that
-    each is evaluated, and thresholded, entirely within its own probability
-    space rather than a threshold selected on one score being silently applied
-    to another (the defect this remediation corrects for the fused score).
+    Used identically for the XGBoost, Bayesian, and fused score spaces so each
+    is evaluated and thresholded within its own probability space.
     """
     selection = select_threshold(
         labels,

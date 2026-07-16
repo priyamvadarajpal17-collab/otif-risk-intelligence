@@ -152,7 +152,7 @@ def fit_bayesian_model(
     *,
     smoothing: float = 1.0,
 ) -> BayesianBundle:
-    """Compatibility alias for fitting the Bayesian network."""
+    """Convenience alias for fitting the Bayesian network."""
     return fit_bayesian_network(historical, smoothing=smoothing)
 
 
