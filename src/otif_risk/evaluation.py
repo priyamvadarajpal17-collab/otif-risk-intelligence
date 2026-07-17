@@ -105,6 +105,11 @@ def cause_fidelity_report(
     overall_agreement = (
         float((aligned["predicted"] == aligned["truth"]).mean()) if len(aligned) else float("nan")
     )
+    majority_cause_baseline = (
+        float(aligned["truth"].value_counts(normalize=True).max())
+        if len(aligned)
+        else float("nan")
+    )
     per_cause: dict[str, dict[str, Any]] = {}
     for cause in (*CAUSE_CATEGORIES, "UNKNOWN"):
         mask = aligned["truth"] == cause
@@ -119,12 +124,14 @@ def cause_fidelity_report(
         "evaluated_orders": int(len(aligned)),
         "scope": "held-out OTIF misses only",
         "overall_agreement": overall_agreement,
+        "majority_cause_baseline": majority_cause_baseline,
         "per_cause_recall": per_cause,
         "note": (
             "Agreement compares the evidence-derived primary cause against the "
-            "generator's retrospective ground-truth label on held-out OTIF misses. "
+            "retrospective rule-derived primary cause on held-out OTIF misses. "
             "Successful ON_TIME orders are excluded because they have no failure "
-            "cause to recover. This is a fidelity/association diagnostic, not proof "
-            "that the Bayesian pathway is causally correct."
+            "cause to recover. The reference shares operational evidence with the "
+            "point-in-time scorer, so this measures derivation consistency rather "
+            "than latent simulator-truth recovery or causal correctness."
         ),
     }

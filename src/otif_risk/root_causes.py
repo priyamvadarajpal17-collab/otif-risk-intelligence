@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 
+import numpy as np
 import pandas as pd
 
 from .contracts import CAUSE_CATEGORIES, PrototypeDataset
@@ -41,12 +42,22 @@ def calculate_outcomes(dataset: PrototypeDataset) -> pd.DataFrame:
     return outcomes
 
 
-def _event_evidence(dataset: PrototypeDataset, event_type: str) -> pd.DataFrame:
+def _event_evidence(
+    dataset: PrototypeDataset, event_type: str, order_ids: pd.Index
+) -> pd.DataFrame:
+    """Return per-order event evidence, reindexed so *missing* events are NaN/None.
+
+    Some events are never logged at all (partial observability), so this must
+    not raise on absence -- it must report the absence as "no evidence"
+    (``event_delay_hours`` NaN, ``exception_code`` None), which the caller
+    treats as the rule simply not matching.
+    """
     frame = dataset.events.loc[dataset.events["event_type"] == event_type].copy()
     frame["event_delay_hours"] = (
         frame["event_timestamp"] - frame["planned_timestamp"]
     ).dt.total_seconds() / 3600
-    return frame.set_index("order_id")
+    indexed = frame.drop_duplicates("order_id").set_index("order_id")
+    return indexed.reindex(order_ids)[["event_delay_hours", "exception_code"]]
 
 
 def derive_root_causes(
@@ -59,57 +70,73 @@ def derive_root_causes(
     if missing := required - set(outcomes.columns):
         raise ValueError(f"outcomes missing required columns: {sorted(missing)}")
 
-    orders = dataset.orders.set_index("order_id")
-    lines = dataset.order_lines.groupby("order_id").agg(
-        requested_qty=("requested_qty", "sum"),
-        allocated_qty=("allocated_qty", "sum"),
-        shipped_qty=("shipped_qty", "sum"),
-        stockout_flag=("stockout_flag", "max"),
+    order_ids = pd.Index(outcomes["order_id"])
+    orders = dataset.orders.set_index("order_id").reindex(order_ids)
+    lines = (
+        dataset.order_lines.groupby("order_id")
+        .agg(
+            requested_qty=("requested_qty", "sum"),
+            allocated_qty=("allocated_qty", "sum"),
+            shipped_qty=("shipped_qty", "sum"),
+            stockout_flag=("stockout_flag", "max"),
+        )
+        .reindex(order_ids)
     )
-    vendor = _event_evidence(dataset, "VENDOR_READY")
-    shipped = _event_evidence(dataset, "SHIPPED")
-    transit = _event_evidence(dataset, "IN_TRANSIT")
-    delivered = _event_evidence(dataset, "DELIVERED")
-    capacity = dataset.capacity_snapshots.set_index(["dc_id", "snapshot_date"])
+    vendor = _event_evidence(dataset, "VENDOR_READY", order_ids)
+    shipped = _event_evidence(dataset, "SHIPPED", order_ids)
+    transit = _event_evidence(dataset, "IN_TRANSIT", order_ids)
+    delivered = _event_evidence(dataset, "DELIVERED", order_ids)
+
+    snapshot_keys = list(
+        zip(orders["dc_id"].to_numpy(), orders["order_date"].dt.normalize().to_numpy(), strict=True)
+    )
+    capacity = dataset.capacity_snapshots.set_index(["dc_id", "snapshot_date"])["utilization"]
+    utilization = np.array([float(capacity.get(key, 0.5)) for key in snapshot_keys])
+
+    otif_miss = outcomes.set_index("order_id")["otif_miss"].reindex(order_ids).to_numpy()
+
+    evidence = {
+        "ORDER_CAPTURE": (orders["capture_delay_hours"].astype(float) > 24).to_numpy(),
+        "VENDOR_FAILURE": (
+            (vendor["event_delay_hours"].astype(float) > 24)
+            | (vendor["exception_code"] == "SUPPLIER_LATE")
+        ).to_numpy(),
+        "INVENTORY_SHORTAGE": (
+            lines["shipped_qty"].astype(float) < lines["requested_qty"].astype(float)
+        ).to_numpy(),
+        "DC_CAPACITY": utilization > 0.90,
+        "WAREHOUSE_OPS": (shipped["exception_code"] == "PICK_PACK_DELAY").to_numpy(),
+        "TRANSPORT": (transit["exception_code"] == "CARRIER_DELAY").to_numpy(),
+        "CUSTOMER_DELIVERY": (delivered["exception_code"] == "CUSTOMER_APPOINTMENT").to_numpy(),
+    }
 
     rows: list[dict[str, object]] = []
-    for outcome in outcomes.itertuples(index=False):
-        order_id = outcome.order_id
-        order = orders.loc[order_id]
-        line = lines.loc[order_id]
-        snapshot_key = (order["dc_id"], order["order_date"].normalize())
-        utilization = float(capacity.loc[snapshot_key, "utilization"])
-        evidence = {
-            "ORDER_CAPTURE": float(order["capture_delay_hours"]) > 24,
-            "VENDOR_FAILURE": float(vendor.loc[order_id, "event_delay_hours"]) > 24
-            or vendor.loc[order_id, "exception_code"] == "SUPPLIER_LATE",
-            "INVENTORY_SHORTAGE": bool(line["stockout_flag"])
-            or float(line["allocated_qty"]) < float(line["requested_qty"]),
-            "DC_CAPACITY": utilization > 1.0,
-            "WAREHOUSE_OPS": shipped.loc[order_id, "exception_code"] == "PICK_PACK_DELAY",
-            "TRANSPORT": transit.loc[order_id, "exception_code"] == "CARRIER_DELAY",
-            "CUSTOMER_DELIVERY": (
-                delivered.loc[order_id, "exception_code"] == "CUSTOMER_APPOINTMENT"
-            ),
-        }
+    for row_index, order_id in enumerate(order_ids):
         matched = [
-            cause for cause in CAUSE_PRIORITY if evidence[cause] and int(outcome.otif_miss) == 1
+            cause
+            for cause in CAUSE_PRIORITY
+            if evidence[cause][row_index] and int(otif_miss[row_index]) == 1
         ]
-        primary = matched[0] if matched else ("UNKNOWN" if outcome.otif_miss else "ON_TIME")
+        primary = matched[0] if matched else ("UNKNOWN" if otif_miss[row_index] else "ON_TIME")
         secondary = matched[1:]
+        vendor_delay = vendor["event_delay_hours"].iloc[row_index]
+        capture_delay_hours = float(orders["capture_delay_hours"].iloc[row_index])
         details = {
-            "ORDER_CAPTURE": f"capture delayed {float(order['capture_delay_hours']):.0f}h",
+            "ORDER_CAPTURE": f"capture delayed {capture_delay_hours:.0f}h",
             "VENDOR_FAILURE": (
-                f"vendor ready delayed {float(vendor.loc[order_id, 'event_delay_hours']):.0f}h"
+                f"vendor ready delayed {float(vendor_delay):.0f}h"
+                if pd.notna(vendor_delay)
+                else "vendor ready event not observed"
             ),
             "INVENTORY_SHORTAGE": (
-                f"allocated {int(line['allocated_qty'])}/{int(line['requested_qty'])} units"
+                f"shipped {int(lines['shipped_qty'].iloc[row_index])}/"
+                f"{int(lines['requested_qty'].iloc[row_index])} units"
             ),
-            "DC_CAPACITY": f"DC utilization {utilization:.0%}",
-            "WAREHOUSE_OPS": (f"warehouse exception {shipped.loc[order_id, 'exception_code']}"),
-            "TRANSPORT": f"transport exception {transit.loc[order_id, 'exception_code']}",
+            "DC_CAPACITY": f"DC utilization {utilization[row_index]:.0%}",
+            "WAREHOUSE_OPS": f"warehouse exception {shipped['exception_code'].iloc[row_index]}",
+            "TRANSPORT": f"transport exception {transit['exception_code'].iloc[row_index]}",
             "CUSTOMER_DELIVERY": (
-                f"delivery exception {delivered.loc[order_id, 'exception_code']}"
+                f"delivery exception {delivered['exception_code'].iloc[row_index]}"
             ),
             "UNKNOWN": "OTIF miss with no observable rule evidence",
             "ON_TIME": "order delivered on time and in full",
@@ -122,6 +149,9 @@ def derive_root_causes(
             "confidence": 0.95 if matched else (0.25 if primary == "UNKNOWN" else 1.0),
             "vendor_fault": int("VENDOR_FAILURE" in matched),
         }
+        row.update(
+            {f"stage_{cause}": int(evidence[cause][row_index]) for cause in CAUSE_CATEGORIES}
+        )
         row.update({f"cause_{cause}": int(cause in matched) for cause in CAUSE_CATEGORIES})
         rows.append(row)
     return pd.DataFrame(rows)

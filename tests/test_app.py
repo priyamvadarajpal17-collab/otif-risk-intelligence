@@ -138,3 +138,85 @@ def test_streamlit_three_view_smoke(tmp_path, monkeypatch) -> None:
     navigation.set_value("Hotspots + impact").run()
     assert not app.exception
     assert any(header.value == "Hotspots + impact" for header in app.header)
+
+
+def test_parse_pathway_route_extracts_route_from_json() -> None:
+    from otif_risk.app import _parse_pathway_route
+
+    value = (
+        '{"route": ["VENDOR_FAILURE", "INVENTORY_SHORTAGE", "OTIF_MISS"], '
+        '"posterior_risk": 0.5}'
+    )
+    assert _parse_pathway_route(value) == ["VENDOR_FAILURE", "INVENTORY_SHORTAGE", "OTIF_MISS"]
+    assert _parse_pathway_route("not json") == []
+    assert _parse_pathway_route(None) == []
+
+
+def test_parse_affected_skus_extracts_list() -> None:
+    from otif_risk.app import _parse_affected_skus
+
+    value = '[{"sku_id": "SKU0001", "evidence_strength": 0.4}]'
+    parsed = _parse_affected_skus(value)
+    assert parsed[0]["sku_id"] == "SKU0001"
+    assert _parse_affected_skus(None) == []
+    assert _parse_affected_skus("garbage") == []
+
+
+def test_find_latest_ops_directory_requires_completed_summary(tmp_path) -> None:
+    from otif_risk.app import _find_latest_ops_directory
+
+    assert _find_latest_ops_directory(tmp_path) is None
+    ops_dir = tmp_path / "ops-abc123"
+    ops_dir.mkdir()
+    (ops_dir / "operations_summary.json").write_text("{}", encoding="utf-8")
+    assert _find_latest_ops_directory(tmp_path) == ops_dir
+
+
+def test_find_benchmark_path_detects_presence(tmp_path) -> None:
+    from otif_risk.app import _find_benchmark_path
+
+    assert _find_benchmark_path(tmp_path) is None
+    (tmp_path / "benchmark.json").write_text("{}", encoding="utf-8")
+    assert _find_benchmark_path(tmp_path) is not None
+
+
+def test_streamlit_five_view_smoke(tmp_path, monkeypatch) -> None:
+    _write_fake_run(tmp_path)
+    monkeypatch.setenv("OTIF_ARTIFACTS_DIR", str(tmp_path))
+    app_path = Path(otif_risk.app.__file__)
+
+    app = AppTest.from_file(str(app_path), default_timeout=10).run()
+    assert not app.exception
+
+    for label, expected_header in (
+        ("Operations", "Operations"),
+        ("Model health", "Model health"),
+        ("Bayesian network", "Bayesian network"),
+    ):
+        navigation = next(radio for radio in app.radio if label in radio.options)
+        navigation.set_value(label).run()
+        assert not app.exception
+        assert any(header.value == expected_header for header in app.header)
+
+
+def test_bayesian_graph_svg_highlights_active_route() -> None:
+    from otif_risk.app import _bayesian_graph_svg
+
+    svg = _bayesian_graph_svg(
+        {
+            "evidence": {"VENDOR_FAILURE": 1, "INVENTORY_SHORTAGE": 1},
+            "active_evidence": ["VENDOR_FAILURE", "INVENTORY_SHORTAGE"],
+            "route": [
+                "VENDOR_FAILURE",
+                "INVENTORY_SHORTAGE",
+                "WAREHOUSE_OPS",
+                "TRANSPORT",
+                "OTIF_MISS",
+            ],
+        }
+    )
+
+    assert "Bayesian causal network" in svg
+    assert "VENDOR FAILURE" in svg
+    assert "ACTIVE EVIDENCE" in svg
+    assert "arrow-hot" in svg

@@ -27,7 +27,7 @@ def _split(seed: int, size: int = 48) -> pd.DataFrame:
     return pd.DataFrame(
         {
             "order_id": [f"{seed}-{index}" for index in range(size)],
-            "prediction_timestamp": pd.date_range("2025-01-01", periods=size, freq="h"),
+            "as_of_timestamp": pd.date_range("2025-01-01", periods=size, freq="h"),
             "leading_signal_INVENTORY_SHORTAGE": inventory,
             "leading_signal_TRANSPORT": transport,
             "backlog_zscore": backlog,

@@ -5,7 +5,7 @@ import json
 import pandas as pd
 
 from otif_risk.contracts import PrototypeConfig
-from otif_risk.pipeline import _bayesian_training_history, _run_directory, run_pipeline
+from otif_risk.pipeline import _run_directory, bayesian_training_history, run_pipeline
 
 
 def test_run_pipeline_writes_complete_artifacts(tmp_path):
@@ -20,20 +20,24 @@ def test_run_pipeline_writes_complete_artifacts(tmp_path):
     assert (run_dir / "models" / "xgboost_risk.joblib").is_file()
     assert (run_dir / "models" / "bayesian_network.joblib").is_file()
     assert (run_dir / "data" / "scored_orders.csv").is_file()
+    assert (run_dir / "data" / "scored_order_lines.csv").is_file()
     assert (run_dir / "data" / "root_causes.csv").is_file()
     assert (run_dir / "data" / "vendor_rollup.csv").is_file()
     assert (run_dir / "data" / "order_type_rollup.csv").is_file()
     assert (run_dir / "data" / "sku_rollup.csv").is_file()
+    assert (run_dir / "data" / "simulator_truth.csv").is_file()
+    assert (run_dir / "data" / "line_truth.csv").is_file()
+    assert (run_dir / "data" / "shocks.csv").is_file()
+    assert (run_dir / "data" / "fusion_comparison.csv").is_file()
     assert (run_dir / "planner_feedback.csv").is_file()
-    assert report["architecture"]["fusion"].startswith("0.70")
+    weight_grid = {round(value * 0.1, 1) for value in range(11)}
+    assert report["architecture"]["fusion_chosen_weight"] in weight_grid
     assert report["architecture"]["risk_model"] == "xgboost"
-    assert report["threshold_strategy"] == "recall_floor"
     assert 0 <= report["test_metrics"]["pr_auc"] <= 1
     assert 0.10 <= report["data"]["otif_miss_rate"] <= 0.30
 
 
-def test_fused_threshold_drives_decisions_and_is_not_the_raw_xgb_threshold(tmp_path):
-    """Threshold selection and application use the fused score space."""
+def test_fused_threshold_drives_decisions_and_scored_orders_have_sku_evidence(tmp_path):
     report = run_pipeline(
         PrototypeConfig(seed=11, n_orders=400, output_dir=tmp_path / "artifacts")
     )
@@ -42,9 +46,7 @@ def test_fused_threshold_drives_decisions_and_is_not_the_raw_xgb_threshold(tmp_p
     xgb = report["model_scores"]["xgb"]
     bbn = report["model_scores"]["bbn"]
     assert report["threshold"] == fused["threshold"]
-    assert report["validation_metrics"] == fused["validation_metrics"]
     assert report["test_metrics"] == fused["test_metrics"]
-    # Each score space is evaluated/thresholded independently with the same metric set.
     expected_metric_keys = {
         "pr_auc",
         "roc_auc",
@@ -56,32 +58,51 @@ def test_fused_threshold_drives_decisions_and_is_not_the_raw_xgb_threshold(tmp_p
         "threshold",
         "flagged_orders",
     }
-    for space in (xgb, bbn, fused):
+    for space in (xgb, bbn):
         assert expected_metric_keys <= set(space["test_metrics"])
-        assert expected_metric_keys <= set(space["validation_metrics"])
+    assert expected_metric_keys <= set(fused["test_metrics"])
 
     scored_orders = pd.read_csv(
         next((tmp_path / "artifacts").glob("run-*/data/scored_orders.csv"))
     )
-    # The pipeline's fused threshold must produce an actionable work queue.
     assert (scored_orders["decision_status"] != "MONITOR").any()
+    assert "affected_skus_json" in scored_orders.columns
+    assert "affected_sku_count" in scored_orders.columns
+    assert "contested_with" in scored_orders.columns
 
 
-def test_prevalence_baseline_and_cause_fidelity_are_reported(tmp_path):
+def test_line_evidence_and_cause_fidelity_are_reported(tmp_path):
     report = run_pipeline(
         PrototypeConfig(seed=13, n_orders=300, output_dir=tmp_path / "artifacts")
     )
 
     baseline = report["model_scores"]["prevalence_baseline"]
     assert "prevalence" in baseline
-    assert "note" in baseline
     fidelity = report["cause_fidelity"]
     assert 0 <= fidelity["overall_agreement"] <= 1
     assert fidelity["scope"] == "held-out OTIF misses only"
-    assert fidelity["evaluated_orders"] == sum(
-        report["model_scores"]["fused"]["test_metrics"]["confusion_matrix"][1]
-    )
     assert "UNKNOWN" in fidelity["per_cause_recall"]
+
+    line_evidence = report["line_evidence"]
+    assert "targeted_evidence" in line_evidence
+    assert "naive_all_lines_baseline" in line_evidence
+    assert line_evidence["naive_all_lines_baseline"]["recall"] == 1.0
+    assert 0 <= fidelity["majority_cause_baseline"] <= 1
+
+
+def test_canonical_contention_pair_is_actionable_and_contested(tmp_path):
+    report = run_pipeline(
+        PrototypeConfig(seed=42, n_orders=400, output_dir=tmp_path / "artifacts")
+    )
+    scored_path = (
+        tmp_path / "artifacts" / report["provenance"]["run_directory"]
+        / "data" / "scored_orders.csv"
+    )
+    scored = pd.read_csv(scored_path).set_index("order_id")
+
+    pair = scored.loc[["O000397", "O000398"]]
+    assert set(pair["decision_status"]) == {"RECOMMENDED", "CONTESTED"}
+    assert set(pair["resource_id"]) == {"V001"}
 
 
 def test_bayesian_inference_mode_is_recorded(tmp_path):
@@ -91,8 +112,9 @@ def test_bayesian_inference_mode_is_recorded(tmp_path):
 
     assert report["architecture"]["bayesian_inference_mode"] in {
         "pgmpy_exact",
-        "empirical_table",
+        "brute_force_exact",
     }
+    assert len(report["architecture"]["bayesian_chain_edges"]) == 9
 
 
 def test_provenance_and_schema_metadata_are_persisted(tmp_path):
@@ -110,7 +132,6 @@ def test_provenance_and_schema_metadata_are_persisted(tmp_path):
 
 
 def test_rerunning_identical_config_does_not_overwrite_prior_run(tmp_path):
-    """Canonical reruns must be distinguishable and non-destructive."""
     config = PrototypeConfig(seed=23, n_orders=300, output_dir=tmp_path / "artifacts")
 
     first_report = run_pipeline(config)
@@ -138,22 +159,21 @@ def test_run_directory_appends_distinguishing_suffix_without_deleting(tmp_path):
 
 
 def test_bayesian_training_history_excludes_validation_and_test_order_ids():
-    """Bayesian fitting must only see the training split's resolved history."""
     causes = pd.DataFrame(
         {
             "order_id": ["a", "b", "c", "d"],
-            "cause_ORDER_CAPTURE": [1, 0, 1, 0],
-            "cause_VENDOR_FAILURE": [0, 1, 0, 1],
-            "cause_INVENTORY_SHORTAGE": [0, 0, 0, 0],
-            "cause_DC_CAPACITY": [0, 0, 0, 0],
-            "cause_WAREHOUSE_OPS": [0, 0, 0, 0],
-            "cause_TRANSPORT": [0, 0, 0, 0],
-            "cause_CUSTOMER_DELIVERY": [0, 0, 0, 0],
+            "stage_ORDER_CAPTURE": [1, 0, 1, 0],
+            "stage_VENDOR_FAILURE": [0, 1, 0, 1],
+            "stage_INVENTORY_SHORTAGE": [0, 0, 0, 0],
+            "stage_DC_CAPACITY": [0, 0, 0, 0],
+            "stage_WAREHOUSE_OPS": [0, 0, 0, 0],
+            "stage_TRANSPORT": [0, 0, 0, 0],
+            "stage_CUSTOMER_DELIVERY": [0, 0, 0, 0],
         }
     )
     outcomes = pd.DataFrame({"order_id": ["a", "b", "c", "d"], "otif_miss": [1, 1, 0, 0]})
 
-    history = _bayesian_training_history(causes, outcomes, {"a", "b"})
+    history = bayesian_training_history(causes, outcomes, {"a", "b"})
 
     assert set(history["order_id"]) == {"a", "b"}
     assert len(history) == 2

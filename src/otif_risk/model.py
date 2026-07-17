@@ -26,7 +26,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
 TARGET_COLUMN = "otif_miss"
-ID_COLUMNS = ("order_id", "prediction_timestamp")
+ID_COLUMNS = ("order_id", "as_of_timestamp")
 ENDPOINT = "OTIF_MISS"
 ThresholdStrategy = Literal["capacity", "recall_floor", "f1_max"]
 

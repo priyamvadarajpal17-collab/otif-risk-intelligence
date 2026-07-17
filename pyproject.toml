@@ -26,6 +26,8 @@ dev = ["build>=1.2", "pytest>=8.3", "ruff>=0.9"]
 
 [project.scripts]
 otif-risk = "otif_risk.pipeline:main"
+otif-ops = "otif_risk.operations:main"
+otif-benchmark = "otif_risk.benchmark:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/otif_risk"]
