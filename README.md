@@ -60,43 +60,70 @@ only, no Mermaid CLI or other internet tooling installed or invoked. Regenerate 
 6. Calibrated XGBoost OTIF-risk model (`model.py`; OpenMP-backed on macOS via Homebrew
    `libomp`) plus SHAP explanations with a deterministic perturbation fallback
    (`explain.py`).
-7. A compact causal Bayesian chain (`bayesian.py`) replacing the direct seven-cause
-   star network:
-   `ORDER_CAPTURE→OTIF_MISS`, `VENDOR_FAILURE→INVENTORY_SHORTAGE`,
+7. A 10-node **mechanism Bayesian network** (`bayesian.py`) matching the actual OTIF
+   definition -- "on time" AND "in full" -- instead of one flat seven-cause star:
+   `ORDER_CAPTURE→LATE_DELIVERY`, `VENDOR_FAILURE→INVENTORY_SHORTAGE`,
    `{INVENTORY_SHORTAGE, DC_CAPACITY}→WAREHOUSE_OPS`, `WAREHOUSE_OPS→TRANSPORT`,
-   with direct OTIF paths for inventory shortfall, warehouse delay, transport, and
-   customer delivery. CPTs are smoothed counts fit on training-only operational stage
-   history, including disruptions absorbed by orders that still achieved OTIF; a node is only given as hard
-   evidence once its stage has actually been observed as of the as-of timestamp, so
-   unobserved intermediate stages are marginalized out via exact inference rather than
-   assumed absent. Exact inference uses `pgmpy` variable elimination when available, or
-   a numerically-identical brute-force joint enumeration over this small 8-node network
-   otherwise (see "Bayesian inference mode" below).
-8. Evidence-based fusion (`fusion.py`): compares XGBoost-only, Bayesian-only, the fixed
+   `INVENTORY_SHORTAGE→IN_FULL_FAILURE`,
+   `{ORDER_CAPTURE, WAREHOUSE_OPS, TRANSPORT, CUSTOMER_DELIVERY}→LATE_DELIVERY`,
+   `{IN_FULL_FAILURE, LATE_DELIVERY}→OTIF_MISS`. `IN_FULL_FAILURE`/`LATE_DELIVERY` are
+   fit directly from each training order's own `1 - in_full` / `1 - on_time` outcome, not
+   inferred from the seven-category failure-only cause labels. CPTs are smoothed counts
+   fit on training-only operational stage history, including disruptions absorbed by
+   orders that still achieved OTIF; a node is only given as hard evidence once its stage
+   has actually been observed as of the as-of timestamp, so unobserved intermediate
+   stages (including the two mechanism nodes themselves, which are never directly
+   observable before an order closes) are marginalized out via exact inference rather
+   than assumed absent. Exact inference uses `pgmpy` variable elimination when available,
+   or a numerically-identical brute-force joint enumeration over this small 10-node
+   network otherwise (see "Bayesian inference mode" below).
+8. **Structural intervention scenarios and causal attribution** (`bayesian.py`): for
+   every scored order, `BayesianBundle.intervene` computes exact
+   `P(OTIF_MISS | evidence, do(node=value))` under the fixed network -- a genuine
+   do-operator computation (an intervened node's fitted CPT is replaced by a fixed
+   value, severing its parents' influence on it) always via brute-force enumeration,
+   never through the pgmpy observational-query path. Only operational cause nodes may be
+   intervened on; invalid nodes/values are rejected. Every scored order gets a do(node=0)
+   scenario for each of its active evidence nodes plus one combined-mitigation scenario,
+   each reporting baseline/post-intervention Bayesian posteriors, absolute/relative risk
+   reduction, the mechanism route(s), the assumed operational action, and an explicit
+   "Fixed-structure scenario analysis -- not a proven treatment effect" qualification.
+   Leave-one-evidence-out **evidence attribution** reports how much each active cause
+   node's posterior contribution would change if it were withheld (marginalized) instead
+   of conditioned on -- explicitly labeled `evidence_attribution_leave_one_out`, not SHAP
+   and not a causal-effect estimate. Neither interventions nor attribution ever feed the
+   XGBoost score, the fused score, or the operational decision; they are persisted
+   diagnostics (`causal_attribution_json`, `intervention_scenarios_json`,
+   `causal_confidence`, `evidence_coverage`, `late_delivery_probability`,
+   `in_full_failure_probability`) surfaced only in the Causal Intelligence Studio view.
+9. Evidence-based fusion (`fusion.py`): compares XGBoost-only, Bayesian-only, the fixed
    70/30 blend, and every other convex weight in 10% increments on validation, selecting
    a blend within 0.002 Brier score of the best eligible candidate under a
    fixed-capacity recall guardrail, then preferring more Bayesian contribution among
    practically equivalent candidates (no stacking model). The operating threshold is
    tuned separately for the chosen weight. See
    "Fusion weight selection" below.
-9. Generic resource-aware interventions (`decisions.py` / `resources.py`): a lookup-table
-   mitigation policy plus a capacity-aware conflict check (DC recovery units, lane
-   alternate capacity, vendor escalation slots, customer appointment slots), greedily
-   allocated by priority; overflow is marked `CONTESTED` with the competing orders
-   listed (`contested_with`).
-10. Vendor, DC, lane, customer, order-type, and SKU rollups plus service-impact
+10. Generic resource-aware interventions (`decisions.py` / `resources.py`): a lookup-table
+    mitigation policy plus a capacity-aware conflict check (DC recovery units, lane
+    alternate capacity, vendor escalation slots, customer appointment slots), greedily
+    allocated by priority; overflow is marked `CONTESTED` with the competing orders
+    listed (`contested_with`).
+11. Vendor, DC, lane, customer, order-type, and SKU rollups plus service-impact
     assumptions (`decisions.py`).
-11. Templated, structured planner narratives (risk → evidence → pathway → affected SKUs
-    → action → resource status; `narratives.py`), append-only CSV feedback
-    (`feedback.py`), and a five-view Streamlit control tower (`app.py`) that reuses only
-    persisted decisions.
-12. A local daily **operations replay** (`operations.py`): trains an initial model on a
+12. Templated, structured planner narratives (risk → evidence → pathway → affected SKUs
+    → action → resource status, optionally noting the dominant mechanism and
+    highest-potential structural intervention; `narratives.py`), append-only CSV feedback
+    (`feedback.py`), and a six-view Streamlit control tower (`app.py`) -- including the
+    **Causal Intelligence Studio** view -- that reuses only persisted decisions.
+13. A local daily **operations replay** (`operations.py`): trains an initial model on a
     historical window, then for each simulated day scores every still-open order as of
     that day, allocates daily resource capacities, persists the queue, closes resolved
     orders, derives their actual cause, appends feedback, computes drift (PSI,
     score-distribution shift, missingness change, recent OTIF-rate change), and retrains
     on a documented cadence or drift trigger — persisting a versioned model registry.
-13. A multi-seed benchmark (`benchmark.py`) with explicit acceptance gates.
+14. A multi-seed benchmark (`benchmark.py`) with explicit acceptance gates, including
+    mechanism PR-AUC/Brier, evidence-coverage distribution, and low-confidence rate.
+
 
 ## Point-in-time signals, leakage, and the digital twin
 
@@ -119,7 +146,8 @@ event/outcome cannot change an earlier as-of snapshot's row.
 Cause consistency is evaluated only on held-out OTIF misses (successful orders have no
 failure cause to recover). Bayesian CPTs use separate `stage_X` incident flags that are
 recorded for every closed order, including disruptions that were absorbed without an
-OTIF miss.
+OTIF miss, plus each order's own `on_time`/`in_full` outcome for the two mechanism
+nodes.
 
 ## Threshold and fusion-weight selection
 
@@ -139,15 +167,22 @@ OTIF miss.
 
 ## Bayesian inference mode
 
-The chain is fit **only on the training split's resolved history**
+The network is fit **only on the training split's resolved history**
 (`bayesian_training_history`), matching the same chronological boundary enforced for the
-risk model. `pgmpy` exact inference is used when importable/constructible; when it is
-not, a brute-force joint enumeration over the small 8-node binary network is used
-instead — verified numerically identical to `pgmpy`'s result in
-`tests/test_bayesian.py::test_brute_force_fallback_matches_pgmpy_exact_inference`. Both
-are exact; there is no approximate/empirical fallback. `architecture.bayesian_inference_mode`
-records which one ran (`pgmpy_exact` or `brute_force_exact`), with
-`architecture.bayesian_engine_build_error` set when `pgmpy` was unavailable.
+risk model, and includes `on_time`/`in_full` so the two mechanism nodes
+(`IN_FULL_FAILURE`, `LATE_DELIVERY`) are fit directly from that split's own resolved
+outcomes. `pgmpy` exact inference is used when importable/constructible; when it is not,
+a brute-force joint enumeration over the small 10-node binary network is used instead —
+verified numerically identical to `pgmpy`'s result in
+`tests/test_bayesian.py::test_brute_force_fallback_matches_pgmpy_exact_inference_for_every_query_node`.
+Both are exact for ordinary observational queries; there is no approximate/empirical
+fallback. `architecture.bayesian_inference_mode` records which one ran (`pgmpy_exact` or
+`brute_force_exact`), with `architecture.bayesian_engine_build_error` set when `pgmpy` was
+unavailable. **Structural interventions always use brute-force enumeration**, regardless
+of which engine scored the observational query, because this prototype does not
+implement/verify pgmpy's do-operator support (see
+`tests/test_bayesian.py::test_intervention_severs_parent_influence_and_can_differ_from_conditioning`,
+which shows a genuine do-vs-conditioning divergence at a collider node).
 
 ## Resource conflicts
 
@@ -212,6 +247,17 @@ uv run python -m build
   `metrics.json` compares the evidence-derived primary cause against the retrospective
   rule-derived cause. Because both use operational evidence, this is a consistency
   diagnostic rather than latent-cause recovery.
+- **Structural intervention scenarios are not proven treatment effects.**
+  `intervention_scenarios_json`/`BayesianBundle.intervene` compute an exact
+  `do(node=value)` posterior under this fixed, fitted network's assumptions -- a
+  "fixed-structure causal scenario analysis," never an identified or randomized causal
+  effect. They never feed the XGBoost score, the fused score, or the operational
+  decision; `causal_consistency` in `metrics.json` reports agreement rates against
+  independent reference labels as a *consistency* diagnostic, explicitly distinguished
+  from causal validation.
+- **Evidence attribution is not SHAP.** `causal_attribution_json`'s leave-one-evidence-out
+  contribution measures this fixed network's sensitivity to withholding one observed
+  cause node, labeled `evidence_attribution_leave_one_out`.
 - The fusion weight is chosen on validation only, from a fixed, explainable grid; no
   stacking model is fit.
 - Financial impact uses documented assumptions and is illustrative.

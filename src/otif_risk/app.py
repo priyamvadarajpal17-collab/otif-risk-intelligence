@@ -11,7 +11,7 @@ from typing import Any
 import pandas as pd
 import streamlit as st
 
-from otif_risk.bayesian import CHAIN_PARENTS
+from otif_risk.bayesian import CHAIN_PARENTS, IN_FULL_FAILURE, LATE_DELIVERY
 from otif_risk.decisions import (
     DEFAULT_RISK_THRESHOLD,
     build_rollups,
@@ -79,72 +79,154 @@ def _parse_pathway(value: Any) -> dict[str, Any]:
     return parsed if isinstance(parsed, dict) else {}
 
 
-def _bayesian_graph_svg(pathway: dict[str, Any]) -> str:
-    """Render the fixed Bayesian graph, highlighting one order's evidence and route."""
-    positions = {
-        "ORDER_CAPTURE": (95, 55),
-        "VENDOR_FAILURE": (95, 155),
-        "DC_CAPACITY": (95, 255),
-        "CUSTOMER_DELIVERY": (95, 355),
-        "INVENTORY_SHORTAGE": (350, 155),
-        "WAREHOUSE_OPS": (570, 215),
-        "TRANSPORT": (790, 215),
-        "OTIF_MISS": (1010, 215),
-    }
-    node_width, node_height = 170, 50
-    route = [str(node) for node in pathway.get("route", [])]
-    route_edges = set(zip(route, route[1:], strict=False))
-    evidence = pathway.get("evidence", {})
-    active = set(str(node) for node in pathway.get("active_evidence", []))
+def _parse_json_list(value: Any) -> list[dict[str, Any]]:
+    if not isinstance(value, str) or not value.strip():
+        return []
+    try:
+        parsed = json.loads(value)
+    except json.JSONDecodeError:
+        return []
+    return [item for item in parsed if isinstance(item, dict)] if isinstance(parsed, list) else []
+
+
+#: Fixed layout for the 10-node mechanism graph. Roots on the left, the two
+#: operational propagation stages in the middle, the IN_FULL_FAILURE (quantity)
+#: and LATE_DELIVERY (timing) mechanism nodes just before the OTIF_MISS
+#: endpoint on the right -- mirroring the actual OTIF ("on time" AND "in
+#: full") definition instead of one flat star of causes.
+_GRAPH_POSITIONS: dict[str, tuple[int, int]] = {
+    "ORDER_CAPTURE": (95, 55),
+    "VENDOR_FAILURE": (95, 175),
+    "DC_CAPACITY": (95, 295),
+    "CUSTOMER_DELIVERY": (95, 415),
+    "INVENTORY_SHORTAGE": (365, 175),
+    "WAREHOUSE_OPS": (620, 245),
+    "TRANSPORT": (875, 245),
+    IN_FULL_FAILURE: (1105, 105),
+    LATE_DELIVERY: (1105, 375),
+    "OTIF_MISS": (1340, 245),
+}
+_GRAPH_NODE_WIDTH, _GRAPH_NODE_HEIGHT = 190, 52
+_GRAPH_STATUS_STYLE: dict[str, dict[str, str]] = {
+    "evidence": {"fill": "#e7eef5", "stroke": "#2b5b8c", "label": "ACTIVE EVIDENCE", "dash": ""},
+    "propagation": {
+        "fill": "#f7e6da",
+        "stroke": "#e3522c",
+        "label": "ACTIVE PROPAGATION",
+        "dash": "",
+    },
+    "intervened": {
+        "fill": "#e1f0e5",
+        "stroke": "#2f7d4f",
+        "label": "INTERVENED (SCENARIO)",
+        "dash": "",
+    },
+    "observed_clear": {
+        "fill": "#fffdf7",
+        "stroke": "#34362f",
+        "label": "OBSERVED CLEAR",
+        "dash": "",
+    },
+    "unknown": {"fill": "#efece2", "stroke": "#53635c", "label": "UNOBSERVED", "dash": "5,4"},
+}
+
+
+def _node_status(node: str, pathway: dict[str, Any], intervened_nodes: set[str]) -> str:
+    if node in intervened_nodes:
+        return "intervened"
+    evidence = pathway.get("evidence", {}) or {}
+    active = {str(item) for item in pathway.get("active_evidence", [])}
+    routes = pathway.get("routes") or ([pathway["route"]] if pathway.get("route") else [])
+    on_route = any(node in route for route in routes)
+    if node in active:
+        return "evidence"
+    if on_route:
+        return "propagation"
+    if node in evidence:
+        return "observed_clear"
+    return "unknown"
+
+
+def _causal_graph_svg(
+    pathway: dict[str, Any], intervened_nodes: set[str] | None = None
+) -> str:
+    """Render the 10-node mechanism graph, highlighting one order's evidence,
+
+    active propagation route(s), and -- when a structural-intervention
+    scenario is being inspected -- the intervened node(s) in green (green is
+    reserved exclusively for simulated risk reduction in this app, never for
+    an actual observed/decision state).
+    """
+    intervened_nodes = intervened_nodes or set()
+    evidence = pathway.get("evidence", {}) or {}
+    routes = pathway.get("routes") or ([pathway["route"]] if pathway.get("route") else [])
+    route_edges = {edge for route in routes for edge in zip(route, route[1:], strict=False)}
 
     edge_parts: list[str] = []
     for target, parents in CHAIN_PARENTS.items():
         for source in parents:
-            source_x, source_y = positions[source]
-            target_x, target_y = positions[target]
+            source_x, source_y = _GRAPH_POSITIONS[source]
+            target_x, target_y = _GRAPH_POSITIONS[target]
+            severed = target in intervened_nodes
             highlighted = (source, target) in route_edges
-            color = "#e3522c" if highlighted else "#7b8078"
-            width = 4 if highlighted else 2
+            if severed:
+                color, width, dash, marker = "#2f7d4f", 2.5, "6,4", "severed"
+            elif highlighted:
+                color, width, dash, marker = "#e3522c", 4, "", "hot"
+            else:
+                color, width, dash, marker = "#8a8d84", 2, "", "base"
+            dash_attr = f' stroke-dasharray="{dash}"' if dash else ""
             edge_parts.append(
-                f'<path d="M {source_x + node_width / 2:.0f} {source_y:.0f} '
-                f'L {target_x - node_width / 2:.0f} {target_y:.0f}" '
-                f'stroke="{color}" stroke-width="{width}" fill="none" '
-                f'marker-end="url(#arrow-{"hot" if highlighted else "base"})"/>'
+                f'<path d="M {source_x + _GRAPH_NODE_WIDTH / 2:.0f} {source_y:.0f} '
+                f'L {target_x - _GRAPH_NODE_WIDTH / 2:.0f} {target_y:.0f}" '
+                f'stroke="{color}" stroke-width="{width}" fill="none"{dash_attr} '
+                f'marker-end="url(#arrow-{marker})"/>'
             )
 
     node_parts: list[str] = []
-    for node, (x, y) in positions.items():
-        is_active = node in active
-        is_route = node in route
-        fill = "#f7e6da" if is_route else ("#e7eef5" if is_active else "#fffdf7")
-        stroke = "#e3522c" if is_route else ("#2b5b8c" if is_active else "#34362f")
+    for node, (x, y) in _GRAPH_POSITIONS.items():
+        status = _node_status(node, pathway, intervened_nodes)
+        style = _GRAPH_STATUS_STYLE[status]
         value = evidence.get(node)
-        status = "ACTIVE EVIDENCE" if value == 1 else ("OBSERVED CLEAR" if value == 0 else "")
+        detail = style["label"]
+        if status in {"evidence", "observed_clear"} and value is not None:
+            detail = f"{style['label']} ({value})"
         label = escape(node.replace("_", " "))
+        dash_attr = f' stroke-dasharray="{style["dash"]}"' if style["dash"] else ""
         node_parts.append(
-            f'<g><rect x="{x - node_width / 2}" y="{y - node_height / 2}" '
-            f'width="{node_width}" height="{node_height}" rx="5" fill="{fill}" '
-            f'stroke="{stroke}" stroke-width="{3 if is_route or is_active else 1.5}"/>'
-            f'<text x="{x}" y="{y - 2}" text-anchor="middle" fill="#16201c" '
+            f'<g><rect x="{x - _GRAPH_NODE_WIDTH / 2}" y="{y - _GRAPH_NODE_HEIGHT / 2}" '
+            f'width="{_GRAPH_NODE_WIDTH}" height="{_GRAPH_NODE_HEIGHT}" rx="5" '
+            f'fill="{style["fill"]}" stroke="{style["stroke"]}" stroke-width="3"{dash_attr}/>'
+            f'<text x="{x}" y="{y - 3}" text-anchor="middle" fill="#16201c" '
             f'font-size="13" font-weight="700">{label}</text>'
             f'<text x="{x}" y="{y + 15}" text-anchor="middle" fill="#53635c" '
-            f'font-size="9">{status}</text></g>'
+            f'font-size="8.5">{escape(detail)}</text></g>'
         )
 
+    width, height = 1440, 480
     return (
-        '<svg viewBox="0 0 1120 420" width="100%" role="img" '
-        'aria-label="Bayesian causal network">'
-        '<defs><marker id="arrow-base" markerWidth="8" markerHeight="8" refX="7" refY="3" '
-        'orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#7b8078"/></marker>'
+        f'<svg viewBox="0 0 {width} {height}" width="100%" role="img" '
+        'aria-label="Causal intelligence mechanism network">'
+        '<defs>'
+        '<marker id="arrow-base" markerWidth="8" markerHeight="8" refX="7" refY="3" '
+        'orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#8a8d84"/></marker>'
         '<marker id="arrow-hot" markerWidth="8" markerHeight="8" refX="7" refY="3" '
-        'orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#e3522c"/></marker></defs>'
-        '<rect width="1120" height="420" fill="#f2f0e8" rx="8"/>'
+        'orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#e3522c"/></marker>'
+        '<marker id="arrow-severed" markerWidth="8" markerHeight="8" refX="7" refY="3" '
+        'orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#2f7d4f"/></marker>'
+        "</defs>"
+        f'<rect width="{width}" height="{height}" fill="#f2f0e8" rx="8"/>'
         + "".join(edge_parts)
         + "".join(node_parts)
-        + '<text x="24" y="402" fill="#53635c" font-size="11">'
-        "Blue = active evidence · Orange = selected route · Gray = fixed model structure"
+        + f'<text x="24" y="{height - 14}" fill="#53635c" font-size="11">'
+        "Blue = active evidence &#183; Orange = active propagation &#183; "
+        "Green = intervened (scenario) &#183; Gray dashed = unobserved"
         "</text></svg>"
     )
+
+
+#: Kept as a private alias: earlier iterations called this the "Bayesian graph".
+_bayesian_graph_svg = _causal_graph_svg
 
 
 def _parse_affected_skus(value: Any) -> list[dict[str, Any]]:
@@ -230,6 +312,7 @@ def _inject_style() -> None:
         :root {
             --ink: #16201c; --signal: #e3522c; --steel: #53635c;
             --paper: #f2f0e8; --panel: #fffdf7; --line: #c8c6bc;
+            --signal-blue: #2b5b8c; --safe-green: #2f7d4f;
         }
         .stApp, [data-testid="stAppViewContainer"] {
             background:
@@ -388,7 +471,7 @@ def _portfolio(decisions: pd.DataFrame) -> None:
         use_container_width=True,
         column_config={
             "combined_risk_score": st.column_config.ProgressColumn(
-                "Risk", min_value=0.0, max_value=1.0, format="%.0%%"
+                "Risk", min_value=0.0, max_value=1.0, format="percent"
             ),
             "estimated_penalty_exposure": st.column_config.NumberColumn(
                 "Penalty exposure", format="$%.2f"
@@ -555,11 +638,17 @@ def _model_health_view(artifacts_root: str, metrics: dict[str, Any]) -> None:
         st.caption(architecture["fusion"])
 
 
-def _bayesian_network_view(decisions: pd.DataFrame, metrics: dict[str, Any]) -> None:
-    st.header("Bayesian network")
+def _confidence_badge_color(band: str) -> str:
+    return {"HIGH": "#2f7d4f", "MEDIUM": "#c8862b", "LOW": "#a63b2a"}.get(band, "#53635c")
+
+
+def _causal_intelligence_view(decisions: pd.DataFrame, metrics: dict[str, Any]) -> None:
+    st.header("Causal intelligence")
     st.caption(
-        "A compact operational pathway model. It explains how observed disruption can "
-        "propagate; XGBoost remains the primary predictive model."
+        "A 10-node mechanism graph splits OTIF risk into its two real components -- "
+        "IN_FULL_FAILURE (quantity) and LATE_DELIVERY (timing) -- feeding one OTIF_MISS "
+        "endpoint. XGBoost remains the primary predictive model; this view is "
+        "decision-support analysis, not a second decision engine."
     )
     order_ids = decisions["order_id"].astype(str).tolist()
     default_index = next(
@@ -570,29 +659,91 @@ def _bayesian_network_view(decisions: pd.DataFrame, metrics: dict[str, Any]) -> 
         ),
         0,
     )
-    selected_id = st.selectbox("Inspect order", order_ids, index=default_index, key="bbn-order")
+    selected_id = st.selectbox("Inspect order", order_ids, index=default_index, key="causal-order")
     order = decisions.loc[decisions["order_id"].astype(str) == selected_id].iloc[0]
     pathway = _parse_pathway(order.get("causal_pathway"))
+    attribution = _parse_json_list(order.get("causal_attribution_json"))
+    scenarios = _parse_json_list(order.get("intervention_scenarios_json"))
+    confidence = str(order.get("causal_confidence", pathway.get("confidence", "MEDIUM")))
+    coverage = float(order.get("evidence_coverage", pathway.get("evidence_coverage", 0.0)))
 
-    columns = st.columns(4)
-    columns[0].metric("Bayesian posterior", f"{float(order.get('bbn_risk_score', 0)):.1%}")
-    columns[1].metric("XGBoost risk", f"{float(order.get('xgb_risk_score', 0)):.1%}")
-    columns[2].metric("Combined risk", f"{float(order.get('combined_risk_score', 0)):.1%}")
-    columns[3].metric(
-        "Evidence delta",
-        f"{float(pathway.get('evidence_delta', 0)):+.1%}",
+    headline = st.columns(5)
+    headline[0].metric("Bayesian posterior", f"{float(order.get('bbn_risk_score', 0)):.1%}")
+    headline[1].metric("XGBoost risk", f"{float(order.get('xgb_risk_score', 0)):.1%}")
+    headline[2].metric("Combined risk", f"{float(order.get('combined_risk_score', 0)):.1%}")
+    headline[3].metric("Evidence coverage", f"{coverage:.0%}")
+    headline[4].markdown(
+        f'<div style="padding-top:1.6rem"><span class="status-strip" '
+        f'style="background:{_confidence_badge_color(confidence)}">{confidence} '
+        "CONFIDENCE</span></div>",
+        unsafe_allow_html=True,
     )
-    st.markdown(_bayesian_graph_svg(pathway), unsafe_allow_html=True)
+
+    st.subheader("Mechanism split: why an order misses OTIF")
+    mechanism_columns = st.columns(2)
+    mechanism_posteriors = pathway.get("mechanism_posteriors", {})
+    late_probability = float(
+        order.get("late_delivery_probability", mechanism_posteriors.get(LATE_DELIVERY, 0))
+    )
+    in_full_probability = float(
+        order.get("in_full_failure_probability", mechanism_posteriors.get(IN_FULL_FAILURE, 0))
+    )
+    with mechanism_columns[0]:
+        st.metric("P(Late delivery) -- timing failure", f"{late_probability:.1%}")
+        st.progress(min(max(late_probability, 0.0), 1.0))
+    with mechanism_columns[1]:
+        st.metric("P(In-full failure) -- quantity failure", f"{in_full_probability:.1%}")
+        st.progress(min(max(in_full_probability, 0.0), 1.0))
+
+    st.subheader("Mechanism graph")
+    scenario_labels = ["Baseline (no intervention)"] + [
+        _scenario_label(scenario) for scenario in scenarios
+    ]
+    scenario_choice = st.selectbox(
+        "Highlight a structural-intervention scenario",
+        scenario_labels,
+        key="causal-scenario",
+    )
+    chosen_scenario = (
+        scenarios[scenario_labels.index(scenario_choice) - 1]
+        if scenario_choice != "Baseline (no intervention)"
+        else None
+    )
+    intervened_nodes = set(chosen_scenario["intervened_nodes"]) if chosen_scenario else set()
+    st.markdown(_causal_graph_svg(pathway, intervened_nodes), unsafe_allow_html=True)
 
     left, right = st.columns([3, 2])
     with left:
-        st.subheader("Order pathway")
-        route = pathway.get("route", [])
-        if route:
-            st.markdown(" → ".join(f"`{node}`" for node in route))
+        st.subheader("Evidence attribution")
+        st.caption(
+            "Leave-one-evidence-out contribution -- not SHAP, not a causal effect estimate."
+        )
+        if attribution:
+            attribution_table = pd.DataFrame(
+                [
+                    {
+                        "node": row["node"],
+                        "contribution": row["contribution"],
+                        "direction": row["direction"],
+                        "observed": row.get("observed", True),
+                    }
+                    for row in attribution
+                ]
+            )
+            st.dataframe(
+                attribution_table,
+                hide_index=True,
+                use_container_width=True,
+                column_config={
+                    "contribution": st.column_config.NumberColumn(
+                        "Contribution to posterior", format="%+.3f"
+                    ),
+                },
+            )
         else:
-            st.caption("No elevated route for this order.")
+            st.caption("No active evidence to attribute for this order.")
         st.write(
+            f"**Route(s):** {_routes_text(pathway)}  \n"
             f"**Prior risk:** {float(pathway.get('prior_risk', 0)):.1%}  \n"
             f"**Posterior risk:** {float(pathway.get('posterior_risk', 0)):.1%}  \n"
             f"**Inference:** {pathway.get('inference_mode', 'not available')}"
@@ -616,6 +767,122 @@ def _bayesian_network_view(decisions: pd.DataFrame, metrics: dict[str, Any]) -> 
             "The pathway is a probabilistic association within a fixed expert-defined "
             "structure, not proof of causality."
         )
+
+    st.subheader("Structural intervention scenarios")
+    st.markdown(
+        '<span class="status-strip" style="background:#2f7d4f">Fixed-structure scenario '
+        "analysis — not proven treatment effect</span>",
+        unsafe_allow_html=True,
+    )
+    if scenarios:
+        scenario_table = pd.DataFrame(
+            [
+                {
+                    "scenario": _scenario_label(scenario),
+                    "baseline_posterior": scenario["baseline_bayesian_posterior"],
+                    "post_intervention_posterior": scenario["post_intervention_bayesian_posterior"],
+                    "absolute_risk_reduction": scenario["absolute_risk_reduction"],
+                    "relative_risk_reduction": scenario["relative_risk_reduction"],
+                }
+                for scenario in scenarios
+            ]
+        )
+        st.dataframe(
+            scenario_table,
+            hide_index=True,
+            use_container_width=True,
+            column_config={
+                "baseline_posterior": st.column_config.NumberColumn(
+                    "Baseline Bayesian posterior", format="percent"
+                ),
+                "post_intervention_posterior": st.column_config.NumberColumn(
+                    "Post-intervention posterior", format="percent"
+                ),
+                "absolute_risk_reduction": st.column_config.NumberColumn(
+                    "Simulated absolute reduction", format="percent"
+                ),
+                "relative_risk_reduction": st.column_config.NumberColumn(
+                    "Simulated relative reduction", format="percent"
+                ),
+            },
+        )
+        if chosen_scenario:
+            st.info(_why_this_changed_text(chosen_scenario))
+        st.caption(
+            "Selecting a scenario only changes what is highlighted above -- it never "
+            "recomputes the persisted XGBoost score, fused score, or decision status "
+            "shown elsewhere in this app."
+        )
+    else:
+        st.caption(
+            "No active evidence on this order, so there is nothing to mitigate: no "
+            "structural-intervention scenarios are computed."
+        )
+
+    st.subheader("Model diagnostics")
+    diagnostics_columns = st.columns(4)
+    if bbn_metrics:
+        diagnostics_columns[0].metric(
+            "Bayesian standalone Brier", f"{float(bbn_metrics.get('brier', 0)):.3f}"
+        )
+    mechanism_metrics = metrics.get("mechanism_metrics", {})
+    late_mechanism = mechanism_metrics.get("late_delivery", {})
+    in_full_mechanism = mechanism_metrics.get("in_full_failure", {})
+    diagnostics_columns[1].metric(
+        "Late-delivery mechanism PR-AUC", f"{float(late_mechanism.get('pr_auc', 0) or 0):.3f}"
+    )
+    diagnostics_columns[2].metric(
+        "In-full mechanism PR-AUC", f"{float(in_full_mechanism.get('pr_auc', 0) or 0):.3f}"
+    )
+    confidence_diag = metrics.get("causal_confidence_diagnostics", {})
+    diagnostics_columns[3].metric(
+        "Low-confidence rate", f"{float(confidence_diag.get('low_confidence_rate', 0) or 0):.0%}"
+    )
+    consistency = metrics.get("causal_consistency", {})
+    if consistency:
+        attribution_agreement = float(consistency.get("top_attribution_vs_rule_cause", 0) or 0)
+        intervention_agreement = float(
+            consistency.get("top_intervention_vs_simulator_responsive_cause", 0) or 0
+        )
+        st.caption(
+            f"Top-attribution vs. rule-derived cause agreement: {attribution_agreement:.0%} · "
+            "Top-intervention vs. simulator-responsive cause agreement: "
+            f"{intervention_agreement:.0%} (consistency diagnostics, not causal validation)."
+        )
+
+
+def _scenario_label(scenario: dict[str, Any]) -> str:
+    nodes = ", ".join(str(node).replace("_", " ").title() for node in scenario["intervened_nodes"])
+    reduction = float(scenario.get("absolute_risk_reduction", 0.0))
+    kind = "Combined mitigation" if scenario.get("type") == "combined_mitigation" else "Mitigate"
+    # Signed format (not a manual "-" prefix): a scenario can structurally
+    # *increase* the modeled posterior (e.g. a screened-off or collider node),
+    # and this must render as a genuine increase, not a double negative.
+    return f"{kind}: {nodes} ({-reduction:+.0%} modeled risk)"
+
+
+def _routes_text(pathway: dict[str, Any]) -> str:
+    routes = pathway.get("routes") or ([pathway["route"]] if pathway.get("route") else [])
+    if not routes:
+        return "no active evidence route"
+    return "; ".join(" → ".join(route) for route in routes)
+
+
+def _why_this_changed_text(scenario: dict[str, Any]) -> str:
+    nodes = ", ".join(str(node).replace("_", " ").title() for node in scenario["intervened_nodes"])
+    baseline = float(scenario["baseline_bayesian_posterior"])
+    post = float(scenario["post_intervention_bayesian_posterior"])
+    absolute = float(scenario["absolute_risk_reduction"])
+    relative = float(scenario["relative_risk_reduction"])
+    actions = ", ".join(item["action"] for item in scenario.get("assumed_actions", []))
+    return (
+        f"Why this changed: mitigating {nodes} (assumed action: {actions or 'operational fix'}) "
+        f"moves the Bayesian posterior from {baseline:.1%} to {post:.1%} -- a "
+        f"{absolute:+.1%} absolute / {relative:.0%} relative reduction under this fixed "
+        "network's assumptions. Fixed-structure scenario analysis — not a proven "
+        "treatment effect; it does not change the XGBoost score, the fused score, or "
+        "the operational decision."
+    )
 
 
 def main(artifacts_root: str | Path | None = None) -> None:
@@ -646,7 +913,7 @@ def main(artifacts_root: str | Path | None = None) -> None:
                 "Hotspots + impact",
                 "Operations",
                 "Model health",
-                "Bayesian network",
+                "Causal intelligence",
             ],
             label_visibility="collapsed",
         )
@@ -659,8 +926,8 @@ def main(artifacts_root: str | Path | None = None) -> None:
         _hotspots_and_impact(decisions, run_directory)
     elif view == "Operations":
         _operations_view(str(root.resolve()))
-    elif view == "Bayesian network":
-        _bayesian_network_view(decisions, metrics)
+    elif view == "Causal intelligence":
+        _causal_intelligence_view(decisions, metrics)
     else:
         _model_health_view(str(root.resolve()), metrics)
 

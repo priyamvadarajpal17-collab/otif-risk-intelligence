@@ -74,3 +74,64 @@ def test_narrative_degrades_gracefully_without_pathway_or_sku_evidence() -> None
     assert "no causal pathway" in narrative
     assert "no affected-SKU evidence" in narrative
     assert "resource status: monitor" in narrative
+
+
+def test_narrative_optionally_mentions_dominant_mechanism_and_top_intervention() -> None:
+    order = {
+        "order_id": "O-7",
+        "combined_risk_score": 0.7,
+        "primary_cause": "VENDOR_FAILURE",
+        "decision_status": "RECOMMENDED",
+        "recommended_action": "Escalate supplier recovery",
+        "late_delivery_probability": 0.62,
+        "in_full_failure_probability": 0.2,
+        "intervention_scenarios_json": (
+            '[{"type":"single_node_mitigation","intervened_nodes":["VENDOR_FAILURE"],'
+            '"absolute_risk_reduction":0.18},'
+            '{"type":"combined_mitigation","intervened_nodes":["VENDOR_FAILURE","DC_CAPACITY"],'
+            '"absolute_risk_reduction":0.5}]'
+        ),
+    }
+
+    narrative = order_narrative(order)
+
+    assert "dominant mechanism: late delivery (62%)" in narrative
+    assert "Vendor Failure" in narrative
+    assert "18%" in narrative
+    assert "fixed-structure scenario analysis" in narrative
+    assert "not a proven treatment effect" in narrative
+    assert "\n" not in narrative
+
+
+def test_narrative_omits_top_intervention_clause_when_best_scenario_does_not_reduce_risk() -> None:
+    """A screened-off or risk-increasing 'best' scenario must not be narrated as a win."""
+    order = {
+        "order_id": "O-9",
+        "combined_risk_score": 0.5,
+        "primary_cause": "WAREHOUSE_OPS",
+        "decision_status": "RECOMMENDED",
+        "intervention_scenarios_json": (
+            '[{"type":"single_node_mitigation","intervened_nodes":["VENDOR_FAILURE"],'
+            '"absolute_risk_reduction":0.0},'
+            '{"type":"single_node_mitigation","intervened_nodes":["WAREHOUSE_OPS"],'
+            '"absolute_risk_reduction":-0.02}]'
+        ),
+    }
+
+    narrative = order_narrative(order)
+
+    assert "structural scenario" not in narrative
+
+
+def test_narrative_omits_mechanism_clause_when_fields_absent() -> None:
+    order = {
+        "order_id": "O-8",
+        "combined_risk_score": 0.3,
+        "primary_cause": "TRANSPORT",
+        "decision_status": "MONITOR",
+    }
+
+    narrative = order_narrative(order)
+
+    assert "dominant mechanism" not in narrative
+    assert "structural scenario" not in narrative

@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 946 1568" role="img" aria-labelledby="title desc" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1134 1568" role="img" aria-labelledby="title desc" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif">
   <title id="title">Target architecture</title>
-  <desc id="desc">Noisy digital twin, compact causal chain, evidence-based fusion, resource-aware ops loop.</desc>
+  <desc id="desc">This iteration: Causal Intelligence Studio -- a 10-node mechanism Bayesian network (IN_FULL_FAILURE / LATE_DELIVERY -&gt; OTIF_MISS) plus exact structural do-operator scenarios, decision-support only.</desc>
   <defs>
     <marker id="arrow-flow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
       <path d="M 0 0 L 10 5 L 0 10 z" fill="#20211d"/>
@@ -15,7 +15,7 @@
       <path d="M 0 0 L 10 5 L 0 10 z" fill="#5b5f57"/>
     </marker>
   </defs>
-  <rect x="0" y="0" width="946" height="1568" fill="#f2ede1"/>
+  <rect x="0" y="0" width="1134" height="1568" fill="#f2ede1"/>
   <g opacity="0.55">
 <line x1="0" y1="0" x2="0" y2="1568" stroke="#20211d14"/>
 <line x1="28" y1="0" x2="28" y2="1568" stroke="#20211d14"/>
@@ -51,65 +51,72 @@
 <line x1="868" y1="0" x2="868" y2="1568" stroke="#20211d14"/>
 <line x1="896" y1="0" x2="896" y2="1568" stroke="#20211d14"/>
 <line x1="924" y1="0" x2="924" y2="1568" stroke="#20211d14"/>
-<line x1="0" y1="0" x2="946" y2="0" stroke="#20211d14"/>
-<line x1="0" y1="28" x2="946" y2="28" stroke="#20211d14"/>
-<line x1="0" y1="56" x2="946" y2="56" stroke="#20211d14"/>
-<line x1="0" y1="84" x2="946" y2="84" stroke="#20211d14"/>
-<line x1="0" y1="112" x2="946" y2="112" stroke="#20211d14"/>
-<line x1="0" y1="140" x2="946" y2="140" stroke="#20211d14"/>
-<line x1="0" y1="168" x2="946" y2="168" stroke="#20211d14"/>
-<line x1="0" y1="196" x2="946" y2="196" stroke="#20211d14"/>
-<line x1="0" y1="224" x2="946" y2="224" stroke="#20211d14"/>
-<line x1="0" y1="252" x2="946" y2="252" stroke="#20211d14"/>
-<line x1="0" y1="280" x2="946" y2="280" stroke="#20211d14"/>
-<line x1="0" y1="308" x2="946" y2="308" stroke="#20211d14"/>
-<line x1="0" y1="336" x2="946" y2="336" stroke="#20211d14"/>
-<line x1="0" y1="364" x2="946" y2="364" stroke="#20211d14"/>
-<line x1="0" y1="392" x2="946" y2="392" stroke="#20211d14"/>
-<line x1="0" y1="420" x2="946" y2="420" stroke="#20211d14"/>
-<line x1="0" y1="448" x2="946" y2="448" stroke="#20211d14"/>
-<line x1="0" y1="476" x2="946" y2="476" stroke="#20211d14"/>
-<line x1="0" y1="504" x2="946" y2="504" stroke="#20211d14"/>
-<line x1="0" y1="532" x2="946" y2="532" stroke="#20211d14"/>
-<line x1="0" y1="560" x2="946" y2="560" stroke="#20211d14"/>
-<line x1="0" y1="588" x2="946" y2="588" stroke="#20211d14"/>
-<line x1="0" y1="616" x2="946" y2="616" stroke="#20211d14"/>
-<line x1="0" y1="644" x2="946" y2="644" stroke="#20211d14"/>
-<line x1="0" y1="672" x2="946" y2="672" stroke="#20211d14"/>
-<line x1="0" y1="700" x2="946" y2="700" stroke="#20211d14"/>
-<line x1="0" y1="728" x2="946" y2="728" stroke="#20211d14"/>
-<line x1="0" y1="756" x2="946" y2="756" stroke="#20211d14"/>
-<line x1="0" y1="784" x2="946" y2="784" stroke="#20211d14"/>
-<line x1="0" y1="812" x2="946" y2="812" stroke="#20211d14"/>
-<line x1="0" y1="840" x2="946" y2="840" stroke="#20211d14"/>
-<line x1="0" y1="868" x2="946" y2="868" stroke="#20211d14"/>
-<line x1="0" y1="896" x2="946" y2="896" stroke="#20211d14"/>
-<line x1="0" y1="924" x2="946" y2="924" stroke="#20211d14"/>
-<line x1="0" y1="952" x2="946" y2="952" stroke="#20211d14"/>
-<line x1="0" y1="980" x2="946" y2="980" stroke="#20211d14"/>
-<line x1="0" y1="1008" x2="946" y2="1008" stroke="#20211d14"/>
-<line x1="0" y1="1036" x2="946" y2="1036" stroke="#20211d14"/>
-<line x1="0" y1="1064" x2="946" y2="1064" stroke="#20211d14"/>
-<line x1="0" y1="1092" x2="946" y2="1092" stroke="#20211d14"/>
-<line x1="0" y1="1120" x2="946" y2="1120" stroke="#20211d14"/>
-<line x1="0" y1="1148" x2="946" y2="1148" stroke="#20211d14"/>
-<line x1="0" y1="1176" x2="946" y2="1176" stroke="#20211d14"/>
-<line x1="0" y1="1204" x2="946" y2="1204" stroke="#20211d14"/>
-<line x1="0" y1="1232" x2="946" y2="1232" stroke="#20211d14"/>
-<line x1="0" y1="1260" x2="946" y2="1260" stroke="#20211d14"/>
-<line x1="0" y1="1288" x2="946" y2="1288" stroke="#20211d14"/>
-<line x1="0" y1="1316" x2="946" y2="1316" stroke="#20211d14"/>
-<line x1="0" y1="1344" x2="946" y2="1344" stroke="#20211d14"/>
-<line x1="0" y1="1372" x2="946" y2="1372" stroke="#20211d14"/>
-<line x1="0" y1="1400" x2="946" y2="1400" stroke="#20211d14"/>
-<line x1="0" y1="1428" x2="946" y2="1428" stroke="#20211d14"/>
-<line x1="0" y1="1456" x2="946" y2="1456" stroke="#20211d14"/>
-<line x1="0" y1="1484" x2="946" y2="1484" stroke="#20211d14"/>
-<line x1="0" y1="1512" x2="946" y2="1512" stroke="#20211d14"/>
-<line x1="0" y1="1540" x2="946" y2="1540" stroke="#20211d14"/>
+<line x1="952" y1="0" x2="952" y2="1568" stroke="#20211d14"/>
+<line x1="980" y1="0" x2="980" y2="1568" stroke="#20211d14"/>
+<line x1="1008" y1="0" x2="1008" y2="1568" stroke="#20211d14"/>
+<line x1="1036" y1="0" x2="1036" y2="1568" stroke="#20211d14"/>
+<line x1="1064" y1="0" x2="1064" y2="1568" stroke="#20211d14"/>
+<line x1="1092" y1="0" x2="1092" y2="1568" stroke="#20211d14"/>
+<line x1="1120" y1="0" x2="1120" y2="1568" stroke="#20211d14"/>
+<line x1="0" y1="0" x2="1134" y2="0" stroke="#20211d14"/>
+<line x1="0" y1="28" x2="1134" y2="28" stroke="#20211d14"/>
+<line x1="0" y1="56" x2="1134" y2="56" stroke="#20211d14"/>
+<line x1="0" y1="84" x2="1134" y2="84" stroke="#20211d14"/>
+<line x1="0" y1="112" x2="1134" y2="112" stroke="#20211d14"/>
+<line x1="0" y1="140" x2="1134" y2="140" stroke="#20211d14"/>
+<line x1="0" y1="168" x2="1134" y2="168" stroke="#20211d14"/>
+<line x1="0" y1="196" x2="1134" y2="196" stroke="#20211d14"/>
+<line x1="0" y1="224" x2="1134" y2="224" stroke="#20211d14"/>
+<line x1="0" y1="252" x2="1134" y2="252" stroke="#20211d14"/>
+<line x1="0" y1="280" x2="1134" y2="280" stroke="#20211d14"/>
+<line x1="0" y1="308" x2="1134" y2="308" stroke="#20211d14"/>
+<line x1="0" y1="336" x2="1134" y2="336" stroke="#20211d14"/>
+<line x1="0" y1="364" x2="1134" y2="364" stroke="#20211d14"/>
+<line x1="0" y1="392" x2="1134" y2="392" stroke="#20211d14"/>
+<line x1="0" y1="420" x2="1134" y2="420" stroke="#20211d14"/>
+<line x1="0" y1="448" x2="1134" y2="448" stroke="#20211d14"/>
+<line x1="0" y1="476" x2="1134" y2="476" stroke="#20211d14"/>
+<line x1="0" y1="504" x2="1134" y2="504" stroke="#20211d14"/>
+<line x1="0" y1="532" x2="1134" y2="532" stroke="#20211d14"/>
+<line x1="0" y1="560" x2="1134" y2="560" stroke="#20211d14"/>
+<line x1="0" y1="588" x2="1134" y2="588" stroke="#20211d14"/>
+<line x1="0" y1="616" x2="1134" y2="616" stroke="#20211d14"/>
+<line x1="0" y1="644" x2="1134" y2="644" stroke="#20211d14"/>
+<line x1="0" y1="672" x2="1134" y2="672" stroke="#20211d14"/>
+<line x1="0" y1="700" x2="1134" y2="700" stroke="#20211d14"/>
+<line x1="0" y1="728" x2="1134" y2="728" stroke="#20211d14"/>
+<line x1="0" y1="756" x2="1134" y2="756" stroke="#20211d14"/>
+<line x1="0" y1="784" x2="1134" y2="784" stroke="#20211d14"/>
+<line x1="0" y1="812" x2="1134" y2="812" stroke="#20211d14"/>
+<line x1="0" y1="840" x2="1134" y2="840" stroke="#20211d14"/>
+<line x1="0" y1="868" x2="1134" y2="868" stroke="#20211d14"/>
+<line x1="0" y1="896" x2="1134" y2="896" stroke="#20211d14"/>
+<line x1="0" y1="924" x2="1134" y2="924" stroke="#20211d14"/>
+<line x1="0" y1="952" x2="1134" y2="952" stroke="#20211d14"/>
+<line x1="0" y1="980" x2="1134" y2="980" stroke="#20211d14"/>
+<line x1="0" y1="1008" x2="1134" y2="1008" stroke="#20211d14"/>
+<line x1="0" y1="1036" x2="1134" y2="1036" stroke="#20211d14"/>
+<line x1="0" y1="1064" x2="1134" y2="1064" stroke="#20211d14"/>
+<line x1="0" y1="1092" x2="1134" y2="1092" stroke="#20211d14"/>
+<line x1="0" y1="1120" x2="1134" y2="1120" stroke="#20211d14"/>
+<line x1="0" y1="1148" x2="1134" y2="1148" stroke="#20211d14"/>
+<line x1="0" y1="1176" x2="1134" y2="1176" stroke="#20211d14"/>
+<line x1="0" y1="1204" x2="1134" y2="1204" stroke="#20211d14"/>
+<line x1="0" y1="1232" x2="1134" y2="1232" stroke="#20211d14"/>
+<line x1="0" y1="1260" x2="1134" y2="1260" stroke="#20211d14"/>
+<line x1="0" y1="1288" x2="1134" y2="1288" stroke="#20211d14"/>
+<line x1="0" y1="1316" x2="1134" y2="1316" stroke="#20211d14"/>
+<line x1="0" y1="1344" x2="1134" y2="1344" stroke="#20211d14"/>
+<line x1="0" y1="1372" x2="1134" y2="1372" stroke="#20211d14"/>
+<line x1="0" y1="1400" x2="1134" y2="1400" stroke="#20211d14"/>
+<line x1="0" y1="1428" x2="1134" y2="1428" stroke="#20211d14"/>
+<line x1="0" y1="1456" x2="1134" y2="1456" stroke="#20211d14"/>
+<line x1="0" y1="1484" x2="1134" y2="1484" stroke="#20211d14"/>
+<line x1="0" y1="1512" x2="1134" y2="1512" stroke="#20211d14"/>
+<line x1="0" y1="1540" x2="1134" y2="1540" stroke="#20211d14"/>
   </g>
   <text x="48" y="28" font-family="Barlow Condensed, Helvetica, Arial, sans-serif" font-size="21" letter-spacing="0.04em" fill="#20211d">TARGET ARCHITECTURE</text>
-  <text x="48" y="46" font-size="11.5" fill="#5b5f57">Noisy digital twin, compact causal chain, evidence-based fusion, resource-aware ops loop.</text>
+  <text x="48" y="46" font-size="11.5" fill="#5b5f57">This iteration: Causal Intelligence Studio -- a 10-node mechanism Bayesian network (IN_FULL_FAILURE / LATE_DELIVERY -&gt; OTIF_MISS) plus exact structural do-operator scenarios, decision-support only.</text>
   <g transform="translate(0, 20)">
   <g class="band">
     <rect x="32.0" y="22.0" width="716.0" height="288.0" rx="10" fill="none" stroke="#2b5b8c" stroke-width="1.4" stroke-dasharray="3,5"/>
@@ -130,14 +137,15 @@
   <path d="M 614.4 478.0 L 614.4 508.0" stroke="#20211d" stroke-width="2" fill="none" marker-end="url(#arrow-flow)"/>
   <path d="M 614.4 570.0 L 496.4 600.0" stroke="#2b5b8c" stroke-width="2.4" fill="none" marker-end="url(#arrow-model)"/>
   <path d="M 496.4 662.0 L 496.4 692.0" stroke="#2b5b8c" stroke-width="2.4" fill="none" marker-end="url(#arrow-model)"/>
-  <path d="M 614.4 570.0 L 732.4 600.0" stroke="#2b5b8c" stroke-width="2.4" fill="none" marker-end="url(#arrow-model)"/>
-  <path d="M 732.4 662.0 L 732.4 692.0" stroke="#2b5b8c" stroke-width="2.4" fill="none" marker-end="url(#arrow-model)"/>
+  <path d="M 614.4 570.0 L 791.4 600.0" stroke="#2b5b8c" stroke-width="2.4" fill="none" marker-end="url(#arrow-model)"/>
+  <path d="M 791.4 662.0 L 685.2 692.0" stroke="#2b5b8c" stroke-width="2.4" fill="none" marker-end="url(#arrow-model)"/>
+  <path d="M 791.4 662.0 L 968.4 692.0" stroke="#2b5b8c" stroke-width="2.4" fill="none" marker-end="url(#arrow-model)"/>
   <path d="M 496.4 662.0 L 614.4 784.0" stroke="#2b5b8c" stroke-width="2.4" fill="none" marker-end="url(#arrow-model)"/>
-  <path d="M 732.4 754.0 L 614.4 784.0" stroke="#2b5b8c" stroke-width="2.4" fill="none" marker-end="url(#arrow-model)"/>
+  <path d="M 685.2 754.0 L 614.4 784.0" stroke="#2b5b8c" stroke-width="2.4" fill="none" marker-end="url(#arrow-model)"/>
   <path d="M 614.4 846.0 L 614.4 876.0" stroke="#d8531f" stroke-width="2.6" fill="none" marker-end="url(#arrow-intervention)"/>
   <path d="M 260.4 570.0 L 213.2 968.0" stroke="#d8531f" stroke-width="2.6" fill="none" marker-end="url(#arrow-intervention)"/>
   <path d="M 496.4 754.0 L 496.4 968.0" stroke="#d8531f" stroke-width="2.6" fill="none" marker-end="url(#arrow-intervention)"/>
-  <path d="M 732.4 754.0 L 496.4 968.0" stroke="#d8531f" stroke-width="2.6" fill="none" marker-end="url(#arrow-intervention)"/>
+  <path d="M 685.2 754.0 L 496.4 968.0" stroke="#d8531f" stroke-width="2.6" fill="none" marker-end="url(#arrow-intervention)"/>
   <path d="M 614.4 938.0 L 779.6 968.0" stroke="#d8531f" stroke-width="2.6" fill="none" marker-end="url(#arrow-intervention)"/>
   <path d="M 307.2 999.0 L 378.4 1091.0" stroke="#d8531f" stroke-width="2.6" fill="none" marker-end="url(#arrow-intervention)"/>
   <path d="M 496.4 1030.0 L 496.4 1060.0" stroke="#d8531f" stroke-width="2.6" fill="none" marker-end="url(#arrow-intervention)"/>
@@ -145,6 +153,8 @@
   <path d="M 378.4 1091.0 L 307.2 1183.0" stroke="#20211d" stroke-width="2" fill="none" marker-end="url(#arrow-flow)"/>
   <path d="M 496.4 1122.0 L 496.4 1152.0" stroke="#20211d" stroke-width="2" fill="none" marker-end="url(#arrow-flow)"/>
   <path d="M 590.4 1091.0 L 661.6 1183.0" stroke="#20211d" stroke-width="2" fill="none" marker-end="url(#arrow-flow)"/>
+  <path d="M 968.4 754.0 L 779.6 1152.0" stroke="#5b5f57" stroke-width="2" fill="none" marker-end="url(#arrow-loop)" stroke-dasharray="6,4"/>
+  <text x="874.0" y="947.0" text-anchor="middle" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="10.5" font-style="italic" fill="#5b5f57">decision-support only, never feeds G/H</text>
   <path d="M 496.4 1122.0 L 213.2 1271.6" stroke="#20211d" stroke-width="2" fill="none" marker-end="url(#arrow-flow)"/>
   <path d="M 307.2 1302.6 L 307.6 1302.6" stroke="#5b5f57" stroke-width="2" fill="none" marker-end="url(#arrow-loop)" stroke-dasharray="6,4"/>
   <path d="M 519.6 1302.6 L 520.0 1302.6" stroke="#5b5f57" stroke-width="2" fill="none" marker-end="url(#arrow-loop)" stroke-dasharray="6,4"/>
@@ -230,10 +240,13 @@
     </text>
   </g>
   <g class="node node-model">
-    <rect x="614.4" y="600.0" width="212.0" height="62.0" rx="6" fill="#e7eef5" stroke="#2b5b8c" stroke-width="1.6"/>
+    <rect x="638.0" y="600.0" width="282.8" height="62.0" rx="6" fill="#e7eef5" stroke="#2b5b8c" stroke-width="1.6"/>
     <text text-anchor="middle" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="12.5" fill="#20211d">
-    <tspan x="720.4" y="628.5">Compact causal Bayesian</tspan>
-    <tspan x="720.4" y="643.5">chain</tspan>
+    <tspan x="779.4" y="606.0">10-node mechanism</tspan>
+    <tspan x="779.4" y="621.0">Bayesian network</tspan>
+    <tspan x="779.4" y="636.0">(IN_FULL_FAILURE /</tspan>
+    <tspan x="779.4" y="651.0">LATE_DELIVERY -&gt;</tspan>
+    <tspan x="779.4" y="666.0">OTIF_MISS)</tspan>
     </text>
   </g>
   <g class="node node-model">
@@ -243,10 +256,18 @@
     </text>
   </g>
   <g class="node node-model">
-    <rect x="614.4" y="692.0" width="212.0" height="62.0" rx="6" fill="#e7eef5" stroke="#2b5b8c" stroke-width="1.6"/>
+    <rect x="567.2" y="692.0" width="212.0" height="62.0" rx="6" fill="#e7eef5" stroke="#2b5b8c" stroke-width="1.6"/>
     <text text-anchor="middle" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="12.5" fill="#20211d">
-    <tspan x="720.4" y="720.5">Exact posterior +</tspan>
-    <tspan x="720.4" y="735.5">pathway</tspan>
+    <tspan x="673.2" y="713.0">Exact posterior +</tspan>
+    <tspan x="673.2" y="728.0">mechanism split +</tspan>
+    <tspan x="673.2" y="743.0">attribution</tspan>
+    </text>
+  </g>
+  <g class="node node-model">
+    <rect x="850.4" y="692.0" width="212.0" height="62.0" rx="6" fill="#e7eef5" stroke="#2b5b8c" stroke-width="1.6"/>
+    <text text-anchor="middle" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="12.5" fill="#20211d">
+    <tspan x="956.4" y="720.5">Exact do-operator</tspan>
+    <tspan x="956.4" y="735.5">intervention scenarios</tspan>
     </text>
   </g>
   <g class="node node-decision">
@@ -304,8 +325,9 @@
   <g class="node node-product">
     <rect x="661.6" y="1152.0" width="212.0" height="62.0" rx="6" fill="#faf6ec" stroke="#20211d" stroke-width="1.6"/>
     <text text-anchor="middle" font-family="IBM Plex Sans, Helvetica, Arial, sans-serif" font-size="12.5" fill="#20211d">
-    <tspan x="767.6" y="1180.5">Model health + causal</tspan>
-    <tspan x="767.6" y="1195.5">pathway view</tspan>
+    <tspan x="767.6" y="1173.0">Causal Intelligence</tspan>
+    <tspan x="767.6" y="1188.0">Studio (mechanism graph,</tspan>
+    <tspan x="767.6" y="1203.0">attribution, scenarios)</tspan>
     </text>
   </g>
   <g class="node node-loop">
