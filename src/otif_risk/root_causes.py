@@ -14,6 +14,26 @@ from .validation import validate_dataset
 CAUSE_PRIORITY = CAUSE_CATEGORIES
 
 
+def compute_service_outcome(
+    delivered_timestamp: pd.Series,
+    delivered_qty: pd.Series,
+    requested_qty: pd.Series,
+    promised_delivery_date: pd.Series,
+) -> dict[str, pd.Series]:
+    """Apply the twin's one OTIF definition to any (delivered, requested) pair.
+
+    This is the single source of truth for ``on_time``/``in_full``/``otif_miss``:
+    ``calculate_outcomes`` uses it for the twin's original simulated lifecycle,
+    and ``action_response.py`` calls it again on a *potential* (evaluation-only)
+    delivered timestamp/quantity after a candidate intervention, so both use
+    identical service-outcome logic -- never a re-derived approximation.
+    """
+    on_time = (delivered_timestamp <= promised_delivery_date).astype(int)
+    in_full = (delivered_qty >= requested_qty).astype(int)
+    otif_miss = ((on_time == 0) | (in_full == 0)).astype(int)
+    return {"on_time": on_time, "in_full": in_full, "otif_miss": otif_miss}
+
+
 def calculate_outcomes(dataset: PrototypeDataset) -> pd.DataFrame:
     """Return one row per order with the OTIF target and its observable components."""
     validate_dataset(dataset)
@@ -33,11 +53,15 @@ def calculate_outcomes(dataset: PrototypeDataset) -> pd.DataFrame:
         .join(delivered)
         .reset_index()
     )
-    outcomes["on_time"] = (
-        outcomes["delivered_timestamp"] <= outcomes["promised_delivery_date"]
-    ).astype(int)
-    outcomes["in_full"] = (outcomes["delivered_qty"] >= outcomes["requested_qty"]).astype(int)
-    outcomes["otif_miss"] = ((outcomes["on_time"] == 0) | (outcomes["in_full"] == 0)).astype(int)
+    service_outcome = compute_service_outcome(
+        outcomes["delivered_timestamp"],
+        outcomes["delivered_qty"],
+        outcomes["requested_qty"],
+        outcomes["promised_delivery_date"],
+    )
+    outcomes["on_time"] = service_outcome["on_time"]
+    outcomes["in_full"] = service_outcome["in_full"]
+    outcomes["otif_miss"] = service_outcome["otif_miss"]
     outcomes["outcome_timestamp"] = outcomes["delivered_timestamp"]
     return outcomes
 
