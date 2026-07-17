@@ -19,7 +19,9 @@ from otif_risk.bayesian import CHAIN_PARENTS, MECHANISM_NODES, BayesianBundle, f
 from otif_risk.contracts import CAUSE_CATEGORIES, PrototypeConfig, PrototypeDataset
 from otif_risk.data import generate_dataset
 from otif_risk.decisions import (
+    attach_business_context,
     build_rollups,
+    primary_cause_from_signals,
     recommend_orders,
     service_impact_summary,
 )
@@ -77,17 +79,6 @@ def _run_directory(config: PrototypeConfig) -> Path:
     return config.output_dir / f"run-{digest}-{suffix}"
 
 
-def _probable_cause(row: pd.Series) -> str:
-    active = [
-        category
-        for category in CAUSE_CATEGORIES
-        if int(row.get(f"leading_signal_{category}", 0)) == 1
-    ]
-    if not active:
-        return "UNKNOWN"
-    return active[0]
-
-
 def _top_attribution_cause(value: Any) -> str | None:
     """Parse `causal_attribution_json` and return its top |contribution| node."""
     try:
@@ -122,32 +113,6 @@ def _top_intervention_cause(value: Any) -> str | None:
     best = max(single_node, key=lambda item: item.get("absolute_risk_reduction", 0.0))
     nodes = best.get("intervened_nodes") or []
     return str(nodes[0]) if nodes else None
-
-
-def _enrich_business_context(scored: pd.DataFrame, dataset: PrototypeDataset) -> pd.DataFrame:
-    lines_with_value = dataset.order_lines.merge(
-        dataset.skus[["sku_id", "base_unit_value"]],
-        on="sku_id",
-        how="left",
-        validate="many_to_one",
-    )
-    requested_qty = lines_with_value["requested_qty"].astype(float)
-    unit_value = lines_with_value["base_unit_value"].fillna(50.0)
-    lines_with_value["line_value"] = requested_qty * unit_value
-    line_context = lines_with_value.groupby("order_id", as_index=False).agg(
-        order_value=("line_value", "sum"),
-        representative_sku=("sku_id", "first"),
-    )
-    enriched = scored.merge(line_context, on="order_id", how="left", validate="one_to_one")
-    customer_number = enriched["customer_id"].astype(str).str.extract(r"(\d+)", expand=False)
-    customer_number = pd.to_numeric(customer_number, errors="coerce").fillna(0).astype(int)
-    enriched["customer_tier"] = customer_number.mod(4).map(
-        {0: "PLATINUM", 1: "GOLD", 2: "SILVER", 3: "BRONZE"}
-    )
-    enriched["penalty_rate"] = enriched["customer_tier"].map(
-        {"PLATINUM": 0.05, "GOLD": 0.03, "SILVER": 0.02, "BRONZE": 0.01}
-    )
-    return enriched
 
 
 def bayesian_training_history(
@@ -294,7 +259,7 @@ def train_full_bundle(
         split.test[["order_id", *(f"leading_signal_{c}" for c in CAUSE_CATEGORIES)]],
         on="order_id",
     )
-    predicted_cause["primary_cause"] = predicted_cause.apply(_probable_cause, axis=1)
+    predicted_cause["primary_cause"] = predicted_cause.apply(primary_cause_from_signals, axis=1)
     cause_fidelity = cause_fidelity_report(
         predicted_cause.loc[missed_order_mask, "primary_cause"],
         test_truth_causes.loc[missed_order_mask],
@@ -385,8 +350,8 @@ def score_orders(
     scored = scored.rename(
         columns={"risk_model_score": "xgb_risk_score", "fused_risk_score": "combined_risk_score"}
     )
-    scored["primary_cause"] = scored.apply(_probable_cause, axis=1)
-    scored = _enrich_business_context(scored, dataset)
+    scored["primary_cause"] = scored.apply(primary_cause_from_signals, axis=1)
+    scored = attach_business_context(scored, dataset)
 
     line_evidence = build_line_evidence(dataset, features)
     sku_summary = affected_sku_summary(line_evidence)

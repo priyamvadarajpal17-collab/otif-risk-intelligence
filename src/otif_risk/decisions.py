@@ -5,9 +5,14 @@ from __future__ import annotations
 import json
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pandas as pd
+
+from .contracts import CAUSE_CATEGORIES
+
+if TYPE_CHECKING:
+    from .contracts import PrototypeDataset
 
 RECOMMENDED = "RECOMMENDED"
 CONTESTED = "CONTESTED"
@@ -69,6 +74,62 @@ FALLBACK_RECOMMENDATION = {
     "owner": "OTIF control tower",
     "resource_type": "dc",
 }
+
+
+def primary_cause_from_signals(row: Mapping[str, Any]) -> str:
+    """Return the first active ``leading_signal_{cause}`` in upstream-priority order.
+
+    This is the scoring-time (predicted, not ground-truth) cause used to pick
+    a recommended action: it reads only observable-by-prediction-time
+    ``leading_signal_*`` feature flags, never the retrospective
+    ``root_causes.derive_root_causes`` rule evaluation used for training
+    labels/evaluation. Shared by ``pipeline.score_orders`` and
+    ``action_response``/``policy_evaluation`` so every consumer of a scored
+    order's ``primary_cause`` agrees on how it was chosen.
+    """
+    active = [
+        category
+        for category in CAUSE_CATEGORIES
+        if int(row.get(f"leading_signal_{category}", 0)) == 1
+    ]
+    if not active:
+        return "UNKNOWN"
+    return active[0]
+
+
+def attach_business_context(scored: pd.DataFrame, dataset: PrototypeDataset) -> pd.DataFrame:
+    """Attach ``order_value``/``customer_tier``/``penalty_rate`` to a scored frame.
+
+    ``order_value`` sums each line's requested quantity times its SKU's base
+    unit value (missing SKU prices default to $50/unit). ``customer_tier`` is
+    a deterministic function of the customer ID (not random), so the same
+    customer always gets the same tier/penalty rate across every run and
+    every consumer (``pipeline.score_orders`` for the deployed decision
+    frame, ``action_response`` for evaluation-only realized penalty).
+    """
+    lines_with_value = dataset.order_lines.merge(
+        dataset.skus[["sku_id", "base_unit_value"]],
+        on="sku_id",
+        how="left",
+        validate="many_to_one",
+    )
+    requested_qty = lines_with_value["requested_qty"].astype(float)
+    unit_value = lines_with_value["base_unit_value"].fillna(50.0)
+    lines_with_value["line_value"] = requested_qty * unit_value
+    line_context = lines_with_value.groupby("order_id", as_index=False).agg(
+        order_value=("line_value", "sum"),
+        representative_sku=("sku_id", "first"),
+    )
+    enriched = scored.merge(line_context, on="order_id", how="left", validate="one_to_one")
+    customer_number = enriched["customer_id"].astype(str).str.extract(r"(\d+)", expand=False)
+    customer_number = pd.to_numeric(customer_number, errors="coerce").fillna(0).astype(int)
+    enriched["customer_tier"] = customer_number.mod(4).map(
+        {0: "PLATINUM", 1: "GOLD", 2: "SILVER", 3: "BRONZE"}
+    )
+    enriched["penalty_rate"] = enriched["customer_tier"].map(
+        {"PLATINUM": 0.05, "GOLD": 0.03, "SILVER": 0.02, "BRONZE": 0.01}
+    )
+    return enriched
 
 
 @dataclass(frozen=True)
