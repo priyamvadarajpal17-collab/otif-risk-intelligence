@@ -327,9 +327,10 @@ CURRENT_DIAGRAM = Diagram(
 TARGET_DIAGRAM = Diagram(
     title="Target architecture",
     subtitle=(
-        "This iteration: Causal Intelligence Studio -- a 10-node mechanism Bayesian "
-        "network (IN_FULL_FAILURE / LATE_DELIVERY -> OTIF_MISS) plus exact structural "
-        "do-operator scenarios, decision-support only."
+        "Causal Intelligence Studio -- a 10-node mechanism Bayesian network "
+        "(IN_FULL_FAILURE / LATE_DELIVERY -> OTIF_MISS) plus exact structural "
+        "do-operator scenarios, decision-support only -- and a Decision Value Lab that "
+        "measures simulated policy value against an evaluation-only oracle ceiling."
     ),
     nodes=(
         Node("A1", "Stable vendor/SKU/lane/DC/customer traits", 0, 0, "loop"),
@@ -374,6 +375,9 @@ TARGET_DIAGRAM = Diagram(
         Node("L3", "Outcomes + derived causes", 2.0, 13.3, "loop"),
         Node("L4", "Feedback + drift + performance", 0.6, 14.3, "loop"),
         Node("L5", "Versioned retraining", 1.6, 14.3, "loop"),
+        Node("M1", "Heterogeneous action-response twin (evaluation-only)", 0.2, 15.6, "decision"),
+        Node("M2", "7-policy capacity-constrained evaluation", 1.5, 15.6, "decision", col_span=1.2),
+        Node("M3", "Oracle regret + counterfactual action ranking", 2.9, 15.6, "decision"),
     ),
     edges=(
         Edge("A1", "A4"),
@@ -410,10 +414,20 @@ TARGET_DIAGRAM = Diagram(
         Edge("L3", "L4", "loop"),
         Edge("L4", "L5", "loop", label="scheduled or triggered"),
         Edge("L5", "L1", "loop"),
+        Edge("A5", "M1", "loop", label="evaluation-only common random numbers"),
+        Edge("I3", "M2", "loop", label="deployed policy under evaluation"),
+        Edge("M1", "M2", "loop"),
+        Edge("F3", "M3", "loop", label="model-scenario vs. simulator-evaluation"),
+        Edge("M2", "M3", "loop"),
     ),
     bands=(
         Band("Noisy supply-chain digital twin", ("A1", "A2", "A3", "A4", "A5"), "twin"),
         Band("Local operating-loop simulation", ("L1", "L2", "L3", "L4", "L5"), "loop"),
+        Band(
+            "Decision Value Lab (Stage 1, evaluation-only, never feeds G/H/J)",
+            ("M1", "M2", "M3"),
+            "loop",
+        ),
     ),
 )
 

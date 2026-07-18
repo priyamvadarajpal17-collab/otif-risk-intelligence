@@ -64,6 +64,70 @@ def _seasonal_multiplier(day_of_year: np.ndarray) -> np.ndarray:
     return 1.0 + 0.28 * np.sin(2 * np.pi * (day_of_year - 100) / 365.0)
 
 
+def recompute_lifecycle_timestamps(
+    order_date: pd.Series,
+    contract_lead_days,
+    vendor_ready_delay_hours,
+    warehouse_delay_hours,
+    planned_transit_days,
+    transit_delay_hours,
+    customer_delay_hours,
+    unknown_extra_hours,
+) -> dict[str, pd.Series]:
+    """Cascade per-stage accumulated delay hours into stage timestamps.
+
+    This is the single source of truth for turning (order date, vendor
+    contract lead time, per-stage delay hours, lane transit days) into the
+    downstream vendor-ready / ship-start / transit-arrival / delivered
+    timestamps: ``generate_dataset`` calls it once to produce the original
+    simulated lifecycle, and ``action_response.py`` calls it again with one
+    stage's delay hours modified by a potential intervention -- so both use
+    *exactly* the same cascade, never a re-derived approximation.
+
+    Order-capture delay is deliberately not a parameter: this twin's
+    ship/transit timing depends only on the order date (not the capture
+    timestamp), so an order-capture fix cannot mechanically change the
+    delivered timestamp or quantity -- see
+    ``action_response.ACTION_TARGET_CAUSES`` and its documented limitation.
+    """
+    index = order_date.index
+    planned_vendor = order_date + pd.to_timedelta(
+        np.asarray(contract_lead_days, dtype=float), unit="D"
+    )
+    actual_vendor_ready = planned_vendor + pd.to_timedelta(
+        np.asarray(vendor_ready_delay_hours, dtype=float), unit="h"
+    )
+
+    planned_ship = order_date + pd.Timedelta(days=3)
+    ship_start = pd.Series(
+        np.maximum(planned_ship.to_numpy(), actual_vendor_ready.to_numpy()), index=index
+    )
+    actual_ship = ship_start + pd.to_timedelta(
+        np.asarray(warehouse_delay_hours, dtype=float), unit="h"
+    )
+
+    planned_transit_start = actual_ship + pd.Timedelta(days=1)
+    actual_transit_arrival = (
+        actual_ship
+        + pd.to_timedelta(np.asarray(planned_transit_days, dtype=float), unit="D")
+        + pd.to_timedelta(np.asarray(transit_delay_hours, dtype=float), unit="h")
+    )
+    delivered_timestamp = actual_transit_arrival + pd.to_timedelta(
+        np.asarray(customer_delay_hours, dtype=float)
+        + np.asarray(unknown_extra_hours, dtype=float),
+        unit="h",
+    )
+    return {
+        "planned_vendor": planned_vendor,
+        "actual_vendor_ready": actual_vendor_ready,
+        "planned_ship": planned_ship,
+        "actual_ship": actual_ship,
+        "planned_transit_start": planned_transit_start,
+        "actual_transit_arrival": actual_transit_arrival,
+        "delivered_timestamp": delivered_timestamp,
+    }
+
+
 @dataclass
 class _Entities:
     vendors: pd.DataFrame
@@ -488,9 +552,6 @@ def generate_dataset(config: PrototypeConfig) -> PrototypeDataset:
         vendor_exception_logged[idx_unknown] = False
         vendor_observed[idx_unknown] = True
 
-    planned_vendor = orders_frame_dates + pd.to_timedelta(order_contract_lead, unit="D")
-    actual_vendor_ready = planned_vendor + pd.to_timedelta(vendor_ready_delay_hours, unit="h")
-
     # --- Warehouse / DC stage ----------------------------------------------------
     capacity_snapshots = _build_capacity_snapshots(
         rng, entities.dcs, orders, shocks, start_date, horizon_days
@@ -533,10 +594,6 @@ def generate_dataset(config: PrototypeConfig) -> PrototypeDataset:
         warehouse_exception_logged[idx_unknown] = False
         warehouse_observed[idx_unknown] = True
 
-    planned_ship = orders_frame_dates + pd.Timedelta(days=3)
-    ship_start = pd.Series(np.maximum(planned_ship.to_numpy(), actual_vendor_ready.to_numpy()))
-    actual_ship = ship_start + pd.to_timedelta(warehouse_delay_hours, unit="h")
-
     # --- Transport stage -----------------------------------------------------------
     lane_variability = entities.lanes.set_index("lane_id")["transit_variability_days"]
     planned_transit_days = entities.lanes.set_index("lane_id")["planned_transit_days"]
@@ -559,13 +616,6 @@ def generate_dataset(config: PrototypeConfig) -> PrototypeDataset:
         transit_exception_logged[idx_unknown] = False
         transit_observed[idx_unknown] = True
 
-    planned_transit_start = actual_ship + pd.Timedelta(days=1)
-    actual_transit_arrival = (
-        actual_ship
-        + pd.to_timedelta(order_planned_transit_days, unit="D")
-        + pd.to_timedelta(transit_delay_hours, unit="h")
-    )
-
     # --- Customer delivery stage -----------------------------------------------------
     appointment_required = entities.customers.set_index("customer_id")["appointment_required"]
     reschedule_trait = entities.customers.set_index("customer_id")["reschedule_trait"]
@@ -581,19 +631,56 @@ def generate_dataset(config: PrototypeConfig) -> PrototypeDataset:
     unknown_roll = rng.random(n) < 0.015
     unknown_extra_hours = np.where(unknown_roll, rng.uniform(24, 60, n), 0.0)
     if idx_unknown is not None:
-        unknown_extra_hours[idx_unknown] = float(rng.uniform(90, 140))
         unknown_roll[idx_unknown] = True
         customer_delay_active[idx_unknown] = False
         customer_exception_logged[idx_unknown] = False
+        # This scenario needs a deterministic guarantee that the order misses
+        # its promised date by a comfortable margin, with zero corroborating
+        # stage evidence -- but the guarantee must be realized by feeding the
+        # *cascade itself* (via ``unknown_extra_hours``, the one mechanism no
+        # action ever targets), never by overwriting ``delivered_timestamp``
+        # after the fact. A post-hoc overwrite would silently desynchronize
+        # this order's recorded outcome from what ``recompute_lifecycle_
+        # timestamps`` -- the same function ``action_response.py`` replays
+        # for every potential-outcome draw -- would recompute from this row's
+        # own stored delay columns, so a *failed, no-effect* action on this
+        # order would wrongly land on a different delivered timestamp/
+        # penalty than ``NO_ACTION``, even though nothing was mechanically
+        # changed. Solving for the exact ``unknown_extra_hours`` value that
+        # makes the single cascade formula land on ``promised + 48h`` keeps
+        # both call sites' outcome for this order identical by construction.
+        probe = recompute_lifecycle_timestamps(
+            orders_frame_dates,
+            order_contract_lead,
+            vendor_ready_delay_hours,
+            warehouse_delay_hours,
+            order_planned_transit_days,
+            transit_delay_hours,
+            customer_delay_hours,
+            np.zeros(n),
+        )
+        target_delivered = promised.iloc[idx_unknown] + pd.Timedelta(hours=48)
+        pre_unknown_arrival = probe["actual_transit_arrival"].iloc[idx_unknown]
+        needed_hours = (target_delivered - pre_unknown_arrival).total_seconds() / 3600.0
+        unknown_extra_hours[idx_unknown] = max(needed_hours, 0.0)
 
-    delivered = actual_transit_arrival + pd.to_timedelta(
-        customer_delay_hours + unknown_extra_hours, unit="h"
+    lifecycle = recompute_lifecycle_timestamps(
+        orders_frame_dates,
+        order_contract_lead,
+        vendor_ready_delay_hours,
+        warehouse_delay_hours,
+        order_planned_transit_days,
+        transit_delay_hours,
+        customer_delay_hours,
+        unknown_extra_hours,
     )
-    if idx_unknown is not None:
-        # Direct, deterministic guarantee: this order misses its promised
-        # date by a comfortable margin regardless of the random requested
-        # -delivery-window draw, with zero corroborating stage evidence.
-        delivered.iloc[idx_unknown] = promised.iloc[idx_unknown] + pd.Timedelta(hours=48)
+    planned_vendor = lifecycle["planned_vendor"]
+    actual_vendor_ready = lifecycle["actual_vendor_ready"]
+    planned_ship = lifecycle["planned_ship"]
+    actual_ship = lifecycle["actual_ship"]
+    planned_transit_start = lifecycle["planned_transit_start"]
+    actual_transit_arrival = lifecycle["actual_transit_arrival"]
+    delivered = lifecycle["delivered_timestamp"]
 
     # --- Events -----------------------------------------------------------------------
     events = _build_events(
