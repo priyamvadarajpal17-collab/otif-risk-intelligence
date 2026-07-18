@@ -1394,12 +1394,16 @@ def _render_citation_badges(citation_ids: list[str], packet: EvidencePacket) -> 
         fact = packet.get(citation_id)
         if fact is not None:
             value_text = _truncate_badge_value(fact.value)
+            safe_id = escape(str(citation_id), quote=True)
+            safe_title = escape(f"{fact.label}: {value_text}", quote=True)
             badges.append(
-                f'<span class="copilot-citation" title="{fact.label}: {value_text}">'
-                f"{citation_id}</span>"
+                f'<span class="copilot-citation" title="{safe_title}">'
+                f"{safe_id}</span>"
             )
         else:
-            badges.append(f'<span class="copilot-citation">{citation_id}</span>')
+            badges.append(
+                f'<span class="copilot-citation">{escape(str(citation_id))}</span>'
+            )
     st.markdown(" ".join(badges), unsafe_allow_html=True)
 
 
