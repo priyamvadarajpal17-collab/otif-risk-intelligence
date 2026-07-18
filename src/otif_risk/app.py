@@ -19,6 +19,7 @@ from otif_risk.decisions import (
     service_impact_summary,
 )
 from otif_risk.feedback import append_feedback
+from otif_risk.manifest import verify_manifest
 from otif_risk.narratives import order_narrative
 
 SCORED_ORDERS_FILENAME = "scored_orders.csv"
@@ -55,6 +56,23 @@ def _find_latest_ops_directory(artifacts_root: str | Path) -> Path | None:
 def _find_benchmark_path(artifacts_root: str | Path) -> Path | None:
     candidate = Path(artifacts_root) / "benchmark.json"
     return candidate if candidate.is_file() else None
+
+
+def _find_policy_benchmark_path(artifacts_root: str | Path) -> Path | None:
+    candidate = Path(artifacts_root) / "policy_benchmark.json"
+    return candidate if candidate.is_file() else None
+
+
+def _load_json(path: Path) -> dict[str, Any]:
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _badge(text: str, kind: str) -> str:
+    """A small, high-contrast lifecycle/status badge (see ``_inject_style``'s
+    ``.gov-badge-*`` classes): green only for verified/passed/promoted,
+    red for held/regression/failed, blue for neutral/informational,
+    orange for warnings."""
+    return f'<span class="gov-badge gov-badge-{kind}">{escape(text)}</span>'
 
 
 def _parse_pathway_route(value: Any) -> list[str]:
@@ -312,7 +330,7 @@ def _inject_style() -> None:
         :root {
             --ink: #16201c; --signal: #e3522c; --steel: #53635c;
             --paper: #f2f0e8; --panel: #fffdf7; --line: #c8c6bc;
-            --signal-blue: #2b5b8c; --safe-green: #2f7d4f;
+            --signal-blue: #2b5b8c; --safe-green: #2f7d4f; --danger-red: #a63b2a;
         }
         .stApp, [data-testid="stAppViewContainer"] {
             background:
@@ -365,6 +383,25 @@ def _inject_style() -> None:
         }
         .run-stamp { color:var(--steel); font-size:.78rem; letter-spacing:.05em; }
         div[data-testid="stDataFrame"] { border: 1px solid rgba(22,32,28,.24); }
+        .gov-badge {
+            display:inline-block; padding:.2rem .6rem; border-radius:2px;
+            font-family:"Barlow Condensed",sans-serif; letter-spacing:.06em;
+            text-transform:uppercase; font-weight:700; font-size:.82rem; color:#fff !important;
+        }
+        .gov-badge-pass { background: var(--safe-green); }
+        .gov-badge-fail { background: var(--danger-red); }
+        .gov-badge-info { background: var(--signal-blue); }
+        .gov-badge-warn { background: var(--signal); }
+        .gov-card {
+            background: rgba(255,253,247,.96); border: 1px solid rgba(22,32,28,.18);
+            border-left: 5px solid var(--signal-blue); padding: .8rem 1rem; margin-bottom:.6rem;
+        }
+        .gov-card.evaluation-only { border-left-color: var(--signal); }
+        .oracle-note {
+            font-family:"Barlow Condensed",sans-serif; letter-spacing:.05em;
+            text-transform:uppercase;
+            color: var(--signal); font-weight:700; font-size:.8rem;
+        }
         </style>
         """,
         unsafe_allow_html=True,
@@ -885,6 +922,388 @@ def _why_this_changed_text(scenario: dict[str, Any]) -> str:
     )
 
 
+def _policy_value_view(artifacts_root: str) -> None:
+    st.header("Policy value")
+    path = _find_policy_benchmark_path(artifacts_root)
+    if path is None:
+        st.info(
+            "No policy_benchmark.json found under this artifacts directory. Run "
+            "`uv run python -m otif_risk.policy_benchmark` to generate one."
+        )
+        return
+    payload = _load_json(path)
+    summary = payload["summary"]
+    gates = summary["acceptance_gates"]
+
+    st.markdown(
+        _badge(
+            "Primary gate passed" if gates["primary_gate_passed"] else "Primary gate failed",
+            "pass" if gates["primary_gate_passed"] else "fail",
+        ),
+        unsafe_allow_html=True,
+    )
+    st.caption(
+        f"Seeds {payload['seeds']} ({payload['n_orders']} orders each). Headline metric: "
+        "avoided penalty per normalized resource unit -- one resource unit is the fraction "
+        "of a resource pool's daily capacity consumed, so a weak action type can never hide "
+        "behind a strong one in the combined number (see per-resource breakdowns in the raw "
+        "report). Primary capacity scenario: "
+        f"{summary['primary_capacity_scenario']} (win threshold {gates['win_threshold']} of "
+        f"{gates['n_seeds']} seeds)."
+    )
+
+    scenarios = summary["capacity_scenarios"]
+    scenario_names = list(scenarios)
+    default_index = (
+        scenario_names.index(summary["primary_capacity_scenario"])
+        if summary["primary_capacity_scenario"] in scenario_names
+        else 0
+    )
+    def _capacity_scenario_label(name: str) -> str:
+        return f"{name} ({int(round(scenarios[name] * 100))}% of default capacity)"
+
+    selected_scenario = st.selectbox(
+        "Capacity-stress scenario",
+        scenario_names,
+        index=default_index,
+        format_func=_capacity_scenario_label,
+    )
+    if selected_scenario != summary["primary_capacity_scenario"]:
+        st.caption(
+            f"Diagnostic/sensitivity view -- the acceptance gates above are measured only at "
+            f"{summary['primary_capacity_scenario']}."
+        )
+
+    headline = summary["median_headline_by_capacity_scenario"][selected_scenario]
+    precision = summary["median_action_precision_by_capacity_scenario"][selected_scenario]
+    coverage = summary["median_avoidable_miss_coverage_by_capacity_scenario"][selected_scenario]
+    regret = summary["median_regret_vs_oracle_by_capacity_scenario"][selected_scenario]
+    rows = [
+        {
+            "policy": policy,
+            "avoided_penalty_per_resource_unit": headline.get(policy),
+            "action_precision": precision.get(policy),
+            "avoidable_miss_coverage": coverage.get(policy),
+            "regret_vs_oracle": regret.get(policy),
+            "evaluation_only": policy == "ORACLE_EVALUATION_ONLY",
+        }
+        for policy in headline
+    ]
+    table = pd.DataFrame(rows).sort_values(
+        "avoided_penalty_per_resource_unit", ascending=False
+    )
+    st.subheader("Policies compared at this capacity scenario (median across seeds)")
+    st.markdown(
+        '<p class="oracle-note">ORACLE_EVALUATION_ONLY is an evaluation-only, unattainable '
+        "ceiling used solely to compute regret -- never a deployable recommendation.</p>",
+        unsafe_allow_html=True,
+    )
+    st.dataframe(table, hide_index=True, use_container_width=True)
+
+    st.subheader("Paired per-seed win/tie/loss (CURRENT_POLICY vs. baselines, primary capacity)")
+    deltas = summary["paired_seed_deltas"]
+    delta_rows = [
+        {
+            "comparison": label.replace("_", " "),
+            "wins": entry["wins"],
+            "ties": entry["ties"],
+            "losses": entry["losses"],
+            "per_seed_delta": entry["per_seed_delta"],
+        }
+        for label, entry in deltas.items()
+    ]
+    st.dataframe(pd.DataFrame(delta_rows), hide_index=True, use_container_width=True)
+
+    st.subheader("Normal vs. drift regime value (CURRENT_POLICY, primary capacity)")
+    regime = gates["current_policy_value_by_regime"]
+    columns = st.columns(2)
+    columns[0].metric("Normal regime", regime["normal"])
+    columns[1].metric("Drift regime", regime["drift"])
+    st.markdown(
+        _badge(
+            "Positive in both regimes"
+            if gates["current_policy_value_positive_in_both_regimes"]
+            else "Regressed in a regime",
+            "pass" if gates["current_policy_value_positive_in_both_regimes"] else "fail",
+        ),
+        unsafe_allow_html=True,
+    )
+
+    diagnostics = summary["value_aware_policy_diagnostics"]
+    st.subheader("Current vs. baseline: value-density explanation")
+    st.markdown(
+        "`value_density = (estimated_penalty_exposure × structural_reduction × "
+        "execution_feasibility) / normalized_resource_fraction` -- CURRENT_POLICY ranks "
+        "every eligible order/action candidate by this explainable density and resources the "
+        "highest-density candidates first, with a 10% seeded-exploration carve-out. "
+        "`structural_reduction` uses a persisted Bayesian do-operator scenario when available, "
+        "else a fixed, documented fallback fraction."
+    )
+    mix_columns = st.columns(2)
+    mix_columns[0].caption("Candidate action mix (median)")
+    mix_columns[0].dataframe(
+        pd.DataFrame(
+            list(diagnostics["candidate_action_mix_median"].items()),
+            columns=["action", "share"],
+        ),
+        hide_index=True,
+        use_container_width=True,
+    )
+    mix_columns[1].caption("Chosen (capacity-accepted) action mix (median)")
+    mix_columns[1].dataframe(
+        pd.DataFrame(
+            list(diagnostics["chosen_action_mix_median"].items()), columns=["action", "share"]
+        ),
+        hide_index=True,
+        use_container_width=True,
+    )
+
+    st.subheader("Bayesian ablation -- shown honestly")
+    ablation = diagnostics["bayesian_ablation"]
+    delta = ablation["median_delta_with_minus_without"] or 0.0
+    st.markdown(
+        _badge(
+            "Bayesian term regresses measured policy value"
+            if delta < 0
+            else "Bayesian term adds value",
+            "fail" if delta < 0 else "pass",
+        ),
+        unsafe_allow_html=True,
+    )
+    st.write(
+        f"With Bayesian structural-reduction term: **{ablation['median_with_bayesian_term']}** · "
+        f"without (leading-signal fallback only): **{ablation['median_without_bayesian_term']}** · "
+        f"median delta: **{ablation['median_delta_with_minus_without']}** across "
+        f"{ablation['n_seeds']} seeds ({ablation['seeds_where_bayesian_term_adds_value']} of "
+        "which favored the Bayesian term)."
+    )
+    st.caption(
+        "The Bayesian mechanism network still drives structured explanation and candidate "
+        "action generation; this ablation shows adding its structural-reduction estimate to "
+        "the deployed policy's ranking currently regresses measured policy value at 50% "
+        "capacity on every benchmarked seed. Stage 2 governance holds a Bayesian-enhanced "
+        "policy challenger built from this exact number rather than promoting it -- see the "
+        "Governance tab's demo lifecycle scenario."
+    )
+
+
+def _governance_view(artifacts_root: str) -> None:
+    st.header("Governance")
+    ops_dir = _find_latest_ops_directory(artifacts_root)
+    if ops_dir is None:
+        st.info(
+            "No completed operations replay found under this artifacts directory. Run "
+            "`uv run python -m otif_risk.operations` to generate one."
+        )
+        return
+    st.caption(f"Replay directory: {ops_dir.name}")
+
+    st.subheader("Manifest trust card")
+    manifest_path = ops_dir / "run_manifest.json"
+    if manifest_path.is_file():
+        manifest = _load_json(manifest_path)
+        verification = verify_manifest(ops_dir)
+        columns = st.columns(4)
+        columns[0].metric("Git SHA", (manifest["git"]["sha"] or "unknown")[:10])
+        columns[1].metric("Content ID", manifest["content_id"][:12])
+        columns[2].metric("Files verified", verification.get("files_verified", 0))
+        columns[3].metric(
+            "Dirty working tree", "yes" if manifest["git"]["dirty"] else "no"
+        )
+        st.markdown(
+            _badge(
+                "Checksums verified" if verification["verified"] else "Verification FAILED",
+                "pass" if verification["verified"] else "fail",
+            ),
+            unsafe_allow_html=True,
+        )
+        st.caption(
+            f"Feature schema hash: {manifest.get('feature_schema_hash') or 'n/a'} · "
+            f"data/feature schema versions: {manifest.get('schema_versions')}"
+        )
+    else:
+        st.warning("No run_manifest.json found for this replay.")
+
+    st.subheader("Champion/challenger lifecycle timeline")
+    registry_dir = ops_dir / "registry"
+    events_path = registry_dir / "registry_events.jsonl"
+    active_path = registry_dir / "active_model.json"
+    if events_path.is_file():
+        events = [
+            json.loads(line)
+            for line in events_path.read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        ]
+        rows = []
+        for event in events:
+            if event["event"] == "ROLLED_BACK":
+                reason = event.get("reason", "")
+            else:
+                reason = "; ".join(event.get("reasons", [])) or "all gates passed"
+            rows.append(
+                {
+                    "event": event["event"],
+                    "version": event["version_id"],
+                    "timestamp_utc": event.get("timestamp_utc"),
+                    "reason": reason,
+                }
+            )
+        st.dataframe(pd.DataFrame(rows), hide_index=True, use_container_width=True)
+        if active_path.is_file():
+            active = _load_json(active_path)
+            st.markdown(
+                f"**Active pointer:** `{active['active_version_id']}` "
+                f"(previous: `{active.get('previous_version_id')}`, set by "
+                f"{active['set_by_event']} at {active['updated_at_utc']})"
+            )
+    else:
+        st.info("No governance lifecycle events recorded yet.")
+
+    st.subheader("Champion/challenger metric deltas and gate statuses")
+    versions_path = registry_dir / "registry_versions.json"
+    if versions_path.is_file():
+        versions = _load_json(versions_path)
+        rows = []
+        for version_id, version_payload in versions.items():
+            metrics = version_payload["metrics"]
+            rows.append(
+                {
+                    "version": version_id,
+                    "note": version_payload.get("note"),
+                    "pr_auc": metrics["pr_auc"],
+                    "brier": metrics["brier"],
+                    "calibration_error": metrics["calibration_error"],
+                    "recall": metrics["recall"],
+                    "alert_rate": metrics["alert_rate"],
+                    "policy_value_50pct_capacity": metrics["policy_value_50pct_capacity"],
+                    "manifest_verified": metrics["manifest_verified"],
+                }
+            )
+        st.dataframe(pd.DataFrame(rows), hide_index=True, use_container_width=True)
+
+    demo_path = ops_dir / "demo_lifecycle_scenario.json"
+    if demo_path.is_file():
+        demo = _load_json(demo_path)
+        st.subheader("Demo governance-lifecycle scenario (measured Stage 1 numbers)")
+        if demo.get("enabled"):
+            st.markdown(
+                _badge("PROMOTED", "pass")
+                + " value-aware CURRENT_POLICY over the legacy single-cause baseline"
+                + "<br/>"
+                + _badge("HELD", "fail")
+                + " Bayesian-enhanced challenger -- measured policy-value regression"
+                + "<br/>"
+                + _badge("ROLLED BACK", "info")
+                + f" active pointer restored to `{demo['rollback']['version_id']}`",
+                unsafe_allow_html=True,
+            )
+            st.caption(
+                "; ".join(demo["promotion_2_bayesian_enhanced_held"]["reasons"])
+                or "all gates passed"
+            )
+        else:
+            st.info(demo.get("reason", "demo lifecycle scenario not available"))
+
+    st.subheader("Decision ledger and observational outcome cohorts")
+    ledger_path = ops_dir / "decision_ledger.csv"
+    if ledger_path.is_file():
+        ledger = pd.read_csv(ledger_path)
+        st.caption(f"{len(ledger):,} decisions logged across the replay.")
+        st.dataframe(
+            ledger.head(100)[
+                [
+                    column
+                    for column in (
+                        "decision_id",
+                        "order_id",
+                        "decision_timestamp",
+                        "model_version",
+                        "chosen_action",
+                        "planner_decision",
+                        "execution_status",
+                        "matured",
+                        "matured_otif_miss",
+                        "realized_penalty",
+                    )
+                    if column in ledger.columns
+                ]
+            ],
+            hide_index=True,
+            use_container_width=True,
+        )
+    cohort_path = ops_dir / "observational_cohort_report.json"
+    if cohort_path.is_file():
+        cohort = _load_json(cohort_path)
+        st.markdown(_badge("Observational -- not causal", "warn"), unsafe_allow_html=True)
+        st.caption(cohort["qualification"])
+        cohort_rows = [
+            {"cohort": name, **stats} for name, stats in cohort["cohorts"].items()
+        ]
+        st.dataframe(pd.DataFrame(cohort_rows), hide_index=True, use_container_width=True)
+
+    intervention_outcomes_path = ops_dir / "intervention_outcomes.json"
+    if intervention_outcomes_path.is_file():
+        intervention_outcomes = _load_json(intervention_outcomes_path)
+        st.subheader("Realized outcomes by intervention type")
+        st.markdown(_badge("Observational -- not causal", "warn"), unsafe_allow_html=True)
+        st.caption(intervention_outcomes["qualification"])
+        action_rows = [
+            {"intervention_type": name, **stats}
+            for name, stats in intervention_outcomes["outcomes_by_intervention_type"].items()
+        ]
+        action_rows.append(
+            {
+                "intervention_type": "NO_INTERVENTION_BASELINE",
+                **intervention_outcomes["no_intervention_baseline"],
+            }
+        )
+        st.dataframe(pd.DataFrame(action_rows), hide_index=True, use_container_width=True)
+
+    st.subheader("Monitoring and SLO status")
+    monitoring_path = ops_dir / "monitoring_report.json"
+    if monitoring_path.is_file():
+        monitoring = _load_json(monitoring_path)
+        slo_rows = [
+            {"slo": name, **stats} for name, stats in monitoring["slo_status"].items()
+        ]
+        st.dataframe(pd.DataFrame(slo_rows), hide_index=True, use_container_width=True)
+        st.caption(monitoring["runtime"]["scope"])
+        regime = monitoring.get("regime_quality", {})
+        if regime:
+
+            def _regime_summary(name: str, stats: dict[str, Any]) -> str:
+                if stats.get("sufficient_sample"):
+                    return f"{name}: n={stats['n_matured_decisions']}, pr_auc={stats.get('pr_auc')}"
+                return f"{name}: n={stats['n_matured_decisions']} (insufficient sample)"
+
+            st.caption(
+                "Regime quality (observational, matured decisions): "
+                + "; ".join(_regime_summary(name, stats) for name, stats in regime.items())
+            )
+    else:
+        st.info("No monitoring_report.json found for this replay.")
+
+    st.subheader("Offline/batch parity status")
+    try:
+        canonical_run_dir = latest_run_directory(artifacts_root)
+        parity_path = canonical_run_dir / "parity_check.json"
+    except FileNotFoundError:
+        parity_path = None
+    if parity_path is not None and parity_path.is_file():
+        parity = _load_json(parity_path)
+        parity_label = "Parity verified" if parity["passed"] else "Parity FAILED"
+        st.markdown(
+            _badge(parity_label, "pass" if parity["passed"] else "fail"),
+            unsafe_allow_html=True,
+        )
+        st.caption(
+            f"{parity['n_orders_checked']} orders checked at as-of "
+            f"{parity['as_of_timestamp']} -- {parity['qualification']}"
+        )
+    else:
+        st.info("No parity_check.json found for the latest canonical pipeline run.")
+
+
 def main(artifacts_root: str | Path | None = None) -> None:
     """Render the control-tower prototype application."""
 
@@ -914,6 +1333,8 @@ def main(artifacts_root: str | Path | None = None) -> None:
                 "Operations",
                 "Model health",
                 "Causal intelligence",
+                "Policy value",
+                "Governance",
             ],
             label_visibility="collapsed",
         )
@@ -928,6 +1349,10 @@ def main(artifacts_root: str | Path | None = None) -> None:
         _operations_view(str(root.resolve()))
     elif view == "Causal intelligence":
         _causal_intelligence_view(decisions, metrics)
+    elif view == "Policy value":
+        _policy_value_view(str(root.resolve()))
+    elif view == "Governance":
+        _governance_view(str(root.resolve()))
     else:
         _model_health_view(str(root.resolve()), metrics)
 

@@ -1,12 +1,12 @@
-"""Deterministic, checked-in SVG renderer for the OTIF architecture diagrams.
+"""Deterministic, checked-in SVG renderer for the OTIF architecture diagram.
 
 This module is the single source of truth for the *visual* (SVG) rendering of
-the two canonical Mermaid diagrams (``current.mmd`` / ``target.mmd``). It does
-not parse Mermaid; instead each diagram's nodes/edges/bands are declared once,
-in a small typed data model, and rendered directly to SVG using nothing but
-the Python standard library (no network access, no external CLI, no Mermaid
-tooling). Keeping the node/edge lists here in the same order and grouping as
-the ``.mmd`` sources keeps the two representations easy to eyeball for drift.
+the canonical Mermaid diagram (``current.mmd``). It does not parse Mermaid;
+instead the diagram's nodes/edges/bands are declared once, in a small typed
+data model, and rendered directly to SVG using nothing but the Python
+standard library (no network access, no external CLI, no Mermaid tooling).
+Keeping the node/edge list here in the same order and grouping as the
+``.mmd`` source keeps the two representations easy to eyeball for drift.
 
 Visual language ("industrial operations room"):
   - warm paper background (``PAPER``) with a faint charcoal grid, evoking a
@@ -244,93 +244,17 @@ font-size="21" letter-spacing="0.04em" fill="{INK}">{_escape(diagram.title.upper
 
 
 # ---------------------------------------------------------------------------
-# Diagram definitions (mirrors current.mmd / target.mmd)
+# Diagram definition mirrors current.mmd, the canonical architecture.
 # ---------------------------------------------------------------------------
 
 CURRENT_DIAGRAM = Diagram(
     title="Current architecture",
     subtitle=(
-        "Shipped realistic-OTIF-demo pipeline: noisy digital twin, compact 8-node "
-        "causal Bayesian chain (one OTIF_MISS endpoint), evidence-based fusion, "
-        "resource-aware ops loop."
-    ),
-    nodes=(
-        Node("A1", "Stable vendor/SKU/lane/DC/customer traits", 0, 0, "loop"),
-        Node("A2", "Seasonality + correlated shocks", 1, 0, "loop"),
-        Node("A3", "Partial observability + noise", 2, 0, "loop"),
-        Node("A4", "Line + order lifecycle simulation", 1, 1, "loop"),
-        Node("A5", "Ground-truth causes, outcomes, response", 1, 2, "loop"),
-        Node("B", "Data contracts + quality report", 1, 3, "data"),
-        Node("C1", "Retrospective multi-cause derivation", 0.4, 4, "data"),
-        Node("C2", "Point-in-time feature snapshots", 1.9, 4, "data"),
-        Node("C3", "Cause + line-evidence truth", 0.4, 5, "data"),
-        Node("D", "Rolling-origin train/validation/test", 1.9, 5, "data"),
-        Node("E1", "XGBoost order-risk model", 1.4, 6, "model"),
-        Node("F1", "Compact causal Bayesian chain (8 nodes, 1 endpoint)", 2.4, 6, "model"),
-        Node("E2", "Calibration + SHAP", 1.4, 7, "model"),
-        Node("F2", "Exact posterior + pathway", 2.4, 7, "model"),
-        Node("G", "Validated score fusion", 1.9, 8, "decision"),
-        Node("H", "Capacity-aware operating threshold", 1.9, 9, "decision"),
-        Node("I1", "Affected-SKU evidence", 0.2, 10, "decision"),
-        Node("I2", "Order explanation", 1.4, 10, "decision"),
-        Node("I3", "Resource-aware intervention policy", 2.6, 10, "decision"),
-        Node("J", "Unified intervention record", 1.4, 11, "decision"),
-        Node("K1", "Order desk", 0.2, 12, "product"),
-        Node("K2", "Portfolio + hotspot views", 1.4, 12, "product"),
-        Node("K3", "Model health + Bayesian network view", 2.6, 12, "product"),
-        Node("L1", "Daily open-order scoring", 0.2, 13.3, "loop"),
-        Node("L2", "Orders close", 1.1, 13.3, "loop"),
-        Node("L3", "Outcomes + derived causes", 2.0, 13.3, "loop"),
-        Node("L4", "Feedback + drift + performance", 0.6, 14.3, "loop"),
-        Node("L5", "Versioned retraining", 1.6, 14.3, "loop"),
-    ),
-    edges=(
-        Edge("A1", "A4"),
-        Edge("A2", "A4"),
-        Edge("A3", "A4"),
-        Edge("A4", "A5"),
-        Edge("A5", "B"),
-        Edge("B", "C1"),
-        Edge("B", "C2"),
-        Edge("C1", "C3"),
-        Edge("C2", "D"),
-        Edge("D", "E1", "model"),
-        Edge("E1", "E2", "model"),
-        Edge("D", "F1", "model"),
-        Edge("F1", "F2", "model"),
-        Edge("E1", "G", "model"),
-        Edge("F2", "G", "model"),
-        Edge("G", "H", "intervention"),
-        Edge("C3", "I1", "intervention"),
-        Edge("E2", "I2", "intervention"),
-        Edge("F2", "I2", "intervention"),
-        Edge("H", "I3", "intervention"),
-        Edge("I1", "J", "intervention"),
-        Edge("I2", "J", "intervention"),
-        Edge("I3", "J", "intervention"),
-        Edge("J", "K1"),
-        Edge("J", "K2"),
-        Edge("J", "K3"),
-        Edge("J", "L1"),
-        Edge("L1", "L2", "loop"),
-        Edge("L2", "L3", "loop"),
-        Edge("L3", "L4", "loop"),
-        Edge("L4", "L5", "loop", label="scheduled or triggered"),
-        Edge("L5", "L1", "loop"),
-    ),
-    bands=(
-        Band("Noisy supply-chain digital twin", ("A1", "A2", "A3", "A4", "A5"), "twin"),
-        Band("Local operating-loop simulation", ("L1", "L2", "L3", "L4", "L5"), "loop"),
-    ),
-)
-
-TARGET_DIAGRAM = Diagram(
-    title="Target architecture",
-    subtitle=(
-        "Causal Intelligence Studio -- a 10-node mechanism Bayesian network "
-        "(IN_FULL_FAILURE / LATE_DELIVERY -> OTIF_MISS) plus exact structural "
-        "do-operator scenarios, decision-support only -- and a Decision Value Lab that "
-        "measures simulated policy value against an evaluation-only oracle ceiling."
+        "Shipped OTIF risk intelligence + Decision Value + Governance architecture: "
+        "noisy digital twin, 10-node mechanism Bayesian network, XGBoost + validated "
+        "fusion, a Decision Value Lab measuring policy value against baselines and an "
+        "evaluation-only oracle, and a governed production lifecycle (manifests, "
+        "adapters/service contracts, decision ledger, champion/challenger promotion)."
     ),
     nodes=(
         Node("A1", "Stable vendor/SKU/lane/DC/customer traits", 0, 0, "loop"),
@@ -376,8 +300,51 @@ TARGET_DIAGRAM = Diagram(
         Node("L4", "Feedback + drift + performance", 0.6, 14.3, "loop"),
         Node("L5", "Versioned retraining", 1.6, 14.3, "loop"),
         Node("M1", "Heterogeneous action-response twin (evaluation-only)", 0.2, 15.6, "decision"),
-        Node("M2", "7-policy capacity-constrained evaluation", 1.5, 15.6, "decision", col_span=1.2),
+        Node("M2", "8-policy capacity-constrained evaluation", 1.5, 15.6, "decision", col_span=1.2),
         Node("M3", "Oracle regret + counterfactual action ranking", 2.9, 15.6, "decision"),
+        Node(
+            "N1",
+            "Source adapters (ERP/WMS/TMS/SRM) + service contracts",
+            0.1,
+            17,
+            "data",
+            col_span=1.3,
+        ),
+        Node(
+            "N2",
+            "Deterministic run manifest: git SHA + content ID + checksums",
+            1.6,
+            17,
+            "data",
+            col_span=1.3,
+        ),
+        Node("N3", "Decision + outcome ledger (idempotent)", 3.1, 17, "data", col_span=1.1),
+        Node(
+            "N4",
+            "Champion/challenger promotion gate",
+            0.6,
+            18.2,
+            "decision",
+            col_span=1.3,
+        ),
+        Node(
+            "N5",
+            "Rolling monitoring + SLO + data quality",
+            2.1,
+            18.2,
+            "decision",
+            col_span=1.3,
+        ),
+        Node(
+            "N6",
+            "Active-model pointer + append-only lifecycle events",
+            1.3,
+            19.4,
+            "decision",
+            col_span=1.6,
+        ),
+        Node("K4", "Policy value view", 0.8, 20.6, "product"),
+        Node("K5", "Governance view", 2.2, 20.6, "product"),
     ),
     edges=(
         Edge("A1", "A4"),
@@ -419,13 +386,34 @@ TARGET_DIAGRAM = Diagram(
         Edge("M1", "M2", "loop"),
         Edge("F3", "M3", "loop", label="model-scenario vs. simulator-evaluation"),
         Edge("M2", "M3", "loop"),
+        Edge("B", "N1", "loop", label="production-shaped source boundary"),
+        Edge("N1", "D", "loop", label="offline/batch parity-tested"),
+        Edge("J", "N3"),
+        Edge("N1", "N3"),
+        Edge("L5", "N4", "loop", label="challenger training"),
+        Edge("M2", "N4", "loop", label="policy value at 50% capacity"),
+        Edge("N2", "N4", "loop", label="manifest verification"),
+        Edge("N4", "N6"),
+        Edge("N3", "N5"),
+        Edge("N5", "N6", "loop"),
+        Edge("N6", "K5"),
+        Edge("N4", "K5"),
+        Edge("N3", "K5"),
+        Edge("N5", "K5"),
+        Edge("M2", "K4"),
+        Edge("M3", "K4"),
     ),
     bands=(
         Band("Noisy supply-chain digital twin", ("A1", "A2", "A3", "A4", "A5"), "twin"),
         Band("Local operating-loop simulation", ("L1", "L2", "L3", "L4", "L5"), "loop"),
         Band(
-            "Decision Value Lab (Stage 1, evaluation-only, never feeds G/H/J)",
+            "Decision Value Lab (evaluation-only, never feeds G/H/J)",
             ("M1", "M2", "M3"),
+            "loop",
+        ),
+        Band(
+            "Governed production lifecycle",
+            ("N1", "N2", "N3", "N4", "N5", "N6"),
             "loop",
         ),
     ),
