@@ -427,6 +427,47 @@ def _inject_style() -> None:
             text-transform:uppercase;
             color: var(--signal); font-weight:700; font-size:.8rem;
         }
+        /* AI Copilot: intentionally quieter than the operations dashboard. */
+        .copilot-header {
+            padding: .2rem 0 1rem; border-bottom: 1px solid rgba(22,32,28,.14);
+            margin-bottom: 1rem;
+        }
+        .copilot-kicker {
+            color: var(--steel); font-size: .76rem; text-transform: uppercase;
+            letter-spacing: .1em; font-weight: 700;
+        }
+        .copilot-status {
+            display:inline-flex; align-items:center; gap:.42rem; padding:.2rem .55rem;
+            border:1px solid rgba(22,32,28,.16); border-radius:999px;
+            background:rgba(255,253,247,.74); font-size:.76rem; color:var(--steel);
+        }
+        .copilot-dot { width:.46rem; height:.46rem; border-radius:50%; background:var(--safe-green); }
+        .copilot-dot.fallback { background:var(--steel); }
+        .copilot-citation {
+            display:inline-block; padding:.12rem .42rem; margin:.08rem .12rem .08rem 0;
+            border-radius:999px; background:#e8e6de; color:#485049 !important;
+            font-family:"IBM Plex Sans",sans-serif; font-size:.7rem; line-height:1.35;
+        }
+        [data-testid="stChatMessage"] {
+            background:rgba(255,253,247,.76); border:1px solid rgba(22,32,28,.10);
+            border-radius:12px; padding:.35rem .55rem; margin-bottom:.55rem;
+            box-shadow:none;
+        }
+        [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) {
+            background:#e9eceb;
+        }
+        [data-testid="stChatInput"] {
+            background:var(--panel); border:1px solid rgba(22,32,28,.18);
+            border-radius:14px;
+        }
+        .copilot-answer-headline {
+            font-family:"Barlow Condensed",sans-serif; font-size:1.15rem;
+            font-weight:700; color:var(--ink); margin-bottom:.45rem;
+        }
+        .copilot-draft {
+            border-left:3px solid var(--signal-blue); padding:.65rem .85rem;
+            background:#f0f2f1; color:var(--ink); white-space:pre-wrap;
+        }
         </style>
         """,
         unsafe_allow_html=True,
@@ -1353,9 +1394,12 @@ def _render_citation_badges(citation_ids: list[str], packet: EvidencePacket) -> 
         fact = packet.get(citation_id)
         if fact is not None:
             value_text = _truncate_badge_value(fact.value)
-            badges.append(_badge(f"{citation_id} · {fact.label} = {value_text}", "info"))
+            badges.append(
+                f'<span class="copilot-citation" title="{fact.label}: {value_text}">'
+                f"{citation_id}</span>"
+            )
         else:
-            badges.append(_badge(f"{citation_id} · unresolved", "warn"))
+            badges.append(f'<span class="copilot-citation">{citation_id}</span>')
     st.markdown(" ".join(badges), unsafe_allow_html=True)
 
 
@@ -1370,23 +1414,16 @@ def _render_cited_list(title: str, items: list[dict[str, Any]], packet: Evidence
         _render_citation_badges(item.get("citations", []) or [], packet)
 
 
-def _render_copilot_answer(question_label: str, answer: CopilotAnswer) -> None:
+def _render_copilot_answer(answer: CopilotAnswer) -> None:
     packet = answer.packet
     response = answer.response
-    mode_kind = "pass" if answer.mode_used == "live" else "info"
-    validation_kind = "pass" if answer.validation_status == "passed" else "fail"
-    st.markdown(f"##### Q: {question_label}")
     st.markdown(
-        _badge(f"{answer.mode_used.upper()} · {answer.provider}", mode_kind)
-        + " "
-        + _badge(f"validation: {answer.validation_status}", validation_kind)
-        + (f" {_badge(answer.model, 'info')}" if answer.model else ""),
+        f'<div class="copilot-answer-headline">{response.get("headline", "")}</div>',
         unsafe_allow_html=True,
     )
-    st.markdown(f"**{response.get('headline', '')}**")
     for item in response.get("what_happened", []) or []:
         st.write(f"- {item}")
-    _render_cited_list("Why flagged", response.get("why_flagged", []), packet)
+    _render_cited_list("Why", response.get("why_flagged", []), packet)
     _render_cited_list("Affected items", response.get("affected_items", []), packet)
     next_step = response.get("recommended_next_step") or {}
     st.markdown("**Recommended next step**")
@@ -1399,63 +1436,107 @@ def _render_copilot_answer(question_label: str, answer: CopilotAnswer) -> None:
         )
     _render_cited_list("Uncertainties", response.get("uncertainties", []), packet)
     if response.get("draft_message"):
-        st.markdown("**Draft message** (copy manually -- never sent or executed automatically)")
-        st.code(response["draft_message"], language=None)
-    st.caption(response.get("disclaimer", ""))
-    if answer.mode_used == "fallback" and answer.fallback_reason:
-        st.caption(f"Fallback reason: {answer.fallback_reason}")
-    st.caption(
-        f"Evidence hash {answer.packet.evidence_hash()[:16]}\u2026 · "
-        f"{len(packet.facts)} cited facts · latency {answer.latency_ms:.0f} ms"
-    )
+        st.markdown("**Draft message** · copy only")
+        st.markdown(
+            f'<div class="copilot-draft">{response["draft_message"]}</div>',
+            unsafe_allow_html=True,
+        )
+    with st.expander("Sources and response details"):
+        st.caption(response.get("disclaimer", ""))
+        if answer.mode_used == "fallback" and answer.fallback_reason:
+            st.caption(f"Fallback reason: {answer.fallback_reason}")
+        st.caption(
+            f"{answer.mode_used} · {answer.provider}"
+            + (f" · {answer.model}" if answer.model else "")
+            + f" · validation {answer.validation_status} · {len(packet.facts)} facts"
+            + f" · {answer.latency_ms:.0f} ms · evidence {answer.packet.evidence_hash()[:16]}…"
+        )
 
 
 def _copilot_mode_badge() -> None:
     mode_configured = os.environ.get("OTIF_LLM_MODE", "auto").strip().lower() or "auto"
     live_ready = is_live_configured()
-    if live_ready:
-        st.markdown(
-            _badge(f"Live OpenAI ready \u00b7 mode={mode_configured}", "pass"),
-            unsafe_allow_html=True,
-        )
-    else:
-        st.markdown(
-            _badge(f"Deterministic fallback \u00b7 mode={mode_configured} \u00b7 no OPENAI_API_KEY", "info"),
-            unsafe_allow_html=True,
-        )
-    st.caption(
-        "The Copilot only explains, answers questions, and drafts text from the evidence below -- "
-        "it never changes a score, threshold, decision, or resource allocation."
+    label = "OpenAI connected" if live_ready else "Grounded fallback"
+    dot_class = "" if live_ready else " fallback"
+    st.markdown(
+        f'<span class="copilot-status"><span class="copilot-dot{dot_class}"></span>'
+        f"{label} · {mode_configured}</span>",
+        unsafe_allow_html=True,
     )
+
+
+def _match_order_question(prompt: str) -> str:
+    """Map free-form chat text onto the fixed, audited order-intent catalog."""
+    text = prompt.lower()
+    if any(word in text for word in ("draft", "email", "message", "supplier escalation")):
+        return "draft_supplier_escalation"
+    if any(word in text for word in ("sku", "item", "product", "line")):
+        return "sku_impact"
+    if any(word in text for word in ("contest", "capacity", "resource")):
+        return "contention"
+    if any(word in text for word in ("why", "flag", "risk", "factor")):
+        return "why_flagged"
+    return "simple_explanation"
+
+
+def _match_portfolio_question(prompt: str) -> str:
+    """Map free-form chat text onto the fixed, audited portfolio catalog."""
+    text = prompt.lower()
+    if "confidence" in text or "missing evidence" in text:
+        return "low_confidence_orders"
+    if any(word in text for word in ("capacity", "contest", "resource")):
+        return "capacity_conflicts"
+    if any(word in text for word in ("penalty", "exposure", "value")):
+        return "largest_penalty_exposure"
+    if any(word in text for word in ("vendor", "dc", "lane", "hotspot")):
+        return "hotspots"
+    if any(word in text for word in ("cause", "reason")):
+        return "dominant_causes"
+    if any(word in text for word in ("health", "model", "threshold")):
+        return "model_health"
+    if any(word in text for word in ("count", "how many", "decision mix")):
+        return "decision_mix"
+    if any(word in text for word in ("highest risk", "riskiest")):
+        return "highest_risk_orders"
+    return "planner_focus_today"
 
 
 def _order_copilot_tab(decisions: pd.DataFrame, metrics: dict[str, Any], run_directory: str) -> None:
     manifest = _load_run_manifest(run_directory)
     order_ids = decisions["order_id"].astype(str).tolist()
-    selected_id = st.selectbox("Order ID", order_ids, key="copilot_order_select")
+    selected_id = st.selectbox(
+        "Order",
+        order_ids,
+        key="copilot_order_select",
+        label_visibility="collapsed",
+    )
     order_row = decisions.loc[decisions["order_id"].astype(str) == selected_id].iloc[0]
     packet = build_order_evidence_packet(order_row.to_dict(), metrics=metrics, manifest=manifest)
 
-    columns = st.columns(3)
-    columns[0].metric("Decision status", str(order_row.get("decision_status", "n/a")))
-    columns[1].metric("Combined risk", f"{float(order_row.get('combined_risk_score', 0.0)):.1%}")
-    columns[2].metric("Cited facts available", len(packet.facts))
-
-    with st.expander("Evidence packet preview (facts the Copilot may cite)"):
-        st.caption(
-            "Allowlisted, deterministically built, and size-limited -- the same facts back both "
-            "live and fallback answers below."
-        )
-        st.json(packet.to_dict())
-
-    question_label_to_id = {label: qid for qid, label in ORDER_QUESTIONS.items()}
-    question_label = st.selectbox(
-        "Ask the copilot", list(question_label_to_id.keys()), key="copilot_order_question"
+    st.caption(
+        f"{order_row.get('decision_status', 'n/a')} · "
+        f"{float(order_row.get('combined_risk_score', 0.0)):.0%} OTIF risk · "
+        f"{len(packet.facts)} grounded facts"
     )
-    question_id = question_label_to_id[question_label]
-
     history_key = f"copilot_history_{selected_id}"
-    if st.button("Ask", key="copilot_order_ask", type="primary"):
+    st.session_state.setdefault(history_key, [])
+
+    st.caption("Try a quick question")
+    quick_columns = st.columns(5)
+    selected_prompt: str | None = None
+    for column, (question_id, label) in zip(
+        quick_columns, ORDER_QUESTIONS.items(), strict=True
+    ):
+        if column.button(label, key=f"quick_{selected_id}_{question_id}", use_container_width=True):
+            selected_prompt = label
+
+    typed_prompt = st.chat_input(
+        "Ask about this order…",
+        key=f"copilot_order_input_{selected_id}",
+    )
+    prompt = typed_prompt or selected_prompt
+    if prompt:
+        question_id = _match_order_question(prompt)
         answer = get_order_copilot_response(
             order_row.to_dict(),
             question_id,
@@ -1463,41 +1544,66 @@ def _order_copilot_tab(decisions: pd.DataFrame, metrics: dict[str, Any], run_dir
             manifest=manifest,
             run_directory=run_directory,
         )
-        st.session_state.setdefault(history_key, [])
-        st.session_state[history_key].append({"question": question_label, "answer": answer})
+        st.session_state[history_key].append({"question": prompt, "answer": answer})
 
     history = st.session_state.get(history_key, [])
     if not history:
-        st.info("Ask a question above to see a grounded, cited answer scoped to this order.")
-        return
-    st.caption(f"{len(history)} question(s) asked for order {selected_id} in this session.")
-    for turn in reversed(history):
-        _render_copilot_answer(turn["question"], turn["answer"])
-        st.divider()
+        with st.chat_message("assistant"):
+            st.markdown(
+                "Ask me to explain the risk, affected SKUs, resource conflict, "
+                "or draft the next planner message."
+            )
+    for turn in history:
+        with st.chat_message("user"):
+            st.write(turn["question"])
+        with st.chat_message("assistant"):
+            _render_copilot_answer(turn["answer"])
+
+    with st.expander("Evidence and safety details"):
+        st.caption(
+            "This is the complete allowlisted packet available to live and fallback answers. "
+            "The Copilot cannot change the persisted decision."
+        )
+        st.json(packet.to_dict())
 
 
 def _portfolio_copilot_tab(decisions: pd.DataFrame, metrics: dict[str, Any], run_directory: str) -> None:
-    st.caption(
-        "Fixed question catalog only -- no unrestricted DataFrame/SQL access. Each question maps "
-        "to one reviewable, deterministic aggregation."
+    history_key = "copilot_portfolio_history"
+    st.session_state.setdefault(history_key, [])
+    st.caption("Try a quick question")
+    quick_ids = (
+        "planner_focus_today",
+        "capacity_conflicts",
+        "largest_penalty_exposure",
+        "model_health",
     )
-    question_label_to_id = {label: qid for qid, label in PORTFOLIO_QUESTIONS.items()}
-    question_label = st.selectbox(
-        "Portfolio question", list(question_label_to_id.keys()), key="copilot_portfolio_question"
-    )
-    question_id = question_label_to_id[question_label]
+    quick_columns = st.columns(len(quick_ids))
+    selected_prompt: str | None = None
+    for column, question_id in zip(quick_columns, quick_ids, strict=True):
+        label = PORTFOLIO_QUESTIONS[question_id]
+        if column.button(label, key=f"portfolio_quick_{question_id}", use_container_width=True):
+            selected_prompt = label
 
-    if st.button("Ask portfolio copilot", key="copilot_portfolio_ask", type="primary"):
+    typed_prompt = st.chat_input("Ask about today's portfolio…", key="copilot_portfolio_input")
+    prompt = typed_prompt or selected_prompt
+    if prompt:
+        question_id = _match_portfolio_question(prompt)
         answer = get_portfolio_copilot_response(
             question_id, decisions, metrics=metrics, run_directory=run_directory
         )
-        st.session_state["copilot_portfolio_last"] = {"question": question_label, "answer": answer}
+        st.session_state[history_key].append({"question": prompt, "answer": answer})
 
-    turn = st.session_state.get("copilot_portfolio_last")
-    if turn is None:
-        st.info("Ask a portfolio question above.")
-        return
-    _render_copilot_answer(turn["question"], turn["answer"])
+    if not st.session_state[history_key]:
+        with st.chat_message("assistant"):
+            st.markdown(
+                "Ask where planners should focus, which resources are contested, "
+                "or which orders carry the largest exposure."
+            )
+    for turn in st.session_state[history_key]:
+        with st.chat_message("user"):
+            st.write(turn["question"])
+        with st.chat_message("assistant"):
+            _render_copilot_answer(turn["answer"])
 
 
 def _copilot_health_card(run_directory: str) -> None:
@@ -1535,20 +1641,21 @@ def _copilot_health_card(run_directory: str) -> None:
 
 
 def _ai_copilot_view(decisions: pd.DataFrame, metrics: dict[str, Any], run_directory: str) -> None:
-    st.header("AI Copilot")
-    st.caption(
-        "Read-only planning copilot: explains, drafts, and cites evidence -- it never decides. "
-        "The order decision, governance, and operations views above remain the authoritative "
-        "operational surfaces."
+    st.markdown(
+        '<div class="copilot-header"><div class="copilot-kicker">Planning assistant</div>'
+        "<h2 style='margin:.1rem 0 .35rem'>AI Copilot</h2>"
+        "<div style='color:#53635c'>Grounded answers from the current scored run. "
+        "It explains and drafts; it never decides.</div></div>",
+        unsafe_allow_html=True,
     )
     _copilot_mode_badge()
-    tabs = st.tabs(["Order Copilot", "Portfolio Copilot"])
+    tabs = st.tabs(["Order", "Portfolio"])
     with tabs[0]:
         _order_copilot_tab(decisions, metrics, run_directory)
     with tabs[1]:
         _portfolio_copilot_tab(decisions, metrics, run_directory)
-    st.divider()
-    _copilot_health_card(run_directory)
+    with st.expander("System details"):
+        _copilot_health_card(run_directory)
 
 
 def main(artifacts_root: str | Path | None = None) -> None:
