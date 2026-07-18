@@ -11,6 +11,7 @@ explains and drafts but never decides.
   [`docs/architecture/current.svg`](docs/architecture/current.svg)
 - **Teammate setup guide**: [`docs/setup.md`](docs/setup.md)
 - **Interactive system walkthrough**: [`docs/system-walkthrough.html`](docs/system-walkthrough.html)
+- **Plain-language system guide (PDF)**: [`docs/otif-system-guide.pdf`](docs/otif-system-guide.pdf)
 - **Model card** (measured benchmark numbers, honest limitations): [`docs/model-card.md`](docs/model-card.md)
 - **Judge-facing demo script**: [`docs/demo-script.md`](docs/demo-script.md)
 

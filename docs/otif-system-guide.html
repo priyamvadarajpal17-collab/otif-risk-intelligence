@@ -1,0 +1,2594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>OTIF Risk Intelligence — System Guide</title>
+<meta name="description" content="A plain-language, end-to-end system guide for the OTIF Risk Intelligence prototype.">
+<style>
+  :root{
+    --ink:#1b1f24;
+    --gray:#4a5158;
+    --lightgray:#6b7280;
+    --hairline:#d7dbe0;
+    --panel:#f4f6f8;
+    --blue:#1c5fa8;
+    --blue-pale:#eaf1fa;
+    --amber:#8a5a00;
+    --amber-pale:#fbf1de;
+    --red:#8a2020;
+    --red-pale:#f9ecec;
+    --green:#1f6b3a;
+    --green-pale:#eaf5ee;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:#ffffff;
+    color:var(--ink);
+    font-family:-apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-size:11pt;
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+  .page{
+    max-width:760px;
+    margin:0 auto;
+    padding:0 4px;
+  }
+  h1,h2,h3,h4{
+    font-family:-apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    color:var(--ink);
+    font-weight:700;
+    line-height:1.25;
+  }
+  h1{font-size:22pt; margin:0 0 6pt 0;}
+  h2{
+    font-size:15pt;
+    margin:22pt 0 8pt 0;
+    padding-bottom:4pt;
+    border-bottom:1.5pt solid var(--blue);
+    break-after:avoid;
+  }
+  h3{font-size:12.5pt; margin:16pt 0 6pt 0; color:var(--blue); break-after:avoid;}
+  h4{font-size:11pt; margin:12pt 0 4pt 0; break-after:avoid;}
+  p{margin:0 0 8pt 0;}
+  ul,ol{margin:0 0 10pt 0; padding-left:20pt;}
+  li{margin-bottom:4pt;}
+  strong{color:var(--ink);}
+  a{color:var(--blue); text-decoration:none;}
+  a:hover{text-decoration:underline;}
+  code, .mono{
+    font-family:"SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    font-size:9.3pt;
+    background:var(--panel);
+    padding:1pt 4pt;
+    border-radius:3pt;
+    color:#22303c;
+  }
+  pre{
+    background:var(--panel);
+    border:0.75pt solid var(--hairline);
+    border-radius:5pt;
+    padding:9pt 11pt;
+    font-family:"SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    font-size:9pt;
+    line-height:1.5;
+    overflow-x:auto;
+    white-space:pre-wrap;
+    word-break:break-word;
+    break-inside:avoid;
+  }
+  .section{break-before:page;}
+  .no-break{break-inside:avoid;}
+  table{
+    width:100%;
+    border-collapse:collapse;
+    margin:8pt 0 14pt 0;
+    font-size:9.7pt;
+    break-inside:avoid;
+  }
+  th,td{
+    text-align:left;
+    padding:5pt 7pt;
+    border:0.75pt solid var(--hairline);
+    vertical-align:top;
+  }
+  th{
+    background:var(--blue);
+    color:#ffffff;
+    font-weight:600;
+    font-size:9.3pt;
+  }
+  tr:nth-child(even) td{background:#fafbfc;}
+  .card{
+    border:0.75pt solid var(--hairline);
+    border-radius:6pt;
+    padding:10pt 13pt;
+    margin:10pt 0;
+    background:#fdfdfe;
+    break-inside:avoid;
+  }
+  .card-blue{border-left:3.5pt solid var(--blue);}
+  .card-amber{border-left:3.5pt solid var(--amber); background:var(--amber-pale);}
+  .card-red{border-left:3.5pt solid var(--red); background:var(--red-pale);}
+  .card-green{border-left:3.5pt solid var(--green); background:var(--green-pale);}
+  .badge{
+    display:inline-block;
+    font-size:8.3pt;
+    font-weight:700;
+    letter-spacing:0.02em;
+    padding:1.5pt 6pt;
+    border-radius:3pt;
+    border:0.75pt solid currentColor;
+  }
+  .badge-blue{color:var(--blue); background:var(--blue-pale);}
+  .badge-amber{color:var(--amber); background:var(--amber-pale);}
+  .badge-red{color:var(--red); background:var(--red-pale);}
+  .badge-green{color:var(--green); background:var(--green-pale);}
+  .svg-wrap{
+    border:0.75pt solid var(--hairline);
+    border-radius:6pt;
+    padding:8pt;
+    margin:10pt 0;
+    background:#ffffff;
+    break-inside:avoid;
+    text-align:center;
+  }
+  .svg-wrap svg{max-width:100%; height:auto; display:block; margin:0 auto;}
+  .caption{
+    font-size:9pt;
+    color:var(--lightgray);
+    margin-top:4pt;
+    text-align:left;
+  }
+  .term{color:var(--blue); font-weight:600;}
+  .small{font-size:9.3pt; color:var(--gray);}
+  .lede{font-size:11.5pt; color:var(--gray);}
+  .kv{display:flex; flex-wrap:wrap; gap:6pt 18pt; margin:8pt 0;}
+  .kv div{font-size:9.7pt;}
+  .kv b{display:block; color:var(--blue); font-size:8.3pt; text-transform:uppercase; letter-spacing:0.04em;}
+  .toc{list-style:none; padding-left:0; margin:0;}
+  .toc li{margin-bottom:5pt; font-size:10.3pt;}
+  .toc .num{color:var(--blue); font-weight:700; display:inline-block; width:22pt;}
+  .toc ul{list-style:none; padding-left:22pt; margin:2pt 0 6pt 0;}
+  .toc ul li{font-size:9.6pt; color:var(--gray); margin-bottom:2pt;}
+  .cover{
+    text-align:left;
+    padding-top:40pt;
+  }
+  .cover .tag{
+    display:inline-block;
+    color:var(--blue);
+    font-weight:700;
+    font-size:10pt;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    margin-bottom:10pt;
+  }
+  .cover hr{border:none; border-top:2pt solid var(--blue); margin:16pt 0 18pt 0;}
+  .rule{border:none; border-top:0.75pt solid var(--hairline); margin:14pt 0;}
+  .footnote{font-size:8.6pt; color:var(--lightgray);}
+  .two-col{display:flex; gap:14pt;}
+  .two-col > div{flex:1;}
+  .glossary dt{font-weight:700; color:var(--ink); margin-top:8pt;}
+  .glossary dd{margin:2pt 0 0 0; color:var(--gray);}
+  .screen-note{
+    background:var(--blue-pale);
+    border:0.75pt dashed var(--blue);
+    border-radius:5pt;
+    padding:6pt 10pt;
+    font-size:9pt;
+    color:var(--blue);
+    margin:8pt 0;
+  }
+
+  /* Print setup */
+  @media print{
+    @page{
+      size:A4;
+      margin:18mm 17mm 20mm 17mm;
+      @top-center{
+        content: "OTIF Risk Intelligence — System Guide";
+        font-size:8pt;
+        color:#6b7280;
+        font-family:-apple-system, Helvetica, Arial, sans-serif;
+      }
+      @bottom-center{
+        content: "Page " counter(page) " of " counter(pages);
+        font-size:8pt;
+        color:#6b7280;
+        font-family:-apple-system, Helvetica, Arial, sans-serif;
+      }
+    }
+    body{font-size:10.2pt;}
+    .screen-note{display:none;}
+    a{color:var(--ink);}
+    .toc a{color:var(--blue);}
+    h1, h2, h3{orphans:3; widows:3;}
+    table, .card, .svg-wrap, pre, figure{break-inside:avoid;}
+    tr{break-inside:avoid;}
+  }
+  @media screen{
+    body{background:#f2f3f5; padding:24px 0 60px 0;}
+    .page{background:#ffffff; box-shadow:0 0 0 1px #e2e4e8; padding:40px 48px 50px 48px;}
+    .section{break-before:auto; padding-top:8px;}
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- ============================================================ -->
+<!-- COVER PAGE -->
+<!-- ============================================================ -->
+<section class="cover">
+  <span class="tag">System Guide · Plain-Language Edition</span>
+  <h1>OTIF Risk Intelligence</h1>
+  <p class="lede">A control-tower prototype that predicts, explains, and helps prioritize the
+  response to orders at risk of missing an <strong>On-Time-In-Full (OTIF)</strong> delivery
+  promise.</p>
+  <hr>
+
+  <h3>What this document is</h3>
+  <p>This guide explains the OTIF Risk Intelligence system from the ground up, for anyone —
+  including readers with no background in data science, statistics, or software engineering.
+  Every technical term is defined the first time it is used. The goal is that after reading
+  this document, you should be able to explain to a colleague what the system does, how its
+  data is produced, how its predictions are made and explained, how it decides what action to
+  recommend, how its performance is measured, and — just as importantly — what it does
+  <strong>not</strong> do.</p>
+
+  <h3>One-paragraph summary</h3>
+  <p>The system watches open customer orders moving through a supply chain (a vendor ships
+  goods, a distribution center picks and packs them, a truck carries them, a customer
+  receives them) and asks one question about each order: is it at risk of arriving late, short
+  on quantity, or both? It answers using a statistical model trained on a carefully built
+  practice dataset (a <span class="term">digital twin</span>, explained in Section 4), explains
+  its reasoning in plain terms, estimates which specific products on the order are likely
+  affected, checks whether the people and equipment needed to fix the problem are actually
+  available, and recommends one clear action. A second, simpler causal-style model cross-checks
+  the first and can also test "what if we fixed this cause?" style scenarios, honestly labeled as
+  scenario analysis rather than a proven cure. Everything the system decides is logged,
+  monitored over time for signs of decay, and only ever put into service after passing a
+  documented set of checks — a person, or another governance process, is always in the loop
+  before anything is acted upon in the real world. The entire system today runs on realistic
+  <em>simulated</em> data, not live company systems, precisely so its behavior can be measured,
+  challenged, and understood before anyone considers connecting it to a real warehouse.</p>
+
+  <h3>Document map</h3>
+  <p class="small">This guide is organized in the same order a new reader would naturally
+  need to understand the system: what problem it solves, how its practice data is generated,
+  how it turns that data into a prediction and an explanation, how it decides what to do about
+  it, how it is kept honest over time, and finally what is genuinely real versus simulated
+  versus not yet built. A full table of contents follows on the next page.</p>
+</section>
+
+<!-- ============================================================ -->
+<!-- TABLE OF CONTENTS -->
+<!-- ============================================================ -->
+<section class="section" id="toc">
+<h2>Table of Contents</h2>
+<ul class="toc">
+  <li><span class="num">1</span><a href="#exec-summary">Executive summary</a></li>
+  <li><span class="num">2</span><a href="#otif-definition">What "OTIF" means, with examples</a></li>
+  <li><span class="num">3</span><a href="#architecture">End-to-end architecture</a></li>
+  <li><span class="num">4</span><a href="#digital-twin">The practice data: a noisy digital twin</a></li>
+  <li><span class="num">5</span><a href="#tables">The ten data tables, explained</a></li>
+  <li><span class="num">6</span><a href="#validation">Data validation: catching bad data before it spreads</a></li>
+  <li><span class="num">7</span><a href="#point-in-time">Point-in-time scoring and data leakage</a></li>
+  <li><span class="num">8</span><a href="#features">Turning raw data into features</a></li>
+  <li><span class="num">9</span><a href="#split">Why the data is split by time, not at random</a></li>
+  <li><span class="num">10</span><a href="#xgboost">The risk model (XGBoost), in plain language</a></li>
+  <li><span class="num">11</span><a href="#shap">Explaining a single score (SHAP)</a></li>
+  <li><span class="num">12</span><a href="#line-evidence">Which products on the order are affected</a></li>
+  <li><span class="num">13</span><a href="#bayesian">The 10-node cause-and-effect network</a></li>
+  <li><span class="num">14</span><a href="#interventions">"What if we fixed this?" scenario analysis</a></li>
+  <li><span class="num">15</span><a href="#fusion">Combining the two models (fusion)</a></li>
+  <li><span class="num">16</span><a href="#decisions">Turning a score into a decision</a></li>
+  <li><span class="num">17</span><a href="#value-lab">The Decision Value Lab</a></li>
+  <li><span class="num">18</span><a href="#exploration">Exploration: keeping some capacity for learning</a></li>
+  <li><span class="num">19</span><a href="#daily-ops">A day in the life: the operations replay</a></li>
+  <li><span class="num">20</span><a href="#adapters">Production-shaped adapters and service contracts</a></li>
+  <li><span class="num">21</span><a href="#manifests">Manifests, lineage, and tamper detection</a></li>
+  <li><span class="num">22</span><a href="#ledger">The decision ledger and observed outcomes</a></li>
+  <li><span class="num">23</span><a href="#monitoring">Monitoring, drift, and service targets</a></li>
+  <li><span class="num">24</span><a href="#governance">Champion/challenger governance</a></li>
+  <li><span class="num">25</span><a href="#copilot">The AI Copilot</a></li>
+  <li><span class="num">26</span><a href="#streamlit">The nine screens of the control tower</a></li>
+  <li><span class="num">27</span><a href="#journey">One order, start to finish</a></li>
+  <li><span class="num">28</span><a href="#boundary">What is real, simulated, and not yet built</a></li>
+  <li><span class="num">29</span><a href="#results">Results and limitations, in one place</a></li>
+  <li><span class="num">30</span><a href="#how-to-run">How to run it</a></li>
+  <li><span class="num">31</span><a href="#glossary">Glossary</a></li>
+  <li><span class="num">32</span><a href="#appendix">Appendix: module map and artifact directory map</a></li>
+</ul>
+</section>
+
+<!-- ============================================================ -->
+<!-- 1. EXECUTIVE SUMMARY -->
+<!-- ============================================================ -->
+<section class="section" id="exec-summary">
+<h2>1. Executive summary</h2>
+
+<h3>1.1 The problem</h3>
+<p>A company that ships physical goods makes a promise to every customer: the order will
+arrive <em>on time</em> and <em>complete</em>. Missing that promise — arriving late, arriving
+short on quantity, or both — is called an <span class="term">OTIF miss</span> (On-Time-In-Full
+miss). OTIF misses cost money (contractual penalties, expedited shipping, customer goodwill)
+and, because a supply chain has many moving parts (vendors, warehouses, trucks, customers), it
+is often unclear in advance which orders are at risk and why. By the time a miss is obvious, it
+is usually too late to do anything about it.</p>
+
+<h3>1.2 What the system does</h3>
+<p>OTIF Risk Intelligence is a prototype "control tower" that, for every open order, produces
+one risk score, one plain-language explanation, an estimate of which specific products on the
+order are affected, a check on whether the resources needed to fix the problem are actually
+available, and one recommended action. It also runs a simulated day-by-day operating loop so
+its behavior over weeks and months can be observed, tracks whether its own predictions are
+decaying, and only ever promotes an improved version of itself after it passes a documented
+set of checks.</p>
+
+<h3>1.3 What the system does not do</h3>
+<ul>
+<li>It does <strong>not</strong> connect to a real company's live ordering, warehouse, or
+shipping systems today. All data is generated by a realistic simulator (Section 4).</li>
+<li>It does <strong>not</strong> prove that any recommended action causes an improvement in the
+real world. Everything labeled a "cause" or an "intervention effect" in this document is either
+an association learned from data, or a scenario computed inside a simulated practice
+environment — never an observed real-world experiment.</li>
+<li>It does <strong>not</strong> make decisions autonomously. Every recommendation is meant for
+a human planner to review, accept, reject, or override; the optional AI assistant (Section 25)
+can only explain and draft text — it cannot change a score, a decision, or an allocation.</li>
+<li>It does <strong>not</strong> claim production readiness. Held-out accuracy numbers measured
+on simulated data are not evidence that the system would perform the same way on a real supply
+chain.</li>
+</ul>
+
+<div class="card card-blue no-break">
+<strong>In one sentence:</strong> this is a working, well-tested, and honestly self-reported
+prototype that demonstrates every piece a real OTIF risk desk would need — prediction,
+explanation, resource-aware decisioning, monitoring, and governance — built and measured end
+to end on realistic synthetic data.
+</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- 2. OTIF DEFINITION -->
+<!-- ============================================================ -->
+<section class="section" id="otif-definition">
+<h2>2. What "OTIF" means, with examples</h2>
+
+<p><span class="term">OTIF</span> stands for <strong>On-Time, In-Full</strong>. An order
+"hits OTIF" only if <em>both</em> of the following are true:</p>
+<ul>
+<li><strong>On time</strong>: the order is delivered at or before the promised delivery date.</li>
+<li><strong>In full</strong>: the customer receives the full quantity that was ordered — not a
+partial shipment.</li>
+</ul>
+<p>Because there are two independent conditions, there are exactly four possible outcomes for
+any order:</p>
+
+<table>
+<thead><tr><th>On time?</th><th>In full?</th><th>Outcome</th><th>Everyday example</th></tr></thead>
+<tbody>
+<tr><td>Yes</td><td>Yes</td><td><strong>OTIF success</strong></td><td>1,000 units arrive on the
+promised date, all 1,000 units present. No penalty, customer expectation met.</td></tr>
+<tr><td>Yes</td><td>No</td><td><strong>OTIF miss — quantity failure</strong></td><td>The truck
+arrives exactly on the promised date, but only 850 of the 1,000 units are on it because a
+warehouse ran short. Arrived on schedule, but incomplete.</td></tr>
+<tr><td>No</td><td>Yes</td><td><strong>OTIF miss — timing failure</strong></td><td>All 1,000
+units eventually arrive, but two days after the promised date because of a carrier delay.
+Complete, but late.</td></tr>
+<tr><td>No</td><td>No</td><td><strong>OTIF miss — both</strong></td><td>The truck arrives three
+days late <em>and</em> only 700 of the 1,000 units are on it. Both promises broken at once.</td></tr>
+</tbody>
+</table>
+
+<p>This system treats "OTIF miss" as the single outcome it ultimately tries to predict, but —
+importantly — it does not treat lateness and incompleteness as one blended idea. Internally
+(Section 13) it keeps a separate notion of an <span class="term">in-full failure</span>
+(quantity problem) and a <span class="term">late-delivery failure</span> (timing problem),
+because in this system's practice data, most OTIF misses turn out to be quantity-driven, not
+timing-driven — an important, measured finding revisited in Section 13.</p>
+
+<div class="card no-break">
+<strong>Why this distinction matters operationally:</strong> the fix for "we will not have
+enough units" (expedite inventory, reallocate from another location) is different from the fix
+for "the truck will be late" (use an alternate carrier, coordinate a new delivery appointment).
+A system that only predicts one blended "will this order fail" number cannot tell a planner
+which of these two very different problems to solve.
+</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- 3. ARCHITECTURE -->
+<!-- ============================================================ -->
+<section class="section" id="architecture">
+<h2>3. End-to-end architecture</h2>
+<p>The diagram below shows every major stage the system passes through, from generating
+practice data to recommending — and eventually governing — a real action. Solid arrows are
+the path a live prediction takes. The dashed arrow shows that "what-if" scenario analysis is
+informational only: it never changes the score or the decision above it.</p>
+
+<div class="svg-wrap no-break">
+<svg viewBox="0 0 700 610" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Architecture diagram">
+<defs>
+  <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+    <path d="M0,0 L10,5 L0,10 z" fill="#1c5fa8"/>
+  </marker>
+  <marker id="arrowgray" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+    <path d="M0,0 L10,5 L0,10 z" fill="#6b7280"/>
+  </marker>
+</defs>
+<style>
+  .box{fill:#ffffff; stroke:#1c5fa8; stroke-width:1.4;}
+  .box2{fill:#eaf1fa; stroke:#1c5fa8; stroke-width:1.2;}
+  .boxg{fill:#f4f6f8; stroke:#6b7280; stroke-width:1.1;}
+  .lbl{font-family:-apple-system,Helvetica,Arial,sans-serif; font-size:11px; fill:#1b1f24; font-weight:600;}
+  .lbl2{font-family:-apple-system,Helvetica,Arial,sans-serif; font-size:9px; fill:#4a5158;}
+  .sect{font-family:-apple-system,Helvetica,Arial,sans-serif; font-size:9.5px; fill:#1c5fa8; font-weight:700; letter-spacing:0.03em;}
+  .edge{stroke:#1c5fa8; stroke-width:1.4; fill:none; marker-end:url(#arrow);}
+  .edgeg{stroke:#6b7280; stroke-width:1.2; fill:none; marker-end:url(#arrowgray);}
+  .edged{stroke:#8a5a00; stroke-width:1.3; fill:none; stroke-dasharray:4,3; marker-end:url(#arrow);}
+</style>
+
+<!-- Row 1: twin -> validation -> features -->
+<rect class="box" x="16" y="14" width="150" height="42" rx="5"/>
+<text class="lbl" x="91" y="32" text-anchor="middle">Digital twin</text>
+<text class="lbl2" x="91" y="45" text-anchor="middle">synthetic order lifecycle</text>
+
+<line class="edge" x1="166" y1="35" x2="206" y2="35"/>
+
+<rect class="box" x="208" y="14" width="150" height="42" rx="5"/>
+<text class="lbl" x="283" y="32" text-anchor="middle">Validation</text>
+<text class="lbl2" x="283" y="45" text-anchor="middle">schema, keys, ranges</text>
+
+<line class="edge" x1="358" y1="35" x2="398" y2="35"/>
+
+<rect class="box" x="400" y="14" width="284" height="42" rx="5"/>
+<text class="lbl" x="542" y="32" text-anchor="middle">Point-in-time features (as_of_timestamp)</text>
+<text class="lbl2" x="542" y="45" text-anchor="middle">only facts knowable at scoring time</text>
+
+<!-- down to models -->
+<line class="edge" x1="500" y1="56" x2="500" y2="86"/>
+<line class="edge" x1="584" y1="56" x2="584" y2="86"/>
+
+<!-- Row 2: two models -->
+<rect class="box2" x="360" y="88" width="150" height="46" rx="5"/>
+<text class="lbl" x="435" y="107" text-anchor="middle">XGBoost risk model</text>
+<text class="lbl2" x="435" y="121" text-anchor="middle">primary risk score</text>
+
+<rect class="box2" x="524" y="88" width="160" height="46" rx="5"/>
+<text class="lbl" x="604" y="107" text-anchor="middle">Bayesian mechanism</text>
+<text class="lbl2" x="604" y="121" text-anchor="middle">network (10 nodes)</text>
+
+<!-- down to fusion -->
+<line class="edge" x1="435" y1="134" x2="500" y2="164"/>
+<line class="edge" x1="604" y1="134" x2="540" y2="164"/>
+
+<rect class="box" x="420" y="166" width="200" height="40" rx="5"/>
+<text class="lbl" x="520" y="184" text-anchor="middle">Fusion (validated blend)</text>
+<text class="lbl2" x="520" y="197" text-anchor="middle">XGBoost primary + Bayesian 10-30%</text>
+
+<!-- down to decision -->
+<line class="edge" x1="520" y1="206" x2="520" y2="236"/>
+
+<rect class="box" x="380" y="238" width="280" height="42" rx="5"/>
+<text class="lbl" x="520" y="256" text-anchor="middle">Threshold + resource-aware decision</text>
+<text class="lbl2" x="520" y="269" text-anchor="middle">RECOMMENDED / CONTESTED / MONITOR</text>
+
+<!-- branch left to evidence/explain, from features and decision -->
+<line class="edge" x1="400" y1="56" x2="180" y2="260" />
+<line class="edge" x1="380" y1="259" x2="366" y2="259"/>
+
+<rect class="box" x="16" y="238" width="350" height="42" rx="5"/>
+<text class="lbl" x="191" y="256" text-anchor="middle">Evidence &amp; explanation</text>
+<text class="lbl2" x="191" y="269" text-anchor="middle">SHAP factors · affected SKUs · causal pathway</text>
+
+<!-- bayesian dashed to scenario studio -->
+<path class="edged" d="M 684 111 C 690 150, 690 250, 660 285" />
+<rect class="boxg" x="500" y="288" width="184" height="40" rx="5"/>
+<text class="lbl" x="592" y="305" text-anchor="middle" style="fill:#8a5a00;">Causal scenario studio</text>
+<text class="lbl2" x="592" y="317" text-anchor="middle">"what-if" only — never feeds back</text>
+
+<!-- down to action -->
+<line class="edge" x1="191" y1="280" x2="191" y2="300"/>
+<line class="edge" x1="520" y1="280" x2="300" y2="300"/>
+
+<rect class="box" x="140" y="302" width="300" height="42" rx="5"/>
+<text class="lbl" x="290" y="320" text-anchor="middle">Recommended intervention record</text>
+<text class="lbl2" x="290" y="333" text-anchor="middle">one score, one explanation, one action, per order</text>
+
+<line class="edge" x1="290" y1="344" x2="290" y2="368"/>
+
+<!-- daily operations band -->
+<rect x="16" y="370" width="668" height="70" rx="6" fill="#f4f6f8" stroke="#6b7280" stroke-width="1"/>
+<text class="sect" x="30" y="386">DAILY OPERATIONS REPLAY (simulated loop)</text>
+<text class="lbl2" x="30" y="404">ingest &#8594; score &#8594; allocate capacity &#8594; log to ledger &#8594; mature outcomes &#8594; monitor drift &#8594; retrain on trigger</text>
+<text class="lbl2" x="30" y="420">feeds a new, versioned model back into scoring; every step persisted, nothing recomputed in the screens</text>
+
+<line class="edgeg" x1="290" y1="440" x2="290" y2="464"/>
+
+<!-- governance band -->
+<rect x="16" y="466" width="668" height="128" rx="6" fill="#eaf1fa" stroke="#1c5fa8" stroke-width="1"/>
+<text class="sect" x="30" y="484">GOVERNED PRODUCTION BOUNDARY</text>
+
+<rect class="box" x="30" y="494" width="128" height="46" rx="4"/>
+<text class="lbl2" x="94" y="512" text-anchor="middle" style="font-weight:600;">Source adapters</text>
+<text class="lbl2" x="94" y="526" text-anchor="middle">ERP/WMS/TMS/SRM</text>
+
+<rect class="box" x="170" y="494" width="128" height="46" rx="4"/>
+<text class="lbl2" x="234" y="512" text-anchor="middle" style="font-weight:600;">Run manifest</text>
+<text class="lbl2" x="234" y="526" text-anchor="middle">checksums &amp; lineage</text>
+
+<rect class="box" x="310" y="494" width="128" height="46" rx="4"/>
+<text class="lbl2" x="374" y="512" text-anchor="middle" style="font-weight:600;">Decision ledger</text>
+<text class="lbl2" x="374" y="526" text-anchor="middle">observed outcomes</text>
+
+<rect class="box" x="450" y="494" width="118" height="46" rx="4"/>
+<text class="lbl2" x="509" y="512" text-anchor="middle" style="font-weight:600;">Champion /</text>
+<text class="lbl2" x="509" y="526" text-anchor="middle">challenger gate</text>
+
+<rect class="box" x="578" y="494" width="94" height="46" rx="4"/>
+<text class="lbl2" x="625" y="512" text-anchor="middle" style="font-weight:600;">Monitoring</text>
+<text class="lbl2" x="625" y="526" text-anchor="middle">&amp; SLOs</text>
+
+<line class="edge" x1="158" y1="517" x2="170" y2="517"/>
+<line class="edge" x1="298" y1="517" x2="310" y2="517"/>
+<line class="edge" x1="438" y1="517" x2="450" y2="517"/>
+<line class="edge" x1="568" y1="517" x2="578" y2="517"/>
+
+<text class="lbl2" x="30" y="558" style="font-style:italic;">A human planner (or a separate governance process) always reviews the recommendation before</text>
+<text class="lbl2" x="30" y="572" style="font-style:italic;">any real-world action is taken; the AI Copilot (Section 25) explains but cannot decide.</text>
+<text class="lbl2" x="30" y="588" style="font-style:italic;">No live ERP/WMS/TMS/cloud connection exists today — see Section 28 for the honest boundary.</text>
+</svg>
+</div>
+<p class="caption">Figure 1. End-to-end flow: practice data enters at top left, a prediction and
+an explanation are produced, a resource-checked decision comes out the bottom, and the whole
+loop is replayed daily and wrapped in a governance boundary before anything would touch a real
+system.</p>
+
+<h3>3.1 Plain-language walk-through</h3>
+<ol>
+<li><strong>Digital twin.</strong> A simulator generates a realistic set of orders, events, and
+capacity data (Section 4) because no real operational data is available to this prototype.</li>
+<li><strong>Validation.</strong> Before anything else runs, the data is checked for structural
+problems — missing columns, duplicate identifiers, impossible quantities (Section 6).</li>
+<li><strong>Point-in-time features.</strong> Raw data is turned into a table of measurements
+("features") that are honestly knowable at the moment a prediction would be made — never
+using information from the future (Section 7–8).</li>
+<li><strong>Two models score every order.</strong> An XGBoost model (Section 10) produces the
+primary risk score. A 10-node Bayesian network (Section 13) produces an independent,
+more-interpretable risk estimate and can also run "what if we fixed X?" scenarios (Section 14).</li>
+<li><strong>Fusion.</strong> The two scores are combined using weights chosen on validation data
+only (Section 15).</li>
+<li><strong>Decision.</strong> The fused score is compared against a threshold; if the order is
+risky enough, the system checks whether the people/equipment needed for a fix are actually
+available and produces one of three statuses: RECOMMENDED, CONTESTED, or MONITOR (Section 16).</li>
+<li><strong>Evidence and explanation.</strong> In parallel, the system estimates which specific
+products (SKUs) on the order are affected (Section 12) and produces a plain-language
+explanation of the top contributing factors (Section 11).</li>
+<li><strong>Daily operations replay.</strong> All of the above is repeated once per simulated
+day across a 90-day window, with capacity allocated, outcomes recorded, drift checked, and the
+model retrained on a schedule (Section 19).</li>
+<li><strong>Governance boundary.</strong> A separate layer of production-shaped adapters,
+tamper-evident manifests, a decision ledger, and a champion/challenger promotion gate wraps the
+whole loop, so that no unvetted model version and no unverified data source could reach a real
+deployment without passing documented checks (Sections 20–24).</li>
+</ol>
+</section>
+
+<!-- ============================================================ -->
+<!-- 4. DIGITAL TWIN -->
+<!-- ============================================================ -->
+<section class="section" id="digital-twin">
+<h2>4. The practice data: a noisy digital twin</h2>
+
+<h3>4.1 Why synthetic (made-up) data at all?</h3>
+<p>This prototype was built without access to a real company's order, warehouse, or shipping
+records. Rather than skip the data problem, it builds a <span class="term">digital twin</span>:
+a computer simulation that behaves like a real supply chain closely enough to generate
+realistic orders, delays, shortages, and outcomes — with all the underlying "truth" about what
+actually happened kept on hand for grading the model afterward. This lets every claim in this
+document be checked against known ground truth, something that would be much harder with real,
+partially-unlabeled operational data.</p>
+
+<h3>4.2 Outcomes emerge — they are not preselected</h3>
+<p>A common and easy mistake when building a practice dataset is to first decide "this order
+will miss OTIF" and then plant matching evidence for a model to find — which teaches the model
+to recognize planted evidence, not real risk. This system does the opposite: for every order,
+it simulates each stage of the order's actual journey one at a time —</p>
+<ol>
+<li>order capture (how long after the customer's request did the order get logged),</li>
+<li>vendor readiness (does the vendor have the goods ready on time),</li>
+<li>line-level allocation (is there enough inventory for every product line on the order),</li>
+<li>warehouse processing (picking and packing delays),</li>
+<li>transport (carrier transit time and delay),</li>
+<li>customer delivery (appointment scheduling, on-site delays),</li>
+</ol>
+<p>— and only <em>after</em> every stage has run, the system adds up the accumulated delay and
+looks at the final shipped quantity to determine whether the order was, in fact, on time and in
+full. Nothing about the final outcome is chosen in advance; it is the mathematical consequence
+of everything that happened at each stage, exactly the way it would be in a real supply chain.</p>
+
+<h3>4.3 The ingredients that make outcomes realistic</h3>
+<div class="kv">
+<div><b>Stable heterogeneity</b>Vendors, distribution centers (DCs), lanes (shipping routes),
+customers, and products (SKUs) each have their own persistent traits — e.g. one vendor is
+simply more reliable than another, one product is scarcer, one customer reschedules
+appointments more often. These traits do not change from order to order.</div>
+<div><b>Seasonality</b>A smooth calendar-wide curve raises or lowers general demand and
+congestion over time, the way retail volume rises before a holiday.</div>
+<div><b>Noise</b>Every stage adds random variation drawn from statistical distributions (gamma
+and normal curves), not a single fixed number — two otherwise-identical orders will not have
+identical delays.</div>
+<div><b>Correlated shocks</b>Randomly-timed disruption windows hit a specific vendor, DC, or
+lane for a period of days, with their own severity — modeling a real-world event like a
+factory slowdown or a weather event, rather than independent bad luck on every order.</div>
+<div><b>A scripted drift epoch</b>A deliberate stretch late in the simulated calendar with
+elevated vendor-disruption density, used later to test whether the monitoring system
+(Section 23) actually notices a changing world.</div>
+<div><b>Partial observability</b>About 3% of vendor/warehouse/transit events never get logged
+at all, and even when a delay is real, the matching exception code is only recorded roughly
+85–90% of the time. A real operations team never sees perfectly complete data either, so
+neither should this system's practice data.</div>
+<div><b>Backfill / recovery chance</b>A shortage spotted at order capture has a documented
+chance of being fixed before shipment by an expedited replenishment. This means an early
+warning sign is a genuine <em>risk factor</em>, not a guarantee of failure — matching how early
+signals behave in the real world.</div>
+</div>
+
+<h3>4.4 Real versus simulated, stated plainly</h3>
+<div class="card card-amber no-break">
+Every order, event, capacity number, and outcome in this system today is <strong>generated by
+the simulator above</strong>, not observed from a real company. The simulator is designed to
+be realistic (noisy, partially observed, seasonal, shock-prone) specifically so the modeling
+techniques demonstrated here would transfer to real data with only an adapter-layer change
+(Section 20) — but no claim is made that this system has been validated on, or would perform
+identically against, real operational data.
+</div>
+
+<h3>4.5 Ground truth is kept — but locked away from the model</h3>
+<p>The simulator secretly knows exactly which shock hit which order, exactly how much delay
+accumulated at each stage, and exactly which product lines were genuinely short. This
+"simulator truth" is written to its own separate files (<code>simulator_truth.csv</code>,
+<code>line_truth.csv</code>, <code>shocks.csv</code>) and is used <strong>only</strong> to grade
+the model after the fact — for example, to check whether the model's guess about which SKU is
+affected actually matches which SKU was truly short. The model itself never sees these files;
+if it did, it would be cheating by looking at the answer key instead of learning from
+observable evidence.</p>
+
+<h3>4.6 Five reserved scenarios</h3>
+<p>To guarantee a small number of instructive, reproducible situations exist in every run
+regardless of which random seed is used, five specific orders are always constructed the same
+way: a multi-cause cascade (several problems compounding on one order), two orders that end up
+competing for the exact same scarce recovery resource, a single-line stockout inside an
+otherwise-healthy multi-line order, and one genuinely unexplained miss with no recoverable
+evidence at all. These are discussed with real, measured numbers in Section 27.</p>
+</section>
+
+<!-- ============================================================ -->
+<!-- 5. TABLES EXPLAINED -->
+<!-- ============================================================ -->
+<section class="section" id="tables">
+<h2>5. The ten data tables, explained</h2>
+<p>The digital twin writes out ten tables. Row counts below are from one canonical run of
+2,500 orders (seed 42) and will vary slightly with the random seed or order count, but the
+structure and relationships are always the same. "Grain" means what one row represents.</p>
+
+<table>
+<thead><tr><th>Table</th><th>Rows</th><th>Grain (one row =)</th><th>Important fields</th><th>Example</th><th>Why it exists</th></tr></thead>
+<tbody>
+<tr><td><strong>orders</strong></td><td>2,500</td><td>one customer order</td>
+<td><code>order_id</code>, <code>order_date</code>, <code>promised_delivery_date</code>,
+vendor/DC/lane/customer IDs, <code>capture_delay_hours</code></td>
+<td>Order <code>O000001</code> promised for delivery on 2024-03-10, routed through vendor
+<code>V006</code> and DC <code>DC005</code>.</td>
+<td>The central unit the whole system scores and reports on — one risk score and one decision
+per order.</td></tr>
+
+<tr><td><strong>order_lines</strong></td><td>4,965</td><td>one product line on one order</td>
+<td><code>order_line_id</code>, <code>sku_id</code>, <code>requested_qty</code>,
+<code>allocated_qty</code>, <code>shipped_qty</code>, <code>stockout_flag</code></td>
+<td>Line 1 of order <code>O000001</code> requested 23 units of <code>SKU019</code>; 23 were
+allocated and shipped (no stockout).</td>
+<td>OTIF's "in full" half is decided at the line level — an order can be short on just one
+product while every other line ships complete.</td></tr>
+
+<tr><td><strong>events</strong></td><td>9,784</td><td>one timestamped lifecycle event</td>
+<td><code>order_id</code>, <code>event_type</code> (e.g. <code>VENDOR_READY</code>,
+<code>SHIPPED</code>, <code>DELIVERED</code>), <code>planned_timestamp</code>,
+<code>event_timestamp</code>, <code>exception_code</code></td>
+<td><code>O000001</code>'s <code>VENDOR_READY</code> event was planned for 2024-03-01
+00:00 and actually posted 2024-03-01 02:31.</td>
+<td>The raw, timestamped trail every feature and every point-in-time snapshot is built from.</td></tr>
+
+<tr><td><strong>capacity_snapshots</strong></td><td>1,635</td><td>one DC's capacity on one
+calendar day</td>
+<td><code>dc_id</code>, <code>snapshot_date</code>, <code>available_capacity_units</code>,
+<code>planned_units</code>, <code>utilization</code></td>
+<td><code>DC001</code> had 1,200 available units and 538 planned units on 2024-01-01
+(45% utilization).</td>
+<td>Lets the system know whether a distribution center is already stretched thin before
+recommending a warehouse-side fix.</td></tr>
+
+<tr><td><strong>vendors</strong></td><td>12</td><td>one supplier</td>
+<td><code>vendor_id</code>, <code>reliability_score</code>, <code>delay_scale_hours</code>,
+<code>contract_lead_days</code></td>
+<td>Vendor <code>V001</code>: reliability 0.943, typical delay scale 4.25 hours.</td>
+<td>Persistent vendor traits drive vendor-caused delay and are the basis for "vendor reliability
+history" features.</td></tr>
+
+<tr><td><strong>dcs</strong> (distribution centers)</td><td>5</td><td>one warehouse/DC</td>
+<td><code>dc_id</code>, <code>daily_capacity_units</code>, <code>capacity_variability</code></td>
+<td><code>DC001</code>: 1,200 daily capacity units, 13.2% capacity variability.</td>
+<td>Defines how much a DC can process per day and how consistent that is — the basis of DC
+utilization and recovery-capacity logic.</td></tr>
+
+<tr><td><strong>lanes</strong></td><td>15</td><td>one shipping route from a DC to a destination
+region</td>
+<td><code>lane_id</code>, <code>origin_dc_id</code>, <code>destination_region</code>,
+<code>planned_transit_days</code>, <code>transit_variability_days</code></td>
+<td>Lane <code>L001</code>: from <code>DC002</code> to the CENTRAL region, planned 2-day
+transit, carrier BlueLine.</td>
+<td>Captures how variable and how long transport takes on a given route.</td></tr>
+
+<tr><td><strong>customers</strong></td><td>40</td><td>one customer account</td>
+<td><code>customer_id</code>, <code>region</code>, <code>appointment_required</code>,
+<code>reschedule_trait</code></td>
+<td>Customer <code>C001</code> in the CENTRAL region does not require a delivery appointment
+and rarely reschedules (trait 0.036).</td>
+<td>Some customers require scheduled delivery appointments, which adds its own risk of delay
+independent of the rest of the supply chain.</td></tr>
+
+<tr><td><strong>skus</strong> (products)</td><td>120</td><td>one product</td>
+<td><code>sku_id</code>, <code>criticality_tier</code>, <code>base_unit_value</code>,
+<code>scarcity_trait</code>, <code>demand_volatility</code></td>
+<td><code>SKU001</code>: STANDARD tier, $22.44 unit value, low scarcity (0.025).</td>
+<td>Product-level traits feed the affected-SKU evidence model (Section 12) and the business
+value of a potential miss.</td></tr>
+
+<tr><td><strong>shocks</strong></td><td>19</td><td>one disruption window</td>
+<td><code>shock_id</code>, <code>shock_type</code> (e.g. <code>VENDOR_DISRUPTION</code>),
+<code>entity_id</code>, <code>start_date</code>, <code>end_date</code>, <code>severity</code></td>
+<td><code>SHK0001</code>: a vendor disruption at <code>V001</code> from 2024-03-17 to
+2024-04-02, severity 2.83.</td>
+<td>The hidden, ground-truth cause of many delays — used only to grade the model, never fed to
+it.</td></tr>
+</tbody>
+</table>
+
+<h3>5.1 Two tables that never touch the model</h3>
+<p>Alongside the ten tables above, the simulator also writes <code>simulator_truth.csv</code>
+and <code>line_truth.csv</code> — the answer key. These record, per order and per order line,
+exactly which shock caused what and exactly how much quantity was truly short. They exist only
+so the evaluation code (which grades the model, Sections 11–13) can check the model's guesses
+against reality. Every place in this codebase that reads these two files is a test or an
+evaluation script — never the model training or scoring code — and this separation is itself
+checked by automated tests, so a future code change cannot accidentally leak the answer key
+into the model without a test failing.</p>
+</section>
+
+<!-- ============================================================ -->
+<!-- 6. VALIDATION -->
+<!-- ============================================================ -->
+<section class="section" id="validation">
+<h2>6. Data validation: catching bad data before it spreads</h2>
+<p>Before any table is used for anything, a validation step checks it for structural problems
+and immediately stops the entire run ("fails fast") if any check fails — rather than silently
+producing a model trained on broken data. The checks fall into four families:</p>
+
+<table>
+<thead><tr><th>Check family</th><th>What it verifies</th><th>Example failure it would catch</th></tr></thead>
+<tbody>
+<tr><td><strong>Schema</strong></td><td>Every required table exists, is not empty, and has
+every column the rest of the system expects (e.g. <code>orders</code> must have
+<code>order_id</code>, <code>promised_delivery_date</code>, vendor/DC/lane/customer IDs).</td>
+<td>A generator change accidentally drops the <code>promised_delivery_date</code> column —
+caught immediately with "orders missing required columns: ['promised_delivery_date']" instead
+of a confusing failure three steps later.</td></tr>
+<tr><td><strong>Keys</strong></td><td>Identifier columns (like <code>order_id</code>,
+<code>vendor_id</code>) contain no missing values and no duplicates.</td>
+<td>Two rows share the same <code>order_id</code> — caught as "orders.order_id must be
+unique" before it can silently double-count an order anywhere downstream.</td></tr>
+<tr><td><strong>References</strong></td><td>Every foreign key actually points at a row that
+exists — e.g. every order's <code>vendor_id</code> must exist in the <code>vendors</code>
+table, every order line's <code>order_id</code> must exist in <code>orders</code>.</td>
+<td>An order line references a SKU that was never generated — caught rather than producing a
+feature row with a silently blank product trait.</td></tr>
+<tr><td><strong>Quantities and timestamps</strong></td><td>Requested quantities are positive,
+allocated/shipped quantities are non-negative, every order has exactly one
+<code>DELIVERED</code> event, and event timestamps respect logical ordering.</td>
+<td>An order somehow has zero or two <code>DELIVERED</code> events — caught as "every order
+must have exactly one DELIVERED event" rather than silently producing an undefined OTIF outcome
+for that order.</td></tr>
+</tbody>
+</table>
+
+<div class="card no-break">
+<strong>Why this matters even though the data is synthetic:</strong> validation is exactly the
+kind of check a real ERP/WMS integration would also need (duplicate order IDs, orphaned
+references, impossible quantities are common real-world data-quality problems). Building and
+testing this discipline now means the same validation module can run unchanged against real
+source-system data later, simply behind the adapters described in Section 20.
+</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- 7. POINT-IN-TIME / LEAKAGE -->
+<!-- ============================================================ -->
+<section class="section" id="point-in-time">
+<h2>7. Point-in-time scoring and data leakage</h2>
+
+<h3>7.1 The core idea</h3>
+<p>Every prediction this system makes is tagged with an <span class="term">as-of
+timestamp</span>: the exact moment in time at which the prediction is imagined to be made.
+A feature is only allowed to use information that had genuinely already happened by that
+moment. This might sound obvious, but it is one of the easiest mistakes to make by accident
+when building a predictive system, and it has a specific name:</p>
+<p><span class="term">Data leakage</span> is when a model is accidentally given information
+from the future relative to the moment it is supposed to be making a prediction. A model
+trained with leaked information can look extremely accurate in testing — because it is
+effectively being shown the answer — and then fail badly the moment it is used for real,
+forward-looking predictions, where the future genuinely is not known yet.</p>
+
+<h3>7.2 A concrete example</h3>
+<div class="svg-wrap no-break">
+<svg viewBox="0 0 700 220" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Point-in-time timeline diagram">
+<style>
+  .tl{stroke:#4a5158; stroke-width:1.5;}
+  .dotpast{fill:#1c5fa8; stroke:#1c5fa8;}
+  .dotfuture{fill:#ffffff; stroke:#9aa3ad; stroke-width:1.4; stroke-dasharray:2,2;}
+  .ttl{font-family:-apple-system,Helvetica,Arial,sans-serif; font-size:11px; fill:#1b1f24; font-weight:600;}
+  .ttl2{font-family:-apple-system,Helvetica,Arial,sans-serif; font-size:9px; fill:#4a5158;}
+  .ttlfuture{font-family:-apple-system,Helvetica,Arial,sans-serif; font-size:9px; fill:#9aa3ad;}
+</style>
+<line class="tl" x1="30" y1="70" x2="670" y2="70"/>
+
+<!-- order captured -->
+<circle class="dotpast" cx="60" cy="70" r="5"/>
+<text class="ttl2" x="60" y="55" text-anchor="middle">Order</text>
+<text class="ttl2" x="60" y="66" text-anchor="middle">captured</text>
+<text class="ttl2" x="60" y="95" text-anchor="middle">Day 0</text>
+
+<!-- vendor ready -->
+<circle class="dotpast" cx="220" cy="70" r="5"/>
+<text class="ttl2" x="220" y="55" text-anchor="middle">Vendor ready</text>
+<text class="ttl2" x="220" y="66" text-anchor="middle">(observed, w/ delay)</text>
+<text class="ttl2" x="220" y="95" text-anchor="middle">Day 2</text>
+
+<!-- AS OF line -->
+<line x1="330" y1="30" x2="330" y2="150" stroke="#1c5fa8" stroke-width="2" stroke-dasharray="5,3"/>
+<rect x="270" y="14" width="120" height="18" rx="3" fill="#1c5fa8"/>
+<text x="330" y="27" text-anchor="middle" font-family="-apple-system,Helvetica,Arial,sans-serif" font-size="10" fill="#ffffff" font-weight="700">AS-OF TIMESTAMP</text>
+<text class="ttl2" x="330" y="165" text-anchor="middle">"now" — Day 3</text>
+
+<!-- shipped: future, hidden -->
+<circle class="dotfuture" cx="420" cy="70" r="5"/>
+<text class="ttlfuture" x="420" y="55" text-anchor="middle">Shipped</text>
+<text class="ttlfuture" x="420" y="66" text-anchor="middle">(not yet happened)</text>
+<text class="ttlfuture" x="420" y="95" text-anchor="middle">Day 5</text>
+
+<!-- delivered: future, hidden -->
+<circle class="dotfuture" cx="600" cy="70" r="5"/>
+<text class="ttlfuture" x="600" y="55" text-anchor="middle">Delivered</text>
+<text class="ttlfuture" x="600" y="66" text-anchor="middle">(not yet happened)</text>
+<text class="ttlfuture" x="600" y="95" text-anchor="middle">Day 8</text>
+<text class="ttlfuture" x="600" y="107" text-anchor="middle">OTIF outcome decided here</text>
+
+<rect x="30" y="120" width="290" height="52" rx="5" fill="#eaf5ee" stroke="#1f6b3a" stroke-width="1"/>
+<text x="45" y="136" font-family="-apple-system,Helvetica,Arial,sans-serif" font-size="9.5" fill="#1f6b3a" font-weight="700">ALLOWED as of Day 3:</text>
+<text x="45" y="150" font-family="-apple-system,Helvetica,Arial,sans-serif" font-size="9" fill="#1f6b3a">vendor ready delay, capture delay,</text>
+<text x="45" y="163" font-family="-apple-system,Helvetica,Arial,sans-serif" font-size="9" fill="#1f6b3a">initial allocation, DC utilization so far</text>
+
+<rect x="400" y="120" width="270" height="52" rx="5" fill="#f9ecec" stroke="#8a2020" stroke-width="1"/>
+<text x="415" y="136" font-family="-apple-system,Helvetica,Arial,sans-serif" font-size="9.5" fill="#8a2020" font-weight="700">LEAKAGE if used as of Day 3:</text>
+<text x="415" y="150" font-family="-apple-system,Helvetica,Arial,sans-serif" font-size="9" fill="#8a2020">shipped timestamp, delivered timestamp,</text>
+<text x="415" y="163" font-family="-apple-system,Helvetica,Arial,sans-serif" font-size="9" fill="#8a2020">final shipped quantity, the OTIF outcome itself</text>
+</svg>
+</div>
+<p class="caption">Figure 2. An order captured on Day 0 is being scored "as of" Day 3. The
+vendor-ready event (Day 2) already happened and may be used. The shipped and delivered events
+(Days 5 and 8) have not happened yet from the as-of viewpoint and must not be used — even
+though, at the time this document is generated, the full history for training data already
+exists in storage.</p>
+
+<h3>7.3 How the system enforces this — not just promises it</h3>
+<p>Every feature is computed strictly from events whose own recorded timestamp is at or before
+the as-of timestamp being scored, and from facts known at order capture (like the initial
+inventory check) or from slowly-changing reference data (like a customer's general appointment
+requirement). The same as-of contract is used in two different places: (1) when reproducing a
+historical snapshot for training/testing, and (2) when scoring an order live in the daily
+operations replay — so the exact same code path is exercised both times, rather than one
+"training" version and a separate, easier-to-get-wrong "production" version.</p>
+<p>This is not just a design promise; it is checked automatically. Part of the automated test
+suite proves three things: (a) a feature that looks forward in time is <em>not</em> present in
+the simulator's raw output at all — it is derived only from already-observed operational
+fields — (b) that feature is not a perfect stand-in for the hidden true cause (i.e. it carries
+real uncertainty, not a leaked answer), and (c) changing every future event and outcome for an
+order cannot change an earlier as-of snapshot's row for that same order at all. If a future code
+change ever violated the as-of contract, these tests would fail immediately.</p>
+</section>
+
+<!-- ============================================================ -->
+<!-- 8. FEATURE ENGINEERING -->
+<!-- ============================================================ -->
+<section class="section" id="features">
+<h2>8. Turning raw data into features</h2>
+<p>A <span class="term">feature</span> is a single measurable number or category that the
+model is allowed to look at when making a prediction — for example, "hours the vendor was
+late" or "how many of the last 30 days' orders from this vendor had a fault." Building good
+features from raw event and order data is called <span class="term">feature engineering</span>.
+This system builds roughly 100 features per order, grouped as follows.</p>
+
+<table>
+<thead><tr><th>Feature group</th><th>What it captures</th><th>Example</th></tr></thead>
+<tbody>
+<tr><td><strong>Line aggregates</strong></td><td>Facts rolled up from the order's individual
+product lines into one order-level number.</td><td><code>worst_line_shortage_ratio</code> — the
+single worst shortfall across all lines on the order.</td></tr>
+<tr><td><strong>Entity traits</strong></td><td>Stable characteristics of the vendor, DC, lane,
+customer, and SKUs involved.</td><td>Vendor reliability score, DC capacity variability, whether
+the customer requires a delivery appointment.</td></tr>
+<tr><td><strong>Observed events</strong></td><td>What has actually posted so far, converted
+into a signal — never the hidden cause directly.</td><td><code>vendor_ready_delay_hours</code>,
+an exception code observed at the warehouse stage.</td></tr>
+<tr><td><strong>Timing / slack</strong></td><td>How much buffer remains between now and the
+promised delivery date.</td><td><code>remaining_slack_hours</code> — if this is small or
+negative, there is little room left to recover from any delay.</td></tr>
+<tr><td><strong>Rolling history (30-day / 90-day / all-time)</strong></td><td>How this vendor,
+DC, lane, customer, or SKU has performed recently and historically, computed only from data
+strictly before the as-of date.</td><td><code>vendor_rolling_fault_rate_90d</code> — this
+vendor's fault-attributed miss rate over the last 90 days (see note below).</td></tr>
+<tr><td><strong>Freshness / missingness</strong></td><td>How stale the available information
+is, and how many expected events have not shown up at all — itself a risk signal, since a
+quiet order can mean either "everything is fine" or "we simply have not heard back yet."</td>
+<td><code>hours_since_last_observed_event</code>, <code>missing_event_stage_count</code>.</td></tr>
+</tbody>
+</table>
+
+<div class="card no-break">
+<strong>A subtle but important detail — fault attribution.</strong> A vendor's rolling history
+feature counts only misses that were <em>actually caused by that vendor</em>, not every miss on
+orders that vendor happened to touch. If a vendor's order missed OTIF because of a warehouse
+problem, that miss does not count against the vendor's own reliability history. Without this
+distinction, a perfectly reliable vendor could look unfairly risky simply by being paired with
+an unreliable warehouse.
+</div>
+
+<h3>8.1 Training/scoring parity</h3>
+<p>"Parity" here means: the exact same feature-building code produces the exact same feature
+values whether it is run once during model training/testing, or run every day inside the
+operations replay when scoring a still-open order. There is no separate, simplified "fast path"
+used only in production that could quietly drift out of sync with the version used for
+training. This is proven directly later in the document (Section 20's offline/batch parity
+result): the same order and the same as-of snapshot, scored two different ways, produced
+byte-identical feature vectors and scores.</p>
+</section>
+
+<!-- ============================================================ -->
+<!-- 9. CHRONOLOGICAL SPLIT -->
+<!-- ============================================================ -->
+<section class="section" id="split">
+<h2>9. Why the data is split by time, not at random</h2>
+<p>To measure how well a model performs on data it has not seen, the available orders are
+divided into three groups: a <span class="term">training</span> set (used to fit the model), a
+<span class="term">validation</span> set (used to tune settings like the decision threshold),
+and a <span class="term">test</span> set (used only at the very end, to report an honest
+performance number). This system splits <strong>chronologically</strong> — training on the
+earliest 60% of orders by calendar time, validating on the next 20%, and testing on the final
+20% — rather than shuffling orders randomly into the three groups.</p>
+
+<h3>9.1 Why not a random split?</h3>
+<p>A random split would let orders from later in the calendar end up in the training set even
+though, in the real deployment this system imitates, the model would never have seen the future
+before making a prediction. A model trained partly on "future" orders relative to some of its
+test orders would be quietly cheating — its test-set score would look better than it would
+ever perform in a genuine forward-looking deployment. Splitting by calendar time instead means
+every test-set prediction is honestly evaluated exactly the way it would be made in
+practice: using only what came before.</p>
+<p>One additional detail: orders that share the exact same as-of timestamp are always kept
+together on the same side of a split boundary — the split never cuts a group of
+identically-timestamped orders in half, which would otherwise let a handful of same-moment
+orders leak information across the training/test boundary.</p>
+
+<h3>9.2 Rolling-origin evaluation</h3>
+<p>A second, more advanced check — used specifically to evaluate the Decision Value Lab's
+policies (Section 17) — goes further: the calendar is divided into five equal chronological
+slices. The first slice is treated purely as historical "warm-up" data (there is no earlier
+history yet to train on, so it is excluded from evaluation entirely). Each of the remaining
+four slices is scored only by a model that was trained — and had its fusion weight and
+threshold selected — using history strictly <em>before</em> that slice. This is called
+<span class="term">rolling-origin</span> evaluation: the "origin" (the training cutoff) rolls
+forward through the calendar, and no slice's own rows are ever allowed to influence the model
+that scores it. Coverage (roughly 80% of the calendar, since the first slice is excluded) is
+reported explicitly rather than assumed.</p>
+</section>
+
+<!-- ============================================================ -->
+<!-- 10. XGBOOST -->
+<!-- ============================================================ -->
+<section class="section" id="xgboost">
+<h2>10. The risk model (XGBoost), in plain language</h2>
+
+<h3>10.1 What XGBoost is, without the jargon</h3>
+<p><span class="term">XGBoost</span> is a widely-used machine learning technique that builds
+its prediction out of many simple decision rules ("decision trees"), each one a short chain of
+yes/no questions like "Is remaining slack under 12 hours? Is vendor reliability below 0.85?".
+No single tree is very accurate on its own. XGBoost builds hundreds of small trees one after
+another, where each new tree focuses specifically on correcting the mistakes the trees before
+it made, and adds all of their votes together into one final number. This "boosting" approach
+tends to perform very well on the kind of structured, tabular business data this system uses
+(rows of orders with columns of numbers and categories), which is why it is a standard,
+well-understood choice for this type of problem rather than something exotic.</p>
+
+<h3>10.2 Inputs and outputs</h3>
+<div class="kv">
+<div><b>What goes in</b>The roughly 100 point-in-time features for one order described in
+Section 8 — vendor/DC/lane/customer/SKU traits, observed event signals, timing slack, rolling
+history, freshness and missingness.</div>
+<div><b>What comes out</b>A single number between 0 and 1 representing the model's estimated
+probability that this order will miss OTIF, given everything it can currently observe.</div>
+</div>
+
+<h3>10.3 Calibration</h3>
+<p>A raw model score is not automatically a trustworthy probability — a model can be
+systematically overconfident or underconfident. <span class="term">Calibration</span> is an
+extra adjustment step, fit on the validation set, that stretches or compresses the raw scores
+so that, for example, orders the model calls "70% likely to miss" really do miss roughly 70% of
+the time in practice. This system uses a standard calibration technique (Platt scaling) fit
+only on validation data, never on the test data used for final reporting.</p>
+
+<h3>10.4 Threshold</h3>
+<p>A risk score alone is not a decision. A <span class="term">threshold</span> is the cutoff
+above which an order is considered "risky enough to act on." This system tunes its threshold
+to target a recall of 65% while keeping precision no lower than 30% (see the box below for what
+those words mean), chosen on validation data only. On the canonical single run, this produced a
+threshold of 0.274 on the fused (see Section 15) score.</p>
+
+<h3>10.5 False positives and false negatives, explained simply</h3>
+<div class="two-col">
+<div class="card card-blue no-break">
+<strong>False positive</strong> — the model flags an order as at-risk, but it actually ships
+OTIF-complete anyway. Cost: a planner's attention (and possibly scarce recovery capacity) is
+spent on an order that did not need it.
+</div>
+<div class="card card-amber no-break">
+<strong>False negative</strong> — the model does not flag an order, but it misses OTIF anyway.
+Cost: a real problem goes unnoticed and unaddressed until it is too late to fix.
+</div>
+</div>
+<p><span class="term">Precision</span> is: of the orders the model flagged, what fraction
+really did miss? <span class="term">Recall</span> is: of the orders that really did miss, what
+fraction did the model flag? These two normally trade off against each other — casting a wider
+net (higher recall) usually catches more false positives too (lower precision) — which is why
+the threshold above is chosen deliberately, with a floor on each.</p>
+
+<h3>10.6 Measured performance (5-seed benchmark, 2,500 orders per seed)</h3>
+<p>All numbers below are medians across five independent random seeds, with the observed range
+across those seeds in parentheses — reported as measured, not tuned to look good.</p>
+<table>
+<thead><tr><th>Metric</th><th>Median</th><th>Range across 5 seeds</th><th>Plain meaning</th></tr></thead>
+<tbody>
+<tr><td>Fused PR-AUC (test)</td><td><strong>0.705</strong></td><td>0.535–0.763</td>
+<td>Precision-Recall Area Under the Curve — a single number (0 to 1, higher is better) summarizing
+how well the score ranks orders that truly miss above orders that do not, across every possible
+threshold. More informative than plain accuracy when misses are the minority outcome.</td></tr>
+<tr><td>Fused recall (test)</td><td><strong>0.705</strong></td><td>0.633–0.856</td>
+<td>At the chosen threshold, about 70.5% of true OTIF misses are flagged in advance.</td></tr>
+<tr><td>Fused precision (test)</td><td><strong>0.614</strong></td><td>0.509–0.635</td>
+<td>About 61.4% of flagged orders genuinely go on to miss OTIF.</td></tr>
+<tr><td>Fused Brier score</td><td>0.097</td><td>0.074–0.099</td>
+<td>A calibration-quality score (lower is better; 0 is perfect) measuring how close predicted
+probabilities are to actual outcomes.</td></tr>
+<tr><td>XGBoost-only PR-AUC</td><td>0.700</td><td>0.533–0.771</td>
+<td>The XGBoost model's own accuracy before blending with the Bayesian network — very close to
+the fused number, since XGBoost is the dominant contributor (Section 15).</td></tr>
+</tbody>
+</table>
+<p class="small">Source: <code>uv run otif-benchmark --seeds 1 2 3 4 5 --orders 2500</code>,
+persisted in <code>artifacts/benchmark.json</code>; see <code>docs/model-card.md</code> for the
+complete table.</p>
+</section>
+
+<!-- ============================================================ -->
+<!-- 11. SHAP -->
+<!-- ============================================================ -->
+<section class="section" id="shap">
+<h2>11. Explaining a single score (SHAP)</h2>
+
+<h3>11.1 The problem SHAP solves</h3>
+<p>XGBoost's final score is the combined result of hundreds of small decision trees — not
+something a person could read off directly. <span class="term">SHAP</span> (SHapley Additive
+exPlanations) is a well-established statistical technique, borrowed from game theory, that
+answers the question "how much did each individual feature push this one order's score up or
+down, compared to an average order?" It does this fairly — attributing credit/blame across
+features in a mathematically consistent way — rather than just picking whichever feature looks
+biggest.</p>
+<p>When the SHAP library is unavailable in a given environment, this system falls back to a
+deterministic alternative: it perturbs (temporarily changes) one feature at a time and measures
+how much the score moves, producing a similar factor-by-factor explanation without depending on
+an extra library.</p>
+
+<h3>11.2 Association, not causation</h3>
+<div class="card card-amber no-break">
+<strong>This is the single most important caveat in this entire document.</strong> A SHAP value
+tells you that a feature was <em>statistically associated</em> with a higher or lower score —
+never that changing that feature would <em>cause</em> the outcome to change. Every SHAP-derived
+explanation in this system is explicitly labeled <code>association_not_causation</code> for
+exactly this reason. For example, "low remaining slack contributed +0.18 to this order's risk
+score" does not mean that artificially adding slack would fix the order — it means the model
+learned that orders with low slack historically missed more often.
+</div>
+
+<h3>11.3 A worked example</h3>
+<p>Suppose an order's fused risk score is 0.81 (well above the 0.274 threshold). A SHAP
+breakdown might read:</p>
+<table>
+<thead><tr><th>Factor</th><th>Contribution to the score</th><th>Plain-language meaning</th></tr></thead>
+<tbody>
+<tr><td><code>vendor_ready_delay_hours</code> = 38.2</td><td>+0.21</td><td>The vendor posted
+its "ready" event about 38 hours later than planned — a strong upward push.</td></tr>
+<tr><td><code>allocation_ratio</code> = 0.61</td><td>+0.17</td><td>Only 61% of requested
+quantity was allocated at capture time — a meaningful shortfall risk.</td></tr>
+<tr><td><code>remaining_slack_hours</code> = 9.4</td><td>+0.09</td><td>Very little buffer time
+remains before the promised delivery date.</td></tr>
+<tr><td><code>vendor_rolling_fault_rate_90d</code> = 0.04</td><td>−0.03</td><td>This vendor's
+own recent fault-attributed miss rate is low — a small downward push, partly offsetting the
+other factors.</td></tr>
+</tbody>
+</table>
+<p>Reading this, a planner immediately understands <em>why</em> the model is worried — a late
+vendor and a real allocation shortfall, with little time buffer left — without needing to
+understand the underlying decision trees.</p>
+</section>
+
+<!-- ============================================================ -->
+<!-- 12. AFFECTED SKU EVIDENCE -->
+<!-- ============================================================ -->
+<section class="section" id="line-evidence">
+<h2>12. Which products on the order are affected</h2>
+<p>An order-level risk score alone does not tell a planner which specific product(s) on a
+multi-line order are actually the problem. A second, smaller model looks at each product line
+individually and flags it as "likely affected" using only information that was genuinely
+knowable at capture time: the initial available-to-promise (ATP) allocation, the inventory
+snapshot at the time of order, the product's own criticality tier, and the order's own
+point-in-time vendor-exception signal. Critically, this line-level model never looks at the
+hidden simulator answer key (<code>line_truth.csv</code>) while making its guess — that file is
+used only afterward, to grade it.</p>
+
+<p>These per-line flags are also rolled up into safe order-level summary features — the worst
+shortage ratio across all lines, how many lines are flagged, what share of flagged lines are
+"critical" tier products, and how concentrated the order's quantity is — which then feed back
+into the order-level XGBoost model from Section 10 as additional, still point-in-time-safe
+features.</p>
+
+<h3>12.1 Measured accuracy</h3>
+<table>
+<thead><tr><th></th><th>Precision</th><th>Recall</th><th>Basis</th></tr></thead>
+<tbody>
+<tr><td><strong>Targeted line evidence (5-seed median)</strong></td><td><strong>0.536</strong>
+(range 0.507–0.602)</td><td><strong>0.627</strong> (range 0.560–0.726)</td><td>5-seed benchmark,
+held-out test lines</td></tr>
+<tr><td>Targeted line evidence (canonical seed-42 run)</td><td>0.58</td><td>0.66</td>
+<td>Single canonical run, held-out test lines</td></tr>
+<tr><td>Naive "flag every held-out line" baseline</td><td>0.09</td><td>1.00</td>
+<td>Same held-out lines, for comparison</td></tr>
+</tbody>
+</table>
+<p>The naive baseline's recall is a trivial 1.00 because it flags <em>every</em> line — it
+"catches" every truly affected line only by also wrongly flagging almost everything else, which
+is why its precision (0.09) is so poor. The targeted model is roughly six times more precise
+than that naive baseline at broadly comparable recall — meaningfully narrowing down which
+product on a multi-line order actually needs attention, rather than telling a planner "maybe
+all of them."</p>
+</section>
+
+<!-- ============================================================ -->
+<!-- 13. BAYESIAN NETWORK -->
+<!-- ============================================================ -->
+<section class="section" id="bayesian">
+<h2>13. The 10-node cause-and-effect network</h2>
+
+<h3>13.1 What a Bayesian network is, in plain terms</h3>
+<p>A <span class="term">Bayesian network</span> is a diagram of boxes ("nodes") connected by
+arrows, where each arrow represents "this can influence that." Each node also carries a table of
+probabilities (a <span class="term">Conditional Probability Table</span>, or <span
+class="term">CPT</span>) describing how likely it is to be "active" given the state of the
+nodes pointing into it. Unlike XGBoost (Section 10), which is a single opaque score, a Bayesian
+network's structure is fully visible and its numbers can be read node by node — which is why it
+is used here specifically for interpretability and for "what if" scenario analysis
+(Section 14), even though, on its own, it is a less accurate predictor than XGBoost
+(Section 13.5).</p>
+
+<h3>13.2 This system's specific network</h3>
+<p>Seven nodes represent operational causes that map to real supply-chain stages; two
+"mechanism" nodes separate <em>quantity</em> problems from <em>timing</em> problems (matching
+the actual definition of OTIF from Section 2, instead of collapsing everything into one flat
+list of causes); and one final node represents the OTIF miss itself.</p>
+
+<div class="svg-wrap no-break">
+<svg viewBox="0 0 700 530" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="10-node Bayesian mechanism network diagram">
+<defs>
+  <marker id="arrowB" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+    <path d="M0,0 L10,5 L0,10 z" fill="#4a5158"/>
+  </marker>
+</defs>
+<style>
+  .ncause{fill:#eaf1fa; stroke:#1c5fa8; stroke-width:1.3;}
+  .nmech{fill:#fbf1de; stroke:#8a5a00; stroke-width:1.3;}
+  .nout{fill:#f9ecec; stroke:#8a2020; stroke-width:1.5;}
+  .nlbl{font-family:-apple-system,Helvetica,Arial,sans-serif; font-size:9.6px; fill:#1b1f24; font-weight:700;}
+  .bedge{stroke:#6b7280; stroke-width:1.3; fill:none; marker-end:url(#arrowB);}
+</style>
+
+<!-- Row 0: root causes -->
+<rect class="ncause" x="16" y="20" width="140" height="36" rx="5"/>
+<text class="nlbl" x="86" y="42" text-anchor="middle">ORDER_CAPTURE</text>
+
+<rect class="ncause" x="185" y="20" width="140" height="36" rx="5"/>
+<text class="nlbl" x="255" y="42" text-anchor="middle">VENDOR_FAILURE</text>
+
+<rect class="ncause" x="350" y="20" width="130" height="36" rx="5"/>
+<text class="nlbl" x="415" y="42" text-anchor="middle">DC_CAPACITY</text>
+
+<rect class="ncause" x="520" y="20" width="164" height="36" rx="5"/>
+<text class="nlbl" x="602" y="42" text-anchor="middle">CUSTOMER_DELIVERY</text>
+
+<!-- Row 1 -->
+<rect class="ncause" x="175" y="112" width="160" height="36" rx="5"/>
+<text class="nlbl" x="255" y="134" text-anchor="middle">INVENTORY_SHORTAGE</text>
+
+<!-- Row 2 -->
+<rect class="ncause" x="270" y="204" width="140" height="36" rx="5"/>
+<text class="nlbl" x="340" y="226" text-anchor="middle">WAREHOUSE_OPS</text>
+
+<!-- Row 3 -->
+<rect class="ncause" x="270" y="296" width="140" height="36" rx="5"/>
+<text class="nlbl" x="340" y="318" text-anchor="middle">TRANSPORT</text>
+
+<!-- Row 4: mechanism nodes -->
+<rect class="nmech" x="106" y="392" width="164" height="38" rx="5"/>
+<text class="nlbl" x="188" y="411" text-anchor="middle" style="fill:#8a5a00;">IN_FULL_FAILURE</text>
+<text style="font-family:-apple-system,Helvetica,Arial,sans-serif; font-size:7.6px; fill:#8a5a00;" x="188" y="423" text-anchor="middle">(quantity mechanism)</text>
+
+<rect class="nmech" x="428" y="392" width="152" height="38" rx="5"/>
+<text class="nlbl" x="504" y="411" text-anchor="middle" style="fill:#8a5a00;">LATE_DELIVERY</text>
+<text style="font-family:-apple-system,Helvetica,Arial,sans-serif; font-size:7.6px; fill:#8a5a00;" x="504" y="423" text-anchor="middle">(timing mechanism)</text>
+
+<!-- Row 5: outcome -->
+<rect class="nout" x="270" y="474" width="160" height="40" rx="5"/>
+<text class="nlbl" x="350" y="496" text-anchor="middle" style="fill:#8a2020;">OTIF_MISS</text>
+
+<!-- edges -->
+<line class="bedge" x1="255" y1="56" x2="255" y2="108"/>
+<line class="bedge" x1="415" y1="56" x2="355" y2="200"/>
+<line class="bedge" x1="255" y1="148" x2="330" y2="200"/>
+<line class="bedge" x1="340" y1="240" x2="340" y2="292"/>
+<path class="bedge" d="M 210 148 C 190 260, 180 340, 185 388"/>
+<path class="bedge" d="M 86 56 C 86 220, 300 340, 428 400"/>
+<path class="bedge" d="M 320 232 C 380 290, 420 340, 440 388"/>
+<line class="bedge" x1="360" y1="332" x2="450" y2="392"/>
+<path class="bedge" d="M 602 56 C 602 220, 560 340, 520 396"/>
+<line class="bedge" x1="200" y1="430" x2="310" y2="474"/>
+<line class="bedge" x1="490" y1="430" x2="390" y2="474"/>
+</svg>
+</div>
+<p class="caption">Figure 3. The 10-node mechanism network. Blue boxes are the seven
+operational cause nodes; amber boxes are the two mechanism nodes that separate a quantity
+problem from a timing problem; the red box is the final OTIF-miss outcome. A shared upstream
+cause (like <code>VENDOR_FAILURE</code>) can have a route to <em>both</em> mechanisms at once.</p>
+
+<h3>13.3 Conditional probability tables (CPTs) and inference</h3>
+<p>Each node's CPT is fit from counts observed in the training data only — for example, "of all
+orders where <code>VENDOR_FAILURE</code> was active and <code>DC_CAPACITY</code> was not, what
+fraction also had <code>WAREHOUSE_OPS</code> active?" These counts include disruptions that
+were successfully absorbed without causing an OTIF miss, not just disruptions on orders that
+went on to miss — so the network learns the full picture, not only the worst cases. The two
+mechanism nodes are fit directly from each training order's own actual "was it late" / "was it
+short" outcome, rather than being guessed from the seven cause labels.</p>
+<p><span class="term">Inference</span> is the process of computing "given what we've actually
+observed, what is the probability of OTIF_MISS (or any other node)?" This system computes exact
+inference — not an approximation — using a well-established open-source library (<code>pgmpy</code>)
+when it is available, or a from-scratch brute-force calculation over every possible combination
+of the network's states when it is not. Both methods have been checked, node by node, to produce
+numerically identical answers, so which one happens to run does not change any result.</p>
+
+<h3>13.4 Missing evidence is not assumed absent</h3>
+<p>A node is only treated as directly observed once its corresponding stage has actually
+happened as of the as-of timestamp. If, for example, an order has not yet reached the warehouse
+stage, <code>WAREHOUSE_OPS</code> is not simply assumed to be "false" — it is
+<span class="term">marginalized out</span>: the network mathematically averages over both
+possibilities (active and not active), weighted by how likely each is given everything else
+that is known, rather than guessing. This lets an early vendor-failure signal raise OTIF risk
+immediately, well before the warehouse or transport stages have even occurred.</p>
+
+<h3>13.5 Measured performance and an honest limitation</h3>
+<table>
+<thead><tr><th>Metric</th><th>Median</th><th>Range</th><th>Meaning</th></tr></thead>
+<tbody>
+<tr><td>Bayesian-only PR-AUC (overall OTIF miss)</td><td><strong>~0.475</strong></td>
+<td>0.346–0.486</td><td>Meaningfully weaker on its own than XGBoost's 0.700 — expected, since
+this network optimizes for a transparent, fixed structure rather than raw predictive power.</td></tr>
+<tr><td><code>IN_FULL_FAILURE</code> mechanism PR-AUC</td><td><strong>~0.417</strong></td>
+<td>0.312–0.451</td><td>Against its own roughly 13–15% held-out base rate — a solid, useful
+signal for the quantity mechanism.</td></tr>
+<tr><td><code>LATE_DELIVERY</code> mechanism PR-AUC</td><td><strong>~0.126</strong></td>
+<td>0.057–0.149</td><td>Against its own roughly 3.8% held-out base rate — a weak predictor
+(around 3x lift over random, but far weaker than the quantity mechanism).</td></tr>
+</tbody>
+</table>
+<div class="card card-amber no-break">
+<strong>Honest limitation.</strong> Most modeled OTIF misses in this digital twin are dominated
+by quantity shortfall rather than timing delay, and the network's ability to predict
+<em>timing</em> failures specifically is genuinely weak. This is a measured property of the
+fitted network on this particular dataset, reported plainly rather than adjusted to look
+better — any timing-side pathway detail from this network should be read with lower confidence
+than quantity-side detail.
+</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- 14. STRUCTURAL INTERVENTIONS -->
+<!-- ============================================================ -->
+<section class="section" id="interventions">
+<h2>14. "What if we fixed this?" scenario analysis</h2>
+
+<h3>14.1 What a structural intervention is</h3>
+<p>Beyond simply asking "given what we observe, what is the risk?", the Bayesian network from
+Section 13 can also answer a different, more ambitious-sounding question: "if we could force
+this one cause node to be fully resolved, what would the network's estimated risk become?" This
+is computed with a technique called the <span class="term">do-operator</span> — mathematically
+different from simply pretending you had observed that node to be resolved. The do-operator
+temporarily replaces that node's learned probability table with a fixed value and removes the
+influence its own upstream causes would normally have on it, isolating the effect of that one
+node alone. Every scored order at risk gets one such scenario per active piece of evidence, plus
+one scenario combining every active fix at once.</p>
+
+<h3>14.2 Evidence attribution</h3>
+<p>A related but distinct diagnostic, <span class="term">evidence attribution</span>, asks: "how
+much would the posterior risk change if we pretended we had never observed this one cause node
+at all (rather than forcing it to a fixed resolved value)?" This is computed by leaving one
+piece of evidence out at a time and re-running inference. It is explicitly not the same
+technique as SHAP (Section 11) and not a causal-effect estimate — it is a sensitivity measure
+for this one fixed network.</p>
+
+<h3>14.3 Neither of these ever feeds back into the decision</h3>
+<div class="card card-blue no-break">
+Structural intervention scenarios and evidence attribution are computed and stored purely as
+diagnostics for a human analyst to review. They never change the XGBoost score, never change the
+fused score, and never change the operational decision (Section 16). They are surfaced only in
+a dedicated "Causal Intelligence Studio" screen (Section 26).
+</div>
+
+<h3>14.4 A concrete worked example</h3>
+<p>On order <code>O002497</code> (introduced fully in Section 27), active evidence includes
+<code>VENDOR_FAILURE</code>, <code>INVENTORY_SHORTAGE</code>, and <code>WAREHOUSE_OPS</code>.
+The scenario table for this order reads:</p>
+<table>
+<thead><tr><th>Scenario</th><th>Baseline risk</th><th>After intervention</th><th>Reduction</th></tr></thead>
+<tbody>
+<tr><td><code>do(VENDOR_FAILURE = resolved)</code></td><td>98.4%</td><td>98.4%</td>
+<td><strong>0.0 points</strong></td></tr>
+<tr><td><code>do(INVENTORY_SHORTAGE = resolved)</code></td><td>98.4%</td><td>9.6%</td>
+<td><strong>88.8 points</strong></td></tr>
+<tr><td>Combined mitigation (all active nodes)</td><td>98.4%</td><td>3.6%</td>
+<td><strong>94.8 points</strong></td></tr>
+</tbody>
+</table>
+<p>This is a genuinely instructive, non-obvious result: fixing the "obvious" root cause
+(<code>VENDOR_FAILURE</code>) alone does <em>nothing</em> here, because by the time
+<code>INVENTORY_SHORTAGE</code> is already locked in downstream, the vendor problem has already
+done its damage — a real statistical phenomenon at this type of network junction, not a bug.
+Fixing the inventory shortage directly, however, removes almost all of the risk. Every row of
+this table carries the label <strong>"Fixed-structure scenario analysis — not a proven treatment
+effect."</strong></p>
+
+<h3>14.5 Why "not a proven treatment effect" matters</h3>
+<p>This scenario analysis assumes the fitted network's structure and probabilities are correct
+and complete, and computes what they imply mathematically. It has not been validated the way a
+real randomized controlled trial or a real operational A/B test would validate an actual
+intervention. It is a rigorous, transparent "if this model of the world is right, here is what
+follows" statement — genuinely useful for prioritizing which lever to pull first — but it should
+never be presented to a decision-maker as proof that pulling that lever will produce that exact
+result in the real world.</p>
+</section>
+
+<!-- ============================================================ -->
+<!-- 15. FUSION -->
+<!-- ============================================================ -->
+<section class="section" id="fusion">
+<h2>15. Combining the two models (fusion)</h2>
+<p>The final risk score used everywhere downstream is a weighted blend of the XGBoost score
+(Section 10) and the Bayesian network's own observational risk estimate (Section 13) —
+<span class="term">fusion</span>. XGBoost is deliberately the dominant contributor because it is
+measurably more accurate on its own (median PR-AUC 0.700 versus the Bayesian network's 0.475).</p>
+
+<h3>15.1 How the weight is chosen</h3>
+<ol>
+<li>Score the validation and test sets using XGBoost alone, the Bayesian network alone, and
+every blend in between in steps of 10% (0% Bayesian, 10% Bayesian, 20%, ... 100% Bayesian).</li>
+<li>On the <strong>validation set only</strong>, keep any blend that (a) still catches enough
+true misses at the planners' realistic top-priority capacity, and (b) is within a small
+calibration tolerance (0.002 Brier score) of the single best blend found.</li>
+<li>Among the blends left standing after step 2 — which are all practically equally accurate —
+prefer the one with <em>more</em> Bayesian contribution, since the Bayesian network's
+transparent structure is valuable for explanation even when it does not add measurable
+accuracy.</li>
+<li>Tune the final decision threshold separately, once, for whichever blend was chosen.</li>
+</ol>
+
+<h3>15.2 Why not just force an equal weight?</h3>
+<p>Forcing, say, a fixed 50/50 blend regardless of what the data shows would either waste
+accuracy (if the Bayesian network is much weaker that day) or waste interpretability (if it
+happened to be just as accurate but under-weighted). Selecting on validation data — and never on
+the test data used for final reporting — means the chosen weight reflects a genuine,
+checked trade-off rather than an assumption. In practice, this process selects 10–30% Bayesian
+contribution across the 5-seed benchmark (the canonical seed-42 run selected 10%), never forcing
+50/50 and never discarding the Bayesian network entirely.</p>
+<p>The full comparison table — every blend's measured accuracy on validation and test — is
+always saved to disk (<code>fusion_comparison.csv</code>), regardless of which blend wins, so
+the choice can always be audited afterward rather than taken on faith.</p>
+</section>
+
+<!-- ============================================================ -->
+<!-- 16. DECISIONS -->
+<!-- ============================================================ -->
+<section class="section" id="decisions">
+<h2>16. Turning a score into a decision</h2>
+
+<h3>16.1 Eligible threshold</h3>
+<p>An order becomes a candidate for action only once its fused risk score (Section 15) is at or
+above the tuned decision threshold (0.274 on the canonical run — Section 10.4). Orders below
+the threshold are not considered actionable at all, regardless of how interesting their factors
+might look.</p>
+
+<h3>16.2 Action mapping</h3>
+<p>Each of the seven operational cause categories (Section 13) maps to one specific,
+human-executable action:</p>
+<table>
+<thead><tr><th>Primary cause</th><th>Mapped action</th><th>Resource pool consumed</th></tr></thead>
+<tbody>
+<tr><td>ORDER_CAPTURE</td><td>Order capture correction</td><td>Customer slot</td></tr>
+<tr><td>VENDOR_FAILURE</td><td>Vendor escalation</td><td>Vendor escalation slot</td></tr>
+<tr><td>INVENTORY_SHORTAGE</td><td>Inventory reallocation</td><td>DC recovery capacity</td></tr>
+<tr><td>DC_CAPACITY / WAREHOUSE_OPS</td><td>Warehouse expedite</td><td>DC recovery capacity</td></tr>
+<tr><td>TRANSPORT</td><td>Alternate transport</td><td>Lane alternate capacity</td></tr>
+<tr><td>CUSTOMER_DELIVERY</td><td>Appointment coordination</td><td>Customer appointment slot</td></tr>
+</tbody>
+</table>
+<p class="small">Resource pools are finite and shared: a distribution center can only absorb so
+much recovery work per day, a vendor can only field so many escalation calls, and so on
+(Section 16.5).</p>
+
+<h3>16.3 Expected-value formula (the deployed heuristic)</h3>
+<p>For the numbers shown directly in the order desk today, the estimated dollar benefit of
+acting on a recommended order uses a simple, transparent formula:</p>
+<pre>estimated_avoidable_penalty = estimated_penalty_exposure &times; 60%</pre>
+<p>where <code>estimated_penalty_exposure</code> is order value &times; penalty rate &times;
+combined risk score — how much money is realistically at stake, risk-weighted. The 60% is a
+fixed, documented <em>assumption</em> about how effective an average intervention is — it is a
+fast, transparent user-interface heuristic, not a measured number. The <em>measured</em>
+equivalent, which replaces this assumption with an actual simulated test, is the Decision Value
+Lab (Section 17).</p>
+
+<h3>16.4 RECOMMENDED / CONTESTED / MONITOR</h3>
+<ul>
+<li><strong>MONITOR</strong> — the order's fused risk score is below the eligible threshold, or
+its primary cause has no observable mechanism to act on. No action is proposed; the order is
+simply watched.</li>
+<li><strong>RECOMMENDED</strong> — the order is above threshold, an action is mapped, and the
+resource pool that action needs still has capacity available today. The action is proposed for
+a planner to execute.</li>
+<li><strong>CONTESTED</strong> — the order is above threshold and an action is mapped, but the
+needed resource pool is already fully claimed by other, higher-priority orders today. The order
+is marked contested and the specific competing order(s) are named, so a planner knows exactly
+what it is competing against rather than seeing a vague "no capacity" message.</li>
+</ul>
+
+<div class="svg-wrap no-break">
+<svg viewBox="0 0 700 260" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="RECOMMENDED CONTESTED MONITOR scenario diagram">
+<defs>
+  <marker id="arrowS" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+    <path d="M0,0 L10,5 L0,10 z" fill="#4a5158"/>
+  </marker>
+</defs>
+<style>
+  .ord{fill:#ffffff; stroke:#1c5fa8; stroke-width:1.3;}
+  .pool{fill:#f4f6f8; stroke:#6b7280; stroke-width:1.2;}
+  .slbl{font-family:-apple-system,Helvetica,Arial,sans-serif; font-size:10px; fill:#1b1f24; font-weight:700;}
+  .slbl2{font-family:-apple-system,Helvetica,Arial,sans-serif; font-size:8.6px; fill:#4a5158;}
+  .sedge{stroke:#4a5158; stroke-width:1.2; fill:none; marker-end:url(#arrowS);}
+</style>
+
+<rect class="ord" x="20" y="20" width="190" height="52" rx="5"/>
+<text class="slbl" x="115" y="40" text-anchor="middle">Order O002497</text>
+<text class="slbl2" x="115" y="54" text-anchor="middle">risk 0.81, priority 62.4</text>
+<text class="slbl2" x="115" y="65" text-anchor="middle">cause: VENDOR_FAILURE</text>
+
+<rect class="ord" x="20" y="150" width="190" height="52" rx="5"/>
+<text class="slbl" x="115" y="170" text-anchor="middle">Order O002498</text>
+<text class="slbl2" x="115" y="184" text-anchor="middle">risk 0.77, priority 51.8</text>
+<text class="slbl2" x="115" y="195" text-anchor="middle">cause: VENDOR_FAILURE</text>
+
+<rect class="pool" x="280" y="86" width="180" height="52" rx="5"/>
+<text class="slbl" x="370" y="106" text-anchor="middle">Vendor V001</text>
+<text class="slbl2" x="370" y="120" text-anchor="middle">escalation slot pool</text>
+<text class="slbl2" x="370" y="131" text-anchor="middle">capacity: 1 slot / day</text>
+
+<line class="sedge" x1="210" y1="50" x2="278" y2="100"/>
+<line class="sedge" x1="210" y1="176" x2="278" y2="124"/>
+
+<rect x="500" y="20" width="170" height="52" rx="5" fill="#eaf5ee" stroke="#1f6b3a" stroke-width="1.3"/>
+<text class="slbl" x="585" y="40" text-anchor="middle" style="fill:#1f6b3a;">RECOMMENDED</text>
+<text class="slbl2" x="585" y="54" text-anchor="middle">higher priority wins the slot</text>
+<line class="sedge" x1="460" y1="102" x2="498" y2="55"/>
+
+<rect x="500" y="150" width="170" height="52" rx="5" fill="#f9ecec" stroke="#8a2020" stroke-width="1.3"/>
+<text class="slbl" x="585" y="170" text-anchor="middle" style="fill:#8a2020;">CONTESTED</text>
+<text class="slbl2" x="585" y="184" text-anchor="middle">contested_with: O002497</text>
+<line class="sedge" x1="460" y1="123" x2="498" y2="167"/>
+
+<rect class="ord" x="20" y="220" width="190" height="34" rx="5" style="stroke:#9aa3ad;"/>
+<text class="slbl2" x="115" y="241" text-anchor="middle">Order O001800 — risk 0.11 (below threshold)</text>
+<line class="sedge" x1="210" y1="237" x2="498" y2="237" stroke-dasharray="3,2"/>
+<rect x="500" y="220" width="170" height="34" rx="5" fill="#f4f6f8" stroke="#6b7280" stroke-width="1.2"/>
+<text class="slbl2" x="585" y="241" text-anchor="middle" style="font-weight:700;">MONITOR</text>
+</svg>
+</div>
+<p class="caption">Figure 4. Two orders sharing the same vendor's single daily escalation slot:
+the higher-priority order is RECOMMENDED, the other is CONTESTED and told exactly which order it
+lost out to. A third, low-risk order never reaches the resource check at all and is simply
+MONITORed. This mirrors the real reserved scenario walked through fully in Section 27.</p>
+
+<h3>16.5 Resource demand, in one place</h3>
+<p>Distribution-center conflicts are quantity-aware (measured against real daily capacity units
+and a documented recovery fraction); vendor, lane, and customer conflicts are simpler
+count-based slot pools, since this prototype does not have an equivalent numeric
+recovery-capacity field for those dimensions. Every pool is allocated greedily by priority and
+reset each simulated day, and every "who lost to whom" is recorded — never a silent rejection.</p>
+</section>
+
+<!-- ============================================================ -->
+<!-- 17. DECISION VALUE LAB -->
+<!-- ============================================================ -->
+<section class="section" id="value-lab">
+<h2>17. The Decision Value Lab</h2>
+<p>Section 16.3 noted that the deployed "60% effectiveness" number is an assumption, not a
+measurement. The Decision Value Lab exists specifically to replace that assumption with an
+actual, falsifiable measurement — by simulating what would really happen if a given action were
+taken, using the digital twin's own lifecycle mechanics.</p>
+
+<h3>17.1 The action-response twin and common random numbers</h3>
+<p>For every combination of (random seed, order, possible action), the system draws one
+deterministic random number (derived from a cryptographic hash, so it is reproducible but not
+predictable by hand) that decides whether that specific action would have succeeded for that
+specific order. The key idea is <span class="term">common random numbers</span>: every
+candidate policy being compared sees the <em>exact same</em> drawn outcome for the exact same
+order/action pair. This means differences measured between policies come from genuinely
+different decisions, not from different luck — a standard, rigorous simulation technique for
+making fair comparisons.</p>
+<p>Six actions are modeled (matching Section 16.2's mapping, with warehouse expedite covering
+both DC-capacity and warehouse-ops causes). A successful action reduces only the specific delay
+or shortfall it targets; a failed, mismatched attempt can occasionally make the targeted problem
+slightly worse, reflecting genuine operational risk. One documented limitation: because this
+twin's shipping and transit timing depends only on the order date (never on how quickly the
+order was captured), the "order capture correction" action can never mechanically change a
+delivered timestamp or quantity in this simulation — reported honestly as a structural no-op,
+not hidden.</p>
+
+<h3>17.2 Eight policies compared</h3>
+<table>
+<thead><tr><th>Policy</th><th>What it does</th></tr></thead>
+<tbody>
+<tr><td><code>NO_ACTION</code></td><td>Never intervenes — the floor.</td></tr>
+<tr><td><code>RANDOM_AT_CAPACITY</code></td><td>Accepts eligible orders in random order until
+capacity runs out.</td></tr>
+<tr><td><code>HIGHEST_RISK_AT_CAPACITY</code></td><td>Accepts the highest-risk-score orders
+first.</td></tr>
+<tr><td><code>HIGHEST_FINANCIAL_AT_CAPACITY</code></td><td>Accepts the highest-dollar-exposure
+orders first.</td></tr>
+<tr><td><code>STRONGEST_SIGNAL_HEURISTIC</code></td><td>Accepts orders with the strongest single
+observed evidence signal first.</td></tr>
+<tr><td><code>SINGLE_CAUSE_PRIORITY_BASELINE</code></td><td>The existing deployed
+risk&times;tier&times;value ranking (Section 16), with one fixed action per order's primary
+cause.</td></tr>
+<tr><td><code>CURRENT_POLICY</code> (value-aware)</td><td>Considers <em>every</em>
+point-in-time-feasible action per order (not just the one primary-cause action) and ranks
+order-action pairs by expected avoided penalty per unit of scarce resource consumed.</td></tr>
+<tr><td><code>ORACLE_EVALUATION_ONLY</code></td><td>An unattainable, evaluation-only ceiling
+that may pick any action with hindsight — used solely to compute regret, never a deployable
+recommendation.</td></tr>
+</tbody>
+</table>
+
+<h3>17.3 The value-aware formula</h3>
+<pre>expected_benefit = estimated_penalty_exposure &times; structural_reduction &times; execution_feasibility
+value_density     = expected_benefit / normalized_resource_fraction</pre>
+<p><code>structural_reduction</code> comes from a persisted Bayesian intervention scenario
+(Section 14) when one exists for that cause, or otherwise falls back to the same 60%
+deployed-UI assumption from Section 16.3, scaled down if the signal is only a secondary,
+corroborating one. <code>execution_feasibility</code> is a fixed weighted mix of remaining
+timing slack, an action-specific resource trait (e.g. vendor reliability for a vendor
+escalation), and how much of the Bayesian network's evidence is actually observed for this
+order. <code>normalized_resource_fraction</code> divides the action's resource cost by that
+pool's standard daily capacity, so the same ranking applies no matter how scarce capacity is
+that day.</p>
+
+<h3>17.4 Capacity scenarios: 25%, 50%, 100%</h3>
+<p>At this twin's generously-sized default (100%) daily capacity, resource pools are rarely
+actually contested, so a smarter <em>ranking</em> has very little to improve — most policies,
+including plain random selection, simply accept every eligible order. To ask the right business
+question (what happens when capacity is genuinely scarce), every policy is re-run at three
+capacity levels applied uniformly to every resource pool: 25%, 50% (the <strong>primary
+headline</strong> scenario every acceptance gate below is measured against), and 100% (kept only
+as a diagnostic).</p>
+
+<h3>17.5 Stage 1 headline result — measured, not asserted</h3>
+<table>
+<thead><tr><th>Policy</th><th>25% capacity</th><th>50% capacity (primary)</th><th>100% capacity (diagnostic)</th></tr></thead>
+<tbody>
+<tr><td><code>NO_ACTION</code></td><td>0.00</td><td>0.00</td><td>0.00</td></tr>
+<tr><td><code>RANDOM_AT_CAPACITY</code></td><td>8.20</td><td>9.17</td><td>15.09</td></tr>
+<tr><td><code>HIGHEST_RISK_AT_CAPACITY</code></td><td>8.06</td><td>9.17</td><td>14.96</td></tr>
+<tr><td><code>SINGLE_CAUSE_PRIORITY_BASELINE</code></td><td>8.06</td><td>9.174</td><td>15.12</td></tr>
+<tr><td><strong><code>CURRENT_POLICY</code> (value-aware, with Bayesian term)</strong></td>
+<td><strong>8.35</strong></td><td><strong>9.964</strong></td><td><strong>17.02</strong></td></tr>
+<tr><td><em>Value-aware policy without the Bayesian term (ablation)</em></td><td>—</td>
+<td><em>11.3445</em></td><td>—</td></tr>
+<tr><td><code>ORACLE_EVALUATION_ONLY</code> (ceiling, never deployable)</td><td>56.45</td>
+<td>74.45</td><td>119.76</td></tr>
+</tbody>
+</table>
+<p class="small">Units: median avoided penalty per normalized scarce-resource unit, across 5
+fixed random seeds, 2,500 orders per seed. Source: <code>artifacts/policy_benchmark.json</code>.</p>
+
+<div class="card card-green no-break">
+<strong>At the primary 50%-capacity headline, the deployed value-aware policy (with its
+Bayesian term) beats every deployable baseline</strong> —
+9.964 versus the shared baseline median of 9.174, a <strong>+8.6%</strong> improvement — winning
+4 of 5 individually-tested random seeds against each baseline (only seed 4 is a loss, reported
+honestly, not adjusted away). The acceptance gate for this result is measured and recorded as
+<strong>passed</strong>.
+</div>
+
+<div class="card card-amber no-break">
+<strong>Honest finding: the Bayesian term does not currently help this specific formula.</strong>
+An ablation test — the identical value-aware formula, with vs. without its Bayesian
+structural-reduction term — shows the <em>simpler</em> version (leading-signal fallback only,
+no Bayesian input) actually scores <strong>higher</strong>: a median of 11.3445 versus 9.964,
+winning in all 5 tested seeds. This does not change which policy is deployed (the value-aware
+policy is defined to include the Bayesian term and still clears its own acceptance gate against
+the older baselines), but it is reported plainly as an open question for future work, and it is
+the exact finding the governance walkthrough in Section 24 uses to demonstrate a realistic
+"hold" decision.
+</div>
+
+<h3>17.6 What the oracle is (and is not)</h3>
+<p>The oracle policy is allowed to pick, with full hindsight, whichever action would have
+produced the best outcome for each order — something no real deployable policy could ever know
+in advance. It exists purely to compute <span class="term">regret</span> (how far short of the
+best-possible outcome a real policy falls) and is never presented as something the system could
+actually deploy.</p>
+</section>
+
+<!-- ============================================================ -->
+<!-- 18. EXPLORATION -->
+<!-- ============================================================ -->
+<section class="section" id="exploration">
+<h2>18. Exploration: keeping some capacity for learning</h2>
+<p>If the value-aware policy (Section 17) always assigned every scarce resource slot strictly by
+its own ranking, the system would only ever learn from the orders it already believes are the
+best choice — and could never discover whether a slightly lower-ranked candidate would actually
+have performed just as well or better. To avoid this, roughly <strong>10% of capacity</strong>
+is deliberately reserved for <span class="term">exploration</span>: near-equally-ranked eligible
+orders are given a real, logged chance of being selected even when they are not the single
+top-ranked candidate.</p>
+
+<h3>18.1 How assignment probability is computed</h3>
+<p>For resource pools made of whole, discrete slots (vendor escalation calls, customer
+appointment slots), the explore share is split using seeded, weighted random rounding, so that
+the pool's full available slot count is always used and every candidate's exact chance of being
+selected is logged precisely. For continuous pools (distribution-center or lane capacity, which
+are divided in fractional units rather than whole slots), an exact per-order probability has no
+clean mathematical form, since order sizes differ — those rows honestly report their
+assignment probability as unavailable, together with a separately labeled reservation ratio,
+rather than presenting a misleading precise-looking number.</p>
+
+<h3>18.2 Why this matters for future learning</h3>
+<p>Exploration is what would let a future, real deployment of this system responsibly learn
+whether its own ranking is actually correct, rather than only ever confirming its own beliefs. In
+production terms: without occasionally trying a "second-best" option and observing what happens,
+a decision system can become confidently wrong forever. This 10% carve-out is a deliberate,
+logged, and reproducible way of avoiding that trap — while still deploying the top-ranked
+decision to the overwhelming majority of eligible orders.</p>
+</section>
+
+<!-- ============================================================ -->
+<!-- 19. DAILY OPERATIONS REPLAY -->
+<!-- ============================================================ -->
+<section class="section" id="daily-ops">
+<h2>19. A day in the life: the operations replay</h2>
+<p>To see how this system would behave over time — not just as a single snapshot — a
+<span class="term">daily operations replay</span> simulates running the whole pipeline once per
+simulated calendar day across a 90-day window.</p>
+
+<div class="svg-wrap no-break">
+<svg viewBox="0 0 700 220" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Daily operations loop diagram">
+<defs>
+  <marker id="arrowO" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+    <path d="M0,0 L10,5 L0,10 z" fill="#1c5fa8"/>
+  </marker>
+</defs>
+<style>
+  .obox{fill:#ffffff; stroke:#1c5fa8; stroke-width:1.3;}
+  .olbl{font-family:-apple-system,Helvetica,Arial,sans-serif; font-size:10px; fill:#1b1f24; font-weight:700;}
+  .olbl2{font-family:-apple-system,Helvetica,Arial,sans-serif; font-size:8.2px; fill:#4a5158;}
+  .oedge{stroke:#1c5fa8; stroke-width:1.4; fill:none; marker-end:url(#arrowO);}
+</style>
+<!-- seven boxes in a loop, arranged as a ring: top row 4, bottom row 3 -->
+<rect class="obox" x="20" y="20" width="90" height="46" rx="5"/>
+<text class="olbl" x="65" y="40" text-anchor="middle">Ingest</text>
+<text class="olbl2" x="65" y="53" text-anchor="middle">day's open orders</text>
+
+<rect class="obox" x="140" y="20" width="90" height="46" rx="5"/>
+<text class="olbl" x="185" y="40" text-anchor="middle">Score</text>
+<text class="olbl2" x="185" y="53" text-anchor="middle">current model version</text>
+
+<rect class="obox" x="260" y="20" width="90" height="46" rx="5"/>
+<text class="olbl" x="305" y="40" text-anchor="middle">Allocate</text>
+<text class="olbl2" x="305" y="53" text-anchor="middle">daily capacity</text>
+
+<rect class="obox" x="380" y="20" width="90" height="46" rx="5"/>
+<text class="olbl" x="425" y="40" text-anchor="middle">Ledger</text>
+<text class="olbl2" x="425" y="53" text-anchor="middle">log every decision</text>
+
+<rect class="obox" x="500" y="20" width="90" height="46" rx="5"/>
+<text class="olbl" x="545" y="40" text-anchor="middle">Mature</text>
+<text class="olbl2" x="545" y="53" text-anchor="middle">close resolved orders</text>
+
+<rect class="obox" x="380" y="130" width="90" height="46" rx="5"/>
+<text class="olbl" x="425" y="150" text-anchor="middle">Monitor</text>
+<text class="olbl2" x="425" y="163" text-anchor="middle">drift &amp; SLOs</text>
+
+<rect class="obox" x="240" y="130" width="110" height="46" rx="5"/>
+<text class="olbl" x="295" y="150" text-anchor="middle">Retrain</text>
+<text class="olbl2" x="295" y="163" text-anchor="middle">on cadence or drift trigger</text>
+
+<line class="oedge" x1="110" y1="43" x2="138" y2="43"/>
+<line class="oedge" x1="230" y1="43" x2="258" y2="43"/>
+<line class="oedge" x1="350" y1="43" x2="378" y2="43"/>
+<line class="oedge" x1="470" y1="43" x2="498" y2="43"/>
+<path class="oedge" d="M 545 66 C 545 110, 470 150, 472 153"/>
+<line class="oedge" x1="380" y1="153" x2="352" y2="153"/>
+<path class="oedge" d="M 240 153 C 150 153, 90 110, 65 68"/>
+</svg>
+</div>
+<p class="caption">Figure 5. One simulated day's loop: still-open orders are scored by the
+currently active model, capacity is allocated, decisions are logged, resolved orders' true
+outcomes are recorded, drift is checked, and a new model version is trained if a schedule or a
+drift trigger fires — then the loop repeats the next day using whichever model is currently
+active (Section 24 decides whether a newly trained version is ever actually promoted).</p>
+
+<h3>19.1 What each step means</h3>
+<ol>
+<li><strong>Ingest.</strong> The set of orders still open (not yet delivered/closed) as of that
+simulated day is assembled.</li>
+<li><strong>Score.</strong> Every open order gets a fresh risk score, explanation, and decision
+using the model version currently marked "active" (Section 24) — using the exact same
+point-in-time feature code as training (Section 8.1).</li>
+<li><strong>Allocate.</strong> Today's resource capacity (Section 16.5) is allocated across
+eligible orders by priority; contested orders are recorded with who they lost to.</li>
+<li><strong>Ledger.</strong> Every decision — feasible actions, chosen action, rejected
+actions, resource state before/after, execution status — is appended to a durable, idempotent
+ledger (Section 22).</li>
+<li><strong>Mature.</strong> Orders that reach their actual delivery date in the simulated
+calendar are closed and their real outcome (and true cause) is recorded.</li>
+<li><strong>Monitor.</strong> The system checks for drift — is the model's accuracy slipping,
+are score distributions shifting, is data going missing more than expected (Section 23)?</li>
+<li><strong>Retrain.</strong> On a fixed schedule, or immediately if a drift trigger fires, a
+new model version is trained on the freshest available history and evaluated — but, critically,
+it is not automatically put into service (Section 24 explains why).</li>
+</ol>
+
+<h3>19.2 What one canonical 90-day replay actually produced</h3>
+<p>Across the 90 simulated days, 9 model versions were trained in total (the initial model plus
+8 retrains), 6,226 individual decisions were logged, and every one of the governance checks
+described in Sections 20–24 ran against real, persisted output — not a mock-up.</p>
+</section>
+
+<!-- ============================================================ -->
+<!-- 20. ADAPTERS AND SERVICE CONTRACTS -->
+<!-- ============================================================ -->
+<section class="section" id="adapters">
+<h2>20. Production-shaped adapters and service contracts</h2>
+<p>Even though this prototype does not connect to any real company system today (Section 4.4),
+it is built as if it eventually would — through a clean, typed boundary rather than code that
+directly reaches into raw files everywhere.</p>
+
+<h3>20.1 The four source adapters</h3>
+<p>Four typed adapters stand in for the four kinds of systems a real deployment would read
+from: <strong>ERP</strong> (Enterprise Resource Planning — order and customer records),
+<strong>WMS</strong> (Warehouse Management System — inventory and warehouse events),
+<strong>TMS</strong> (Transportation Management System — carrier and transit events), and
+<strong>SRM</strong> (Supplier Relationship Management — vendor records). Today's
+implementations simply read from local CSV files, but they honor the exact same point-in-time
+contract from Section 7: any event that has not genuinely occurred yet as of the requested
+snapshot is redacted (not silently dropped, but explicitly marked "not yet available"), matching
+the same rule enforced in feature engineering. Swapping these adapters for real API/database
+connections later would not require changing anything upstream of them.</p>
+
+<h3>20.2 Service contracts</h3>
+<p>A <span class="term">ScoreRequest</span> is a small, well-defined package containing an
+as-of timestamp, an order identifier, a snapshot identifier, and an idempotency key. A
+<span class="term">ScoreResponse</span> returns the model/policy version, the manifest content
+identifier, the risk score, the threshold, a confidence label, the explanation, and the decision
+status. <span class="term">Idempotency</span> means: if the exact same request is sent twice
+(e.g. due to a network retry), the system recognizes it as the same request and never writes a
+duplicate decision — it simply returns (or re-confirms) the original result.</p>
+
+<h3>20.3 Offline/batch parity — proven, not assumed</h3>
+<div class="card card-green no-break">
+<strong>Measured result:</strong> the same 15 orders, scored at the same as-of snapshot, once
+directly against the in-memory dataset and once through the full adapter/service boundary
+(reading data that had been round-tripped through CSV files), produced <strong>byte-identical
+feature vectors and scores</strong> — <code>parity_check.json</code> reports <code>passed:
+true</code> with zero mismatched orders. This proves there is no hidden "shortcut" version of
+feature-building used only in one code path; both paths are provably the same computation.
+</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- 21. MANIFESTS / LINEAGE / CHECKSUMS -->
+<!-- ============================================================ -->
+<section class="section" id="manifests">
+<h2>21. Manifests, lineage, and tamper detection</h2>
+<p>Every run of the pipeline writes a <span class="term">run manifest</span> — a structured
+record of exactly how that run was produced: the exact code version (git commit hash) and
+whether the working copy had uncommitted changes, the versions of every key software
+dependency, the configuration and schema versions used, fingerprints (row counts, schema,
+date ranges, content hashes) of every input table, a hash of the feature schema, the
+training/validation/test date windows, and a SHA-256 checksum of every other file the run
+produced.</p>
+
+<h3>21.1 Two kinds of identifiers</h3>
+<p>A <span class="term">content ID</span> is a deterministic fingerprint that deliberately
+excludes anything that would differ between two otherwise-identical runs (timestamps, the run's
+output folder name, an internal run-instance ID). Two runs with the same random seed,
+configuration, code, and model-facing data will always produce the <em>same</em> content ID,
+even if run on different days or in different folders — proving reproducibility. Separately, a
+<span class="term">run-instance ID</span> and timestamp record exactly when and where that
+particular run happened, for audit purposes.</p>
+
+<h3>21.2 Measured lineage numbers</h3>
+<table>
+<thead><tr><th>Run</th><th>Artifacts checksummed</th><th>Verification result</th></tr></thead>
+<tbody>
+<tr><td>Canonical single pipeline run (seed 42, 2,500 orders)</td><td><strong>29 files</strong></td>
+<td><code>verified: true</code></td></tr>
+<tr><td>90-day operations replay (seed 42, 2,500 orders)</td><td><strong>121 files</strong></td>
+<td><code>verified: true</code></td></tr>
+</tbody>
+</table>
+
+<h3>21.3 A simple tamper example</h3>
+<p>Suppose someone opened one of the persisted scored-order files after a manifest was written
+and manually edited a single risk score — say, changing a value to make an order look safer
+than the model actually said. Re-running the verification step recomputes the SHA-256 checksum
+of that file and compares it against the one recorded in the manifest. Because even a
+single-character change to a file produces a completely different checksum, the mismatch is
+caught immediately: verification flips from <code>true</code> to <code>false</code> and the
+exact file that no longer matches is named explicitly — there is no way to silently substitute
+a different file without it being detected.</p>
+</section>
+
+<!-- ============================================================ -->
+<!-- 22. DECISION LEDGER -->
+<!-- ============================================================ -->
+<section class="section" id="ledger">
+<h2>22. The decision ledger and observed outcomes</h2>
+<p>Every decision made during the 90-day operations replay (Section 19) — one per open order,
+per simulated day — is written to an append/update <span class="term">decision ledger</span>: a
+durable record of the feasible actions considered, the action actually chosen, resource
+availability before and after, the planner disposition, and execution status. Writes are
+idempotent by a decision key, so retrying an identical write never creates a duplicate row.</p>
+
+<h3>22.1 Measured numbers</h3>
+<div class="kv">
+<div><b>Total decisions logged</b>6,226</div>
+<div><b>Reconciled against a matured (closed) outcome</b>5,923</div>
+<div><b>Still open at replay end</b>303</div>
+<div><b>Accepted cohort miss rate</b>57.96% (n = 716)</div>
+<div><b>Monitored cohort miss rate</b>10.08% (n = 5,206)</div>
+<div><b>Mean realized penalty — accepted</b>$113.54</div>
+<div><b>Mean realized penalty — monitored</b>$13.33</div>
+</div>
+
+<h3>22.2 Why this is observational, not causal — and why the gap makes sense</h3>
+<div class="card card-amber no-break">
+<strong>This report is explicitly labeled <code>observational_not_causal</code>.</strong> The
+much higher miss rate among "accepted" orders does not mean accepting an order <em>caused</em>
+it to be more likely to miss — it reflects <em>which</em> orders the system chose to prioritize
+in the first place: correctly, the higher-risk ones. In this replay, an order's actual outcome
+is closed out against its pre-generated result regardless of what decision was made about it (the
+replay does not yet feed the chosen action back into a re-simulated lifecycle) — so this
+comparison is describing the policy's targeting, not measuring a treatment effect. The
+Decision Value Lab (Section 17) remains the only part of this system that produces a
+causally-interpretable, measured intervention value, and it is kept deliberately separate from
+this ledger.
+</div>
+<p>A further breakdown by specific action taken (e.g. inventory reallocation was chosen for 431
+matured decisions, with a 70.3% miss rate among them) shows the same pattern: the hardest,
+most at-risk orders were the ones that received a given action, so a high miss rate among
+"treated" orders is expected and does not indicate the action failed. Cohorts and action types
+with too few observations (below a minimum-sample guard) have their rate withheld rather than
+reported on a misleadingly small sample — e.g. the single <code>REJECTED</code>-cohort order in
+this replay.</p>
+</section>
+
+<!-- ============================================================ -->
+<!-- 23. MONITORING, DRIFT, SLOs -->
+<!-- ============================================================ -->
+<section class="section" id="monitoring">
+<h2>23. Monitoring, drift, and service targets</h2>
+
+<h3>23.1 What "drift" means</h3>
+<p><span class="term">Drift</span> is when the statistical patterns a model was trained on stop
+matching what is currently happening — for example, if vendors genuinely become less reliable
+over time, a model trained on older, better behavior will gradually give worse advice without
+any code being "broken." Left undetected, drift is one of the most common ways a working model
+quietly becomes a bad one. This system checks for several kinds of drift on every simulated day:</p>
+<ul>
+<li><span class="term">PSI</span> (Population Stability Index) — a standard statistical measure
+of how much the distribution of feature values has shifted compared to training data.</li>
+<li><strong>Score-distribution shift</strong> — whether the overall spread of risk scores being
+produced has moved meaningfully.</li>
+<li><strong>Missingness change</strong> — whether more data is silently failing to arrive than
+usual.</li>
+<li><strong>Recent OTIF-rate change</strong> — whether the real, recently-observed miss rate has
+moved away from what the model expects.</li>
+</ul>
+
+<h3>23.2 Service Level Objectives (SLOs) — pass/fail, reported honestly</h3>
+<table>
+<thead><tr><th>Metric</th><th>Target</th><th>Measured (90-day replay)</th><th>Result</th></tr></thead>
+<tbody>
+<tr><td>Rolling realized PR-AUC</td><td>&ge; 0.55</td><td>0.386</td>
+<td><span class="badge badge-red">FAIL</span></td></tr>
+<tr><td>Data-quality completeness/uniqueness/referential health</td><td>zero contract failures</td>
+<td>zero contract failures</td><td><span class="badge badge-green">PASS</span></td></tr>
+<tr><td>Feature freshness cadence</td><td>1 calendar day (structural)</td><td>1 calendar day</td>
+<td><span class="badge badge-green">PASS</span></td></tr>
+<tr><td>Measured local scoring runtime</td><td>informational only</td><td>mean 1.48 s/day</td>
+<td><span class="badge badge-blue">INFO</span></td></tr>
+<tr><td>Measured local retrain runtime</td><td>informational only</td><td>mean 3.35 s
+(across 8 retrains)</td><td><span class="badge badge-blue">INFO</span></td></tr>
+</tbody>
+</table>
+
+<div class="card card-amber no-break">
+<strong>What the failed SLO means, honestly.</strong> The rolling realized PR-AUC target (0.55)
+was missed at 0.386 during this replay. This is the direct, reported cost of the promotion gate
+(Section 24) correctly refusing to promote any of the 8 retrained model versions during this
+90-day window, because every one of them measured worse than the original, still-strong
+champion on its own held-out test data. In other words: the system kept the safer, better
+model active rather than risk swapping in a noisier one, and the honestly-reported price of that
+caution was a stale model whose realized accuracy slowly slipped below target. This is reported
+as a genuine limitation of this specific 90-day run, not smoothed over — a longer replay window,
+or more matured outcomes per retrain, would likely narrow the noise that caused every retrain to
+look worse than it perhaps really was.
+</div>
+<p class="small">Runtime numbers are measured on one local development machine only and are
+explicitly not a production-latency claim.</p>
+</section>
+
+<!-- ============================================================ -->
+<!-- 24. CHAMPION/CHALLENGER GOVERNANCE -->
+<!-- ============================================================ -->
+<section class="section" id="governance">
+<h2>24. Champion/challenger governance</h2>
+<p>A newly trained model (or a newly proposed decision policy) is called a
+<span class="term">challenger</span>. The model or policy currently in active service is the
+<span class="term">champion</span>. This system never swaps a challenger into service
+automatically — a documented <span class="term">promotion gate</span> compares the challenger
+against the champion on several fixed, explicit metrics and tolerances first.</p>
+
+<div class="svg-wrap no-break">
+<svg viewBox="0 0 700 260" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Champion challenger governance flow diagram">
+<defs>
+  <marker id="arrowG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+    <path d="M0,0 L10,5 L0,10 z" fill="#1c5fa8"/>
+  </marker>
+</defs>
+<style>
+  .gbox{fill:#ffffff; stroke:#1c5fa8; stroke-width:1.3;}
+  .gd{fill:#eaf1fa; stroke:#1c5fa8; stroke-width:1.3;}
+  .glbl{font-family:-apple-system,Helvetica,Arial,sans-serif; font-size:9.6px; fill:#1b1f24; font-weight:700;}
+  .glbl2{font-family:-apple-system,Helvetica,Arial,sans-serif; font-size:8.2px; fill:#4a5158;}
+  .gedge{stroke:#1c5fa8; stroke-width:1.3; fill:none; marker-end:url(#arrowG);}
+</style>
+<rect class="gbox" x="16" y="18" width="150" height="46" rx="5"/>
+<text class="glbl" x="91" y="38" text-anchor="middle">Challenger arrives</text>
+<text class="glbl2" x="91" y="51" text-anchor="middle">new model / policy version</text>
+
+<line class="gedge" x1="166" y1="41" x2="204" y2="41"/>
+
+<rect class="gd" x="206" y="18" width="220" height="46" rx="5"/>
+<text class="glbl" x="316" y="34" text-anchor="middle">Compare vs. champion</text>
+<text class="glbl2" x="316" y="47" text-anchor="middle">PR-AUC · Brier · calibration · recall ·</text>
+<text class="glbl2" x="316" y="58" text-anchor="middle">alert rate · drift-regime quality · policy value · manifest verified</text>
+
+<line class="gedge" x1="426" y1="41" x2="464" y2="41"/>
+
+<polygon points="466,18 566,41 466,64 466,18" fill="#f4f6f8" stroke="#6b7280" stroke-width="1.2"/>
+<text class="glbl2" x="500" y="44" text-anchor="middle">within</text>
+<text class="glbl2" x="500" y="53" text-anchor="middle">tolerance?</text>
+
+<line class="gedge" x1="566" y1="35" x2="606" y2="35"/>
+<rect x="608" y="14" width="80" height="34" rx="5" fill="#eaf5ee" stroke="#1f6b3a" stroke-width="1.3"/>
+<text class="glbl" x="648" y="35" text-anchor="middle" style="fill:#1f6b3a;">PROMOTED</text>
+
+<line class="gedge" x1="566" y1="55" x2="606" y2="80"/>
+<rect x="608" y="66" width="80" height="34" rx="5" fill="#f9ecec" stroke="#8a2020" stroke-width="1.3"/>
+<text class="glbl" x="648" y="87" text-anchor="middle" style="fill:#8a2020;">HELD</text>
+
+<path class="gedge" d="M 648 48 C 648 110, 500 130, 380 118"/>
+<rect x="230" y="98" width="200" height="40" rx="5" fill="#ffffff" stroke="#1c5fa8" stroke-width="1.2"/>
+<text class="glbl" x="330" y="115" text-anchor="middle">active_model.json</text>
+<text class="glbl2" x="330" y="128" text-anchor="middle">atomically updated pointer</text>
+
+<path class="gedge" d="M 648 100 C 648 150, 500 170, 430 168"/>
+<text class="glbl2" x="470" y="185" text-anchor="middle">(pointer left unchanged)</text>
+
+<rect x="16" y="150" width="640" height="30" rx="5" fill="#fbf1de" stroke="#8a5a00" stroke-width="1.2"/>
+<text class="glbl2" x="336" y="169" text-anchor="middle" style="fill:#8a5a00; font-weight:700;">Every PROMOTED / HELD / ROLLED_BACK event is appended to a permanent, never-rewritten log</text>
+
+<rect class="gbox" x="16" y="196" width="300" height="46" rx="5" style="stroke:#8a2020;"/>
+<text class="glbl" x="166" y="216" text-anchor="middle" style="fill:#8a2020;">ROLLED_BACK</text>
+<text class="glbl2" x="166" y="230" text-anchor="middle">pointer restored to a prior, manifest-verified version</text>
+
+<line class="gedge" x1="316" y1="219" x2="354" y2="219"/>
+<rect x="356" y="196" width="330" height="46" rx="5" fill="#f4f6f8" stroke="#6b7280" stroke-width="1.2"/>
+<text class="glbl2" x="521" y="212" text-anchor="middle">Only ever rolls back to a version whose own</text>
+<text class="glbl2" x="521" y="225" text-anchor="middle">manifest checksum has been re-verified — never to an unverified one</text>
+</svg>
+</div>
+<p class="caption">Figure 6. A challenger is only promoted if it clears every tolerance check.
+Every outcome — promoted, held, or rolled back — is appended to a permanent lifecycle log, and
+a rollback target must itself be a manifest-verified version.</p>
+
+<h3>24.1 The real 90-day retrain lifecycle</h3>
+<p>Across the canonical 90-day replay, 9 model versions were trained (1 initial + 8 retrains
+triggered by schedule or drift). <strong>Every one of the 8 real retrain challengers was
+held.</strong> Each retrain's own held-out test PR-AUC — necessarily measured on a small, recent
+slice of matured history this early in the replay — regressed well beyond the allowed tolerance
+compared to the strong initial champion (for example, version 9 measured a PR-AUC of 0.343
+versus version 1's 0.717). The gate correctly kept the safer, better-measured champion active
+for the entire replay rather than chasing noisy short-window retrains — the honest cost of this
+caution is the failed rolling PR-AUC SLO from Section 23.2.</p>
+
+<h3>24.2 The demo governance-lifecycle scenario</h3>
+<p>To demonstrate all three possible outcomes (promoted, held, and rolled back) without waiting
+for a real retrain to happen to produce one of each, a separate, clearly labeled
+<em>demo lifecycle scenario</em> is built entirely from numbers already measured in Section 17's
+Decision Value Lab benchmark — nothing here is invented for the demonstration.</p>
+
+<table>
+<thead><tr><th>Step</th><th>Challenger</th><th>Compared against</th><th>Policy value (50% capacity)</th><th>Result</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>Value-aware action policy <em>without</em> the Bayesian term</td>
+<td><code>SINGLE_CAUSE_PRIORITY_BASELINE</code> (9.174)</td><td><strong>11.3445</strong></td>
+<td><span class="badge badge-green">PROMOTED</span></td></tr>
+<tr><td>2</td><td>Value-aware action policy <em>with</em> the Bayesian term
+(<code>CURRENT_POLICY</code>)</td><td>the now-active 11.3445 champion from step 1</td>
+<td><strong>9.964</strong> (&minus;12.2%, beyond the 5% tolerance)</td>
+<td><span class="badge badge-red">HELD</span></td></tr>
+<tr><td>3</td><td>—</td><td>—</td><td>—</td>
+<td><span class="badge badge-amber">ROLLED_BACK</span> to <code>v1</code>, a real,
+manifest-verified version</td></tr>
+</tbody>
+</table>
+<p>The recorded reason for step 2's hold is the literal gate output: <em>"policy value at 50%
+capacity regressed 11.3445 &rarr; 9.9640 (floor 10.7773, tolerance fraction 0.05)."</em> This
+scenario is explicitly, permanently labeled as built from Stage 1's own measured benchmark
+numbers, and is never confused with the real per-day retrain lifecycle in Section 24.1 — they
+are two separate, separately-logged demonstrations of the same gate logic.</p>
+
+<div class="card no-break">
+<strong>Reading this correctly:</strong> the value-aware policy <em>without</em> the Bayesian
+term is the one that gets promoted here, precisely because Section 17.5 measured that the
+Bayesian term currently makes this specific formula perform worse, not better. This is the gate
+working exactly as intended — rewarding the measured stronger option rather than assuming the
+more sophisticated-sounding one must be better.
+</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- 25. AI COPILOT -->
+<!-- ============================================================ -->
+<section class="section" id="copilot">
+<h2>25. The AI Copilot</h2>
+<p>A read-only explanation and drafting layer sits on top of everything described so far. It is
+built specifically so that it <strong>cannot</strong> change a score, a threshold, a
+RECOMMENDED/CONTESTED/MONITOR status, a resource allocation, or a model/policy promotion — it
+can only explain what already happened, answer a fixed list of questions, and draft text for a
+human planner to copy and send manually.</p>
+
+<h3>25.1 Evidence packets and citations</h3>
+<p>Ordinary computer code (not the language model) first builds a small, tightly-controlled
+<span class="term">evidence packet</span> for one order or one fixed portfolio question: its
+identity and status, model/policy/manifest versions, the XGBoost/Bayesian/fused risk with the
+operating threshold, the top SHAP factors (labeled <code>association_not_causation</code>), the
+Bayesian mechanism route and its best scenario (labeled a scenario, not a proven effect),
+affected SKUs, observed and missing lifecycle events, resource contention, and business impact.
+Every single fact in the packet is given a stable identifier (like <code>risk.combined</code> or
+<code>sku.SKU0042</code>), and every claim the Copilot makes must cite one of these identifiers.
+Secrets, file paths, and the hidden simulator ground truth are never placed in the packet at
+all — there is no way for the Copilot to see, let alone repeat, information it should not have.</p>
+
+<h3>25.2 Two interchangeable answer providers, one schema</h3>
+<p>A fully offline, deterministic <span class="term">fallback</span> mode builds the exact same
+structured response using plain code — no network call, no API key, nothing random. This is the
+system's default and always-available mode. An optional <span class="term">live</span> mode can
+call OpenAI's API (default model <code>gpt-5-mini</code>, a small, cost-efficient
+current-generation model) when an API key is configured, using a strict, enforced output format
+so the response always matches the same schema either way. <strong>The OpenAI connection is
+entirely optional; the deterministic fallback is authoritative</strong> — any network error,
+timeout, or validation failure automatically and silently falls back to the deterministic
+answer rather than ever showing a blank page or an unchecked response. A real live smoke test
+against the actual OpenAI API using <code>gpt-5-mini</code> has been run successfully — this
+demonstrates the live path works when configured, but the system is designed and evaluated so
+it never depends on it.</p>
+
+<h3>25.3 What it can and cannot do</h3>
+<div class="two-col">
+<div class="card card-blue no-break">
+<strong>Can:</strong> explain a score and its factors in plain language; answer a fixed catalog
+of order-level and portfolio-level questions; draft a supplier/customer escalation message for
+a human to review and send; cite the exact fact behind every claim; say "unknown" when evidence
+is missing.
+</div>
+<div class="card card-red no-break">
+<strong>Cannot:</strong> change any score, threshold, decision status, resource allocation, or
+model/policy promotion; run arbitrary database queries or code; see secrets, raw file paths, or
+the hidden simulator ground truth; send a message on its own — every draft is copy-only.
+</div>
+</div>
+
+<h3>25.4 Validation and audit</h3>
+<p>A separate validation step checks every response before it is shown: any citation pointing to
+a fact that does not exist in the evidence packet is rejected, every factual claim must have at
+least one citation, the response must explicitly confirm the persisted decision is unchanged, and
+non-finite numbers, oversized output, and unsupported HTML/links are stripped or rejected. Any
+failure here silently falls back to the deterministic response. Every single request — live or
+fallback — is written to a permanent audit log with a request ID, timestamp, which order or
+portfolio question was asked, the provider/model/mode actually used, a hash of the evidence
+packet (not its contents), latency, and which facts were cited — but never the API key or the
+full response text.</p>
+<p>Because no human-labeled "correct explanation" dataset exists for this prototype, the
+Copilot's evaluation harness checks only mechanical properties — citation validity, whether the
+persisted decision was preserved, section completeness, fallback success rate, and
+latency/token usage — across a fixed set of representative order types. It makes no claim about
+explanation quality, factual accuracy beyond citation checking, or human preference.</p>
+</section>
+
+<!-- ============================================================ -->
+<!-- 26. STREAMLIT VIEWS -->
+<!-- ============================================================ -->
+<section class="section" id="streamlit">
+<h2>26. The nine screens of the control tower</h2>
+<p>Everything described in this document is viewable through a nine-screen interactive
+application (built with <span class="term">Streamlit</span>, a Python tool for building simple
+data-driven web interfaces). Every screen loads only already-persisted files — nothing is
+recomputed live inside the interface.</p>
+
+<table>
+<thead><tr><th>Screen</th><th>What it shows</th></tr></thead>
+<tbody>
+<tr><td><strong>Order lookup</strong></td><td>Search any single order: fused risk score,
+decision status, priority, penalty exposure, a structured narrative, the mechanism route, the
+affected-SKU table, any contention warning, and a planner feedback form.</td></tr>
+<tr><td><strong>Ranked portfolio</strong></td><td>Every scored order ranked by priority, for a
+planner scanning the whole open-order book at once.</td></tr>
+<tr><td><strong>Hotspots + impact</strong></td><td>Rollups by vendor, DC, lane, customer, order
+type, and SKU — where risk and dollar exposure are concentrated.</td></tr>
+<tr><td><strong>Operations</strong></td><td>The daily operations replay timeline: open-order
+counts, drift warnings, training windows, thresholds, and fusion weights over the 90 simulated
+days.</td></tr>
+<tr><td><strong>Model health</strong></td><td>The 5-seed benchmark median/range table, every
+acceptance gate with a pass/fail flag, and the full fusion-weight comparison table.</td></tr>
+<tr><td><strong>Causal intelligence</strong></td><td>The 10-node network diagram for one order
+with active evidence highlighted, mechanism-level risk gauges, the evidence-attribution and
+intervention-scenario tables, and diagnostic metrics.</td></tr>
+<tr><td><strong>Policy value</strong></td><td>The Decision Value Lab: a capacity-scenario
+selector, the per-policy avoided-penalty/precision/coverage/regret table, paired seed
+win/tie/loss counts, the value-density formula explained in place, and the honest Bayesian
+ablation result.</td></tr>
+<tr><td><strong>Governance</strong></td><td>The manifest trust card, the champion/challenger
+lifecycle timeline with reasons, a metric-delta table, the decision ledger and observational
+cohorts, monitoring/SLO cards, and offline/batch parity status.</td></tr>
+<tr><td><strong>AI Copilot</strong></td><td>An Order Copilot tab (evidence-packet preview,
+question selector, chat history, citation badges, a copy-only draft box) and a Portfolio
+Copilot tab (the fixed question catalog), plus a Copilot health card.</td></tr>
+</tbody>
+</table>
+</section>
+
+<!-- ============================================================ -->
+<!-- 27. ONE ORDER JOURNEY -->
+<!-- ============================================================ -->
+<section class="section" id="journey">
+<h2>27. One order, start to finish</h2>
+<p>To make every preceding section concrete, this section follows one real, reserved scenario
+from the canonical seed-42 run through the entire system, end to end.</p>
+
+<h3>27.1 The setup</h3>
+<p>Two orders, <code>O002497</code> and <code>O002498</code>, share the same vendor
+(<code>V001</code>), the same distribution center (<code>DC001</code>), and the same order
+date. Vendor <code>V001</code> is under a forced disruption window (Section 4.3's "correlated
+shocks") during this period.</p>
+
+<h3>27.2 Data and events</h3>
+<p>Both orders' events show a late <code>VENDOR_READY</code> posting, an elevated DC
+utilization snapshot, and (for at least one of the two) a warehouse exception code. Their order
+lines show reduced initial allocation relative to what was requested — the observable, honestly
+knowable-at-capture signals from Section 8, not the hidden shock identifier itself.</p>
+
+<h3>27.3 Risk score</h3>
+<p>XGBoost (Section 10) raises both orders' fused risk scores well above the 0.274 threshold.
+SHAP (Section 11) surfaces <code>vendor_ready_delay_hours</code> and <code>allocation_ratio</code>
+as the leading observable factors for both.</p>
+
+<h3>27.4 Explanation</h3>
+<p>The retrospective root-cause derivation (used only for grading and for the causal network,
+never as a live feature) assigns both orders a primary cause of <code>VENDOR_FAILURE</code>, with
+<code>INVENTORY_SHORTAGE</code>, <code>DC_CAPACITY</code>, and <code>WAREHOUSE_OPS</code> as
+matched secondary causes.</p>
+
+<h3>27.5 The Bayesian mechanism view</h3>
+<p>For <code>O002497</code>, the 10-node network (Section 13) shows active evidence for
+<code>VENDOR_FAILURE</code>, <code>INVENTORY_SHORTAGE</code>, and <code>WAREHOUSE_OPS</code>,
+feeding routes into <em>both</em> mechanisms: <code>P(IN_FULL_FAILURE) = 99.5%</code> versus
+<code>P(LATE_DELIVERY) = 9.6%</code> — this order is overwhelmingly a quantity problem, not a
+timing one, exactly the distinction Section 2 said a single blended score could not make. The
+structural scenario table (Section 14) shows fixing <code>VENDOR_FAILURE</code> alone changes
+nothing (0.0 points), while fixing <code>INVENTORY_SHORTAGE</code> removes 88.8 points of risk
+— a genuinely instructive, non-obvious result about where the real leverage is.</p>
+
+<h3>27.6 Action, contention, and the ledger</h3>
+<p>Both orders clear the eligible threshold and are mapped to the same action (vendor
+escalation), which draws on the same single-slot <code>V001</code> escalation pool. The greedy
+priority allocator recommends the higher-priority order and marks the other contested, exactly
+as illustrated in Figure 4:</p>
+<table>
+<thead><tr><th>Order</th><th>Decision status</th><th>Detail</th></tr></thead>
+<tbody>
+<tr><td><code>O002497</code></td><td><span class="badge badge-green">RECOMMENDED</span></td>
+<td>Higher priority score; claims the single available vendor-escalation slot.</td></tr>
+<tr><td><code>O002498</code></td><td><span class="badge badge-red">CONTESTED</span></td>
+<td>Same eligible action, same resource pool, lower priority;
+<code>contested_with</code> names <code>O002497</code> explicitly.</td></tr>
+</tbody>
+</table>
+
+<h3>27.7 Outcome and governance</h3>
+<p>Both decisions are written to the decision ledger (Section 22) with their resource state
+before/after and execution status. When each order matures (its actual delivery is recorded in
+the simulated calendar), the ledger reconciles the decision against the real outcome — feeding
+the observational cohort report — and, separately, the Decision Value Lab (Section 17) can
+replay every feasible action for an order like this one through the twin's own lifecycle
+mechanics to measure, rather than assume, what a given intervention would actually have been
+worth. Nothing about this specific order's outcome retroactively changes the model or the
+threshold; any future change to either would have to pass through the champion/challenger
+promotion gate described in Section 24.</p>
+
+<div class="card card-blue no-break">
+<strong>Why this one story matters:</strong> it touches almost every mechanism in this document
+at once — realistic noisy data, point-in-time-safe features, a risk score with a plain-language
+explanation, a mechanism-level cause breakdown, an honestly-labeled "what if we fixed it"
+scenario, a resource-aware decision with named contention, and a durable, auditable record of
+what happened next. A related reserved order (<code>O002496</code>) shows the same vendor/DC
+driving a full cause-to-cause cascade; another (<code>O002499</code>) shows a single stranded
+product line inside an otherwise-healthy multi-line order; and a final one
+(<code>O002500</code>) is a genuine, unexplained miss with no corroborating evidence anywhere —
+included deliberately so the system's honesty about its own blind spots (Section 29) is never
+just a claim on paper.
+</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- 28. WORKING / SIMULATED / MOCKED -->
+<!-- ============================================================ -->
+<section class="section" id="boundary">
+<h2>28. What is real, simulated, and not yet built</h2>
+<p>This section exists so no reader is left guessing which parts of this document describe a
+working, tested piece of software versus a deliberate stand-in for something a real deployment
+would eventually need.</p>
+
+<table>
+<thead><tr><th>Component</th><th>Status</th><th>Detail</th></tr></thead>
+<tbody>
+<tr><td>Data generation, validation, features, XGBoost, Bayesian network, fusion, decisions,
+explanations</td><td><span class="badge badge-green">FULLY WORKING</span></td>
+<td>Real, runnable code with an automated test suite; measured on synthetic data as reported
+throughout this document.</td></tr>
+<tr><td>Decision Value Lab (action-response twin, 8-policy evaluation)</td>
+<td><span class="badge badge-green">FULLY WORKING</span></td><td>Real code and real measured
+numbers — but evaluated entirely against the twin's own simulated potential outcomes, never a
+real-world experiment.</td></tr>
+<tr><td>Daily operations replay, drift detection, retraining</td>
+<td><span class="badge badge-green">FULLY WORKING</span></td><td>A genuine 90-day simulated
+replay with real persisted artifacts, not a mock-up.</td></tr>
+<tr><td>Manifests, checksums, decision ledger, champion/challenger gate, monitoring/SLOs</td>
+<td><span class="badge badge-green">FULLY WORKING</span></td><td>Real, tested governance
+machinery, running against real (if simulated) data.</td></tr>
+<tr><td>Source adapters (ERP/WMS/TMS/SRM)</td><td><span class="badge badge-amber">PRODUCTION-SHAPED, NOT PRODUCTION-CONNECTED</span></td>
+<td>Typed interfaces with real local-CSV implementations proving the contract and offline/batch
+parity — deliberately not wired to any real company system, database, or message broker.</td></tr>
+<tr><td>AI Copilot deterministic fallback</td><td><span class="badge badge-green">FULLY WORKING</span></td>
+<td>Real, offline, no network dependency.</td></tr>
+<tr><td>AI Copilot live OpenAI mode</td><td><span class="badge badge-blue">OPTIONAL, VERIFIED ONCE LIVE</span></td>
+<td>A real live smoke test against the OpenAI API with <code>gpt-5-mini</code> has passed, but
+this path is optional by design and the deterministic fallback remains authoritative — the
+system is built and evaluated to never depend on live network access succeeding.</td></tr>
+<tr><td>Real-world causal effect of any recommended action</td><td><span class="badge badge-red">NOT DEMONSTRATED</span></td>
+<td>Every "effect," "reduction," or "value" figure in this document is either a statistical
+association or a measurement made entirely inside the simulated twin — never an observed
+real-world experiment.</td></tr>
+<tr><td>Production deployment (cloud hosting, live databases, message brokers, a real
+warehouse/ERP connection)</td><td><span class="badge badge-red">NOT BUILT</span></td>
+<td>Deliberately out of scope for this prototype.</td></tr>
+</tbody>
+</table>
+</section>
+
+<!-- ============================================================ -->
+<!-- 29. RESULTS AND LIMITATIONS -->
+<!-- ============================================================ -->
+<section class="section" id="results">
+<h2>29. Results and limitations, in one place</h2>
+
+<h3>29.1 Headline measured results</h3>
+<table>
+<thead><tr><th>Result</th><th>Measured value</th></tr></thead>
+<tbody>
+<tr><td>OTIF miss rate in the practice data</td><td>median 17.5% (range 15.2%–20.2%),
+inside the intended 15–25% band on every seed tested</td></tr>
+<tr><td>Fused risk model PR-AUC / recall / precision</td><td>0.705 / 0.705 / 0.614 (medians,
+5 seeds)</td></tr>
+<tr><td>Bayesian network PR-AUC (overall / quantity mechanism / timing mechanism)</td>
+<td>~0.475 / ~0.417 / ~0.126</td></tr>
+<tr><td>Affected-SKU evidence precision / recall</td><td>0.536 / 0.627 (5-seed median), versus a
+naive baseline's 0.09 precision</td></tr>
+<tr><td>Decision Value Lab primary gate (50% capacity)</td><td>value-aware policy 9.964 vs.
+shared baseline 9.174 (+8.6%), 4 of 5 seeds won, gate PASSED</td></tr>
+<tr><td>Governance lineage</td><td>29 checksummed artifacts (pipeline run) / 121 (90-day replay),
+both fully verified</td></tr>
+<tr><td>Offline/batch parity</td><td>15/15 orders byte-identical across the adapter boundary</td></tr>
+<tr><td>Decision ledger</td><td>6,226 decisions logged, 5,923 reconciled against matured outcomes</td></tr>
+</tbody>
+</table>
+
+<h3>29.2 Limitations, stated without softening</h3>
+<ul>
+<li>All results are measured on <strong>synthetic data</strong> — a realistic simulation, but
+not a validated stand-in for any real company's supply chain.</li>
+<li>The Bayesian network's standalone accuracy (~0.475 PR-AUC) is meaningfully below
+XGBoost's (~0.700); it is kept primarily for interpretability and scenario analysis, and its
+fusion contribution is capped at 10–30%, never forced to an arbitrary equal weight.</li>
+<li>The timing-failure mechanism (<code>LATE_DELIVERY</code>) is a weak predictor in this
+dataset (~0.126 PR-AUC against a ~3.8% base rate) — most modeled misses here are
+quantity-driven, and timing-side explanations should be read with lower confidence.</li>
+<li>Structural intervention scenarios and evidence attribution are exact computations under a
+fixed, fitted network's assumptions — never a proven, real-world treatment effect.</li>
+<li>The Decision Value Lab's Bayesian structural-reduction term currently makes its own formula
+perform <em>worse</em>, not better (9.964 with it versus 11.3445 without it) — reported plainly,
+not hidden, and used directly in Section 24's governance walkthrough.</li>
+<li>Every one of the 8 real model retrains during the 90-day replay was held by the promotion
+gate, because each one's own held-out accuracy regressed versus the strong initial champion —
+correct, cautious behavior whose honest cost is a failed rolling-PR-AUC monitoring target.</li>
+<li>The decision ledger's observational cohort comparison (accepted vs. monitored miss rates) is
+explicitly not a causal estimate — it reflects which orders were prioritized, not a measured
+effect of acting.</li>
+<li>The AI Copilot's validation guards against presenting unsupported claims as grounded; it
+does not, and cannot, guarantee an upstream language model can never phrase something
+misleadingly, only that every cited fact genuinely exists and the persisted decision is
+preserved.</li>
+<li>Nothing in this system has been tested against a real, live production workload, real
+network latency, or real concurrent users.</li>
+</ul>
+</section>
+
+<!-- ============================================================ -->
+<!-- 30. HOW TO RUN IT -->
+<!-- ============================================================ -->
+<section class="section" id="how-to-run">
+<h2>30. How to run it</h2>
+<p>Full, step-by-step setup instructions for a new machine — including how to download the
+project without Git and open a command window on macOS or Windows — are kept separately in
+<code>docs/setup.md</code>. The commands below assume that setup is already done.</p>
+
+<pre>uv sync --extra dev
+brew install libomp   # macOS only, required for XGBoost
+
+# One scoring run on 2,500 practice orders
+uv run otif-risk --orders 2500 --seed 42
+
+# Multi-seed benchmark (the medians/ranges quoted throughout this document)
+uv run otif-benchmark --seeds 1 2 3 4 5 --orders 2500 --output-dir artifacts \
+  --benchmark-path artifacts/benchmark.json
+
+# Decision Value Lab: 8-policy, 3-capacity-scenario evaluation
+uv run otif-policy-benchmark --seeds 1 2 3 4 5 --orders 2500 \
+  --benchmark-path artifacts/policy_benchmark.json
+
+# 90-day daily operations replay: scoring, drift, retraining, governance
+uv run otif-ops --orders 2500 --seed 42 --replay-days 90 --output-dir artifacts \
+  --policy-value-reference-path artifacts/policy_benchmark.json
+
+# The nine-screen interactive control tower
+uv run streamlit run src/otif_risk/app.py
+
+# Automated tests
+uv run pytest</pre>
+
+<p class="small">Copy <code>.env.example</code> to <code>.env</code> only if you want to enable
+the AI Copilot's live OpenAI mode (Section 25); the Copilot works fully offline with no
+<code>.env</code> file at all.</p>
+</section>
+
+<!-- ============================================================ -->
+<!-- 31. GLOSSARY -->
+<!-- ============================================================ -->
+<section class="section" id="glossary">
+<h2>31. Glossary</h2>
+<dl class="glossary">
+<dt>As-of timestamp</dt><dd>The exact moment in time a prediction pretends to be made at; only
+information that genuinely existed by that moment may be used.</dd>
+<dt>Bayesian network</dt><dd>A diagram of cause-and-effect nodes with probability tables,
+used here for an interpretable, cross-checking risk estimate and "what if" scenario analysis.</dd>
+<dt>Brier score</dt><dd>A number (lower is better) measuring how close predicted probabilities
+are to what actually happened — a calibration-quality measure.</dd>
+<dt>Calibration</dt><dd>Adjusting a model's raw scores so that, e.g., predictions of "70% risk"
+really do come true about 70% of the time.</dd>
+<dt>Capacity scenario</dt><dd>A what-if setting (25%/50%/100% of default daily capacity) used to
+test how policies behave when resources are scarce, not just when they are plentiful.</dd>
+<dt>CPT (Conditional Probability Table)</dt><dd>The table of probabilities attached to one node
+in a Bayesian network describing how likely it is to be active given its parent nodes' states.</dd>
+<dt>Champion / challenger</dt><dd>The model or policy currently in service (champion) versus a
+newly proposed replacement (challenger) being evaluated against it.</dd>
+<dt>Content ID</dt><dd>A deterministic fingerprint of a run that ignores timestamps and file
+paths, so identical runs always produce the same ID.</dd>
+<dt>Data leakage</dt><dd>Accidentally letting a model see information from the future relative
+to when it is supposed to be making a prediction.</dd>
+<dt>Digital twin</dt><dd>A computer simulation of a real-world system (here, a supply chain)
+realistic enough to generate practice data with known ground truth.</dd>
+<dt>Do-operator / intervention</dt><dd>A calculation that asks "what would happen if we forced
+this cause to be resolved," mathematically distinct from simply observing it resolved.</dd>
+<dt>Drift</dt><dd>When real-world patterns change enough that a model trained on older data
+starts giving worse advice.</dd>
+<dt>Evidence attribution</dt><dd>A leave-one-out sensitivity check on the Bayesian network — not
+SHAP, and not a causal-effect estimate.</dd>
+<dt>Evidence packet</dt><dd>A small, controlled, cited set of facts about one order, built by
+plain code, that the AI Copilot is allowed to read and must cite.</dd>
+<dt>Fusion</dt><dd>Blending the XGBoost score and the Bayesian network's score into one final
+number, using a weight chosen on validation data only.</dd>
+<dt>Idempotency</dt><dd>A property where repeating the same request never creates a duplicate
+effect — retrying is always safe.</dd>
+<dt>Manifest</dt><dd>A structured record of exactly how a run was produced, including checksums
+of every output file, for reproducibility and tamper detection.</dd>
+<dt>OTIF (On-Time, In-Full)</dt><dd>An order outcome that requires both arriving on or before the
+promised date and containing the complete ordered quantity.</dd>
+<dt>PR-AUC (Precision-Recall Area Under the Curve)</dt><dd>A single number (0 to 1, higher is
+better) summarizing how well a score ranks true positive cases above negative ones.</dd>
+<dt>Precision</dt><dd>Of everything flagged as risky, what fraction genuinely was.</dd>
+<dt>Recall</dt><dd>Of everything that genuinely was risky, what fraction got flagged.</dd>
+<dt>Regret (in the Decision Value Lab)</dt><dd>How far short of the best-possible (oracle)
+outcome a real, deployable policy falls.</dd>
+<dt>Rolling-origin evaluation</dt><dd>Evaluating a model only on data after its own training
+cutoff, with that cutoff moving forward through the calendar.</dd>
+<dt>SHAP</dt><dd>A technique for attributing how much each input feature pushed one specific
+prediction up or down.</dd>
+<dt>SKU (Stock Keeping Unit)</dt><dd>An individual product identifier.</dd>
+<dt>SLO (Service Level Objective)</dt><dd>A transparent, pre-agreed target a metric is expected
+to meet, checked and reported honestly whether it passes or fails.</dd>
+<dt>Threshold</dt><dd>The risk-score cutoff above which an order is treated as actionable.</dd>
+<dt>XGBoost</dt><dd>A widely-used machine learning technique that combines many small decision
+trees, each correcting the previous ones' mistakes, into one strong prediction.</dd>
+</dl>
+</section>
+
+<!-- ============================================================ -->
+<!-- 32. APPENDIX -->
+<!-- ============================================================ -->
+<section class="section" id="appendix">
+<h2>32. Appendix: module map and artifact directory map</h2>
+
+<h3>32.1 Module-to-responsibility map</h3>
+<table>
+<thead><tr><th>Code module</th><th>Responsibility</th></tr></thead>
+<tbody>
+<tr><td><code>data.py</code></td><td>The digital twin: generates orders, lines, events,
+capacity, shocks, and simulator truth.</td></tr>
+<tr><td><code>validation.py</code></td><td>Fail-fast schema, key, reference, and logical checks
+(Section 6).</td></tr>
+<tr><td><code>root_causes.py</code></td><td>Retrospective, evaluation/training-label cause
+derivation from final outcomes.</td></tr>
+<tr><td><code>features.py</code></td><td>Point-in-time feature engineering and the
+chronological split (Sections 7–9).</td></tr>
+<tr><td><code>line_evidence.py</code></td><td>Capture-time-safe per-line affected-SKU evidence
+(Section 12).</td></tr>
+<tr><td><code>model.py</code></td><td>The XGBoost risk model (Section 10).</td></tr>
+<tr><td><code>explain.py</code></td><td>SHAP explanations and the deterministic perturbation
+fallback (Section 11).</td></tr>
+<tr><td><code>bayesian.py</code></td><td>The 10-node mechanism network, inference, structural
+interventions, and evidence attribution (Sections 13–14).</td></tr>
+<tr><td><code>fusion.py</code></td><td>Validated weight selection and score blending
+(Section 15).</td></tr>
+<tr><td><code>decisions.py</code> / <code>resources.py</code></td><td>Thresholding, action
+mapping, resource-aware conflict resolution (Section 16).</td></tr>
+<tr><td><code>narratives.py</code></td><td>Templated, structured planner-facing explanations.</td></tr>
+<tr><td><code>action_response.py</code> / <code>policy_evaluation.py</code> /
+<code>policy_benchmark.py</code></td><td>The Decision Value Lab (Section 17).</td></tr>
+<tr><td><code>operations.py</code></td><td>The daily operations replay loop (Section 19).</td></tr>
+<tr><td><code>drift.py</code></td><td>Drift detection metrics feeding monitoring/retraining.</td></tr>
+<tr><td><code>benchmark.py</code></td><td>The multi-seed benchmark and acceptance gates.</td></tr>
+<tr><td><code>adapters.py</code> / <code>service_contracts.py</code></td><td>Production-shaped
+source adapters and score request/response contracts (Section 20).</td></tr>
+<tr><td><code>manifest.py</code></td><td>Deterministic run manifests, content IDs, checksum
+verification (Section 21).</td></tr>
+<tr><td><code>decision_ledger.py</code></td><td>The decision/outcome ledger and observational
+cohort reports (Section 22).</td></tr>
+<tr><td><code>monitoring.py</code></td><td>Rolling monitoring and SLO reporting (Section 23).</td></tr>
+<tr><td><code>registry.py</code></td><td>Champion/challenger versions, promotion gate, lifecycle
+events (Section 24).</td></tr>
+<tr><td><code>copilot_context.py</code> / <code>copilot_fallback.py</code> /
+<code>llm_copilot.py</code> / <code>copilot_validation.py</code> / <code>copilot_audit.py</code>
+/ <code>copilot_evaluation.py</code></td><td>The AI Copilot's evidence packets, deterministic
+fallback, live OpenAI integration, validation, audit log, and evaluation harness (Section 25).</td></tr>
+<tr><td><code>app.py</code></td><td>The nine-screen Streamlit control tower (Section 26).</td></tr>
+<tr><td><code>feedback.py</code></td><td>Append-only planner/system feedback logging.</td></tr>
+</tbody>
+</table>
+
+<h3>32.2 Artifact directory map</h3>
+<table>
+<thead><tr><th>Path</th><th>Contents</th></tr></thead>
+<tbody>
+<tr><td><code>artifacts/run-&lt;config-hash&gt;/</code></td><td>One single pipeline run: source
+tables, simulator truth, feature table, scored orders/lines, fusion comparison, rollups, model
+files, <code>metrics.json</code>, <code>run_manifest.json</code>, <code>parity_check.json</code>,
+planner feedback log.</td></tr>
+<tr><td><code>artifacts/ops-&lt;config-hash&gt;/</code></td><td>One operations-replay run: daily
+queues, model registry, <code>decision_ledger.csv</code>,
+<code>observational_cohort_report.json</code>, <code>intervention_outcomes.json</code>,
+<code>monitoring_report.json</code>, <code>demo_lifecycle_scenario.json</code>, a
+<code>registry/</code> directory (versions, lifecycle events, active-model pointer).</td></tr>
+<tr><td><code>artifacts/benchmark.json</code></td><td>The 5-seed model-quality benchmark
+(Section 10.6, Section 13.5).</td></tr>
+<tr><td><code>artifacts/policy_benchmark.json</code> +
+<code>policy_benchmark_manifest.json</code></td><td>The Decision Value Lab's 5-seed,
+3-capacity-scenario, 8-policy evaluation (Section 17), plus its own run manifest.</td></tr>
+<tr><td><code>artifacts/copilot_evaluation.json</code></td><td>The AI Copilot's mechanical
+evaluation report (Section 25.4).</td></tr>
+<tr><td><code>docs/model-card.md</code></td><td>The complete, measured model card with every
+per-seed table.</td></tr>
+<tr><td><code>docs/demo-script.md</code></td><td>A judge-facing, step-by-step walkthrough of the
+same reserved scenario used in Section 27.</td></tr>
+<tr><td><code>docs/setup.md</code></td><td>Full new-machine setup instructions.</td></tr>
+<tr><td><code>docs/architecture/current.mmd</code> / <code>current.svg</code></td><td>The
+project's own generated architecture diagram, rendered by a small, checked-in, deterministic
+renderer.</td></tr>
+</tbody>
+</table>
+
+<hr class="rule">
+<p class="small" style="text-align:center; margin-top:18pt;">End of document. This guide
+describes a demonstration prototype evaluated entirely on synthetic data; see
+<code>docs/model-card.md</code> for the complete, unabridged measured results and limitations
+this document has summarized throughout.</p>
+</section>
+
+</div>
+</body>
+</html>
