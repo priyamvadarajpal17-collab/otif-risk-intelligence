@@ -18,6 +18,7 @@ import json
 import os
 import re
 import time
+from copy import deepcopy
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -38,7 +39,7 @@ from otif_risk.copilot_validation import validate_response
 #: Override with the OPENAI_MODEL environment variable.
 DEFAULT_OPENAI_MODEL = "gpt-5-mini"
 DEFAULT_TIMEOUT_SECONDS = 20.0
-DEFAULT_MAX_OUTPUT_TOKENS = 900
+DEFAULT_MAX_OUTPUT_TOKENS = 2_000
 VALID_MODES = ("auto", "live", "fallback")
 
 #: Matches an OpenAI-style secret key token, including any already partially
@@ -139,6 +140,33 @@ RESPONSE_JSON_SCHEMA: dict[str, Any] = {
         "disclaimer",
     ],
 }
+
+
+def _response_schema_for_evidence(evidence_json: str) -> dict[str, Any]:
+    """Constrain every citation to the exact fact IDs in this request."""
+    schema = deepcopy(RESPONSE_JSON_SCHEMA)
+    try:
+        packet = json.loads(evidence_json)
+        fact_ids = [
+            str(fact["id"])
+            for fact in packet.get("facts", [])
+            if isinstance(fact, dict) and fact.get("id")
+        ]
+    except (json.JSONDecodeError, TypeError, ValueError):
+        fact_ids = []
+    if not fact_ids:
+        return schema
+    cited_item_names = ("why_flagged", "affected_items", "uncertainties")
+    for name in cited_item_names:
+        schema["properties"][name]["items"]["properties"]["citations"]["items"] = {
+            "type": "string",
+            "enum": fact_ids,
+        }
+    schema["properties"]["recommended_next_step"]["properties"]["citations"]["items"] = {
+        "type": "string",
+        "enum": fact_ids,
+    }
+    return schema
 
 
 @dataclass
@@ -251,16 +279,18 @@ class OpenAIResponsesClient:
         )
         try:
             client = OpenAI(api_key=self._api_key, timeout=self._timeout_seconds)
+            response_schema = _response_schema_for_evidence(evidence_json)
             response = client.responses.create(
                 model=self.model,
                 instructions=system_prompt,
                 input=user_payload,
                 max_output_tokens=self._max_output_tokens,
+                reasoning={"effort": "minimal"},
                 text={
                     "format": {
                         "type": "json_schema",
                         "name": "copilot_response",
-                        "schema": RESPONSE_JSON_SCHEMA,
+                        "schema": response_schema,
                         "strict": True,
                     }
                 },
