@@ -41,3 +41,37 @@ def test_run_policy_benchmark_is_reproducible_for_a_fixed_seed():
                 metrics["total_avoided_penalty"]
                 == second_scenarios[scenario]["policies"][policy]["total_avoided_penalty"]
             )
+
+
+def test_main_cli_writes_scoped_manifest_alongside_benchmark(tmp_path, monkeypatch):
+    from otif_risk.manifest import verify_manifest
+    from otif_risk.policy_benchmark import main
+
+    benchmark_path = tmp_path / "artifacts" / "policy_benchmark.json"
+    (tmp_path / "artifacts").mkdir(parents=True)
+    # An unrelated sibling artifact must never be described by this run's manifest.
+    (tmp_path / "artifacts" / "unrelated.json").write_text("{}", encoding="utf-8")
+
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "otif-policy-benchmark",
+            "--seeds",
+            "3",
+            "--orders",
+            "250",
+            "--benchmark-path",
+            str(benchmark_path),
+        ],
+    )
+    main()
+
+    manifest_path = tmp_path / "artifacts" / "policy_benchmark_manifest.json"
+    assert manifest_path.is_file()
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert set(manifest["artifact_checksums"]) == {"policy_benchmark.json"}
+
+    verification = verify_manifest(
+        tmp_path / "artifacts", filename="policy_benchmark_manifest.json"
+    )
+    assert verification["verified"] is True

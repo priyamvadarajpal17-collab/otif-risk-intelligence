@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 import json
 
 import pandas as pd
@@ -30,11 +29,22 @@ def test_run_pipeline_writes_complete_artifacts(tmp_path):
     assert (run_dir / "data" / "shocks.csv").is_file()
     assert (run_dir / "data" / "fusion_comparison.csv").is_file()
     assert (run_dir / "planner_feedback.csv").is_file()
+    assert (run_dir / "run_manifest.json").is_file()
+    assert (run_dir / "parity_check.json").is_file()
     weight_grid = {round(value * 0.1, 1) for value in range(11)}
     assert report["architecture"]["fusion_chosen_weight"] in weight_grid
     assert report["architecture"]["risk_model"] == "xgboost"
     assert 0 <= report["test_metrics"]["pr_auc"] <= 1
     assert 0.10 <= report["data"]["otif_miss_rate"] <= 0.30
+
+
+def test_run_pipeline_parity_check_passes(tmp_path):
+    run_pipeline(PrototypeConfig(seed=13, n_orders=250, output_dir=tmp_path / "artifacts"))
+    run_dir = next((tmp_path / "artifacts").glob("run-*"))
+    parity = json.loads((run_dir / "parity_check.json").read_text(encoding="utf-8"))
+    assert parity["passed"] is True
+    assert parity["mismatched_order_ids"] == []
+    assert parity["n_orders_checked"] > 0
 
 
 def test_fused_threshold_drives_decisions_and_scored_orders_have_sku_evidence(tmp_path):
@@ -236,3 +246,36 @@ def test_metrics_json_reports_mechanism_confidence_and_consistency_diagnostics(t
     assert "top_attribution_vs_rule_cause" in consistency
     assert "top_intervention_vs_simulator_responsive_cause" in consistency
     assert "validated causal effect" in consistency["note"]
+
+
+def test_run_pipeline_manifest_verifies_and_is_content_deterministic(tmp_path):
+    from otif_risk.manifest import verify_manifest
+
+    report_a = run_pipeline(
+        PrototypeConfig(seed=19, n_orders=250, output_dir=tmp_path / "artifacts-a")
+    )
+    report_b = run_pipeline(
+        PrototypeConfig(seed=19, n_orders=250, output_dir=tmp_path / "artifacts-b")
+    )
+
+    run_dir_a = next((tmp_path / "artifacts-a").glob("run-*"))
+
+    assert report_a["manifest"]["content_id"] == report_b["manifest"]["content_id"]
+    assert report_a["manifest"]["run_instance_id"] != report_b["manifest"]["run_instance_id"]
+
+    verification_a = verify_manifest(run_dir_a)
+    assert verification_a["verified"] is True
+    assert verification_a["files_missing"] == []
+    assert verification_a["files_mismatched"] == []
+
+    manifest_payload = json.loads((run_dir_a / "run_manifest.json").read_text(encoding="utf-8"))
+    assert "run_manifest.json" not in manifest_payload["artifact_checksums"]
+    assert "models/xgboost_risk.joblib" in manifest_payload["artifact_checksums"]
+    assert manifest_payload["dataset_fingerprints"] is not None
+    assert "simulator_truth" not in manifest_payload["dataset_fingerprints"]
+
+    # Tampering with an already-checksummed artifact must be detectable.
+    (run_dir_a / "data" / "scored_orders.csv").write_text("tampered", encoding="utf-8")
+    tampered_verification = verify_manifest(run_dir_a)
+    assert tampered_verification["verified"] is False
+    assert "data/scored_orders.csv" in tampered_verification["files_mismatched"]
