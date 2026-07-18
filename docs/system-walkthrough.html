@@ -542,8 +542,17 @@ footer.site-footer{
             <rect x="1090" y="245" width="115" height="115" rx="4" fill="#2e6b2e" stroke="#201d1a" stroke-width="2"></rect>
             <text x="1147" y="290" text-anchor="middle" font-size="13" font-weight="bold" fill="#fff">Streamlit</text>
             <text x="1147" y="306" text-anchor="middle" font-size="13" font-weight="bold" fill="#fff">UI</text>
-            <text x="1147" y="324" text-anchor="middle" font-size="9.5" fill="#dff0df">7 control-tower</text>
+            <text x="1147" y="324" text-anchor="middle" font-size="9.5" fill="#dff0df">9 control-tower</text>
             <text x="1147" y="336" text-anchor="middle" font-size="9.5" fill="#dff0df">views</text>
+          </g>
+
+          <!-- diagnostic satellite: AI Copilot -->
+          <path d="M1147,360 V378 Q1147,388 1130,390 L1120,392" stroke="#c6501f" stroke-width="2" stroke-dasharray="5 4" fill="none" marker-end="url(#arrow-dash)"></path>
+          <g class="arch-node satellite-node" tabindex="0" role="button" aria-label="Jump to AI Copilot" data-target="#sec-ai-copilot">
+            <rect x="1010" y="393" width="205" height="46" rx="4" fill="none" stroke="#c6501f" stroke-width="2" stroke-dasharray="5 4"></rect>
+            <text x="1112" y="410" text-anchor="middle" font-size="10" font-weight="bold" fill="#9c3c14">AI Copilot</text>
+            <text x="1112" y="424" text-anchor="middle" font-size="8" fill="#322c26">read-only explain/draft</text>
+            <text x="1112" y="435" text-anchor="middle" font-size="8" fill="#322c26">never feeds decisions</text>
           </g>
 
           <!-- retrain loop -->
@@ -1056,26 +1065,50 @@ value_density     = expected_benefit / normalized_resource_fraction</code></pre>
       </div>
     </section>
 
-    <section id="sec-ui" data-toc="Streamlit control-tower UI" class="reveal">
+    <section id="sec-ai-copilot" data-toc="AI Copilot: grounded, cited, read-only" class="reveal">
       <div class="section-inner">
         <p class="eyebrow">Section 21</p>
-        <h2>The Streamlit control tower: seven views</h2>
-        <p>All UI views load only <em>persisted</em> artifacts — nothing is recomputed at render time.</p>
+        <h2>The AI Copilot: grounded, cited, and read-only</h2>
+        <p>A read-only explanation/drafting layer sits over the already-governed decision above. It can call the live OpenAI Responses API when configured, or run entirely offline on a deterministic fallback — either way it returns the <strong>same structured, cited response schema</strong>, and it can never change a score, threshold, <span class="tag tag--verified">RECOMMENDED</span>/<span class="tag tag--held">CONTESTED</span>/MONITOR status, resource allocation, or model/policy promotion.</p>
+        <p>Deterministic code — never the LLM — builds a compact, <strong>allowlisted</strong> evidence packet per order (risk scores and threshold, SHAP factors labeled <em>association, not causation</em>, the Bayesian mechanism route/scenario labeled a fixed-structure scenario, affected SKUs, resource contention, business impact) or per fixed portfolio question. Every fact carries a stable citation id (e.g. <code>risk.combined</code>, <code>shap.1</code>, <code>sku.SKU0042</code>) that any answer must cite; secrets, file paths, git remotes, raw feedback text, and simulator ground truth are never read into it.</p>
+        <table>
+          <caption>What the Copilot can and cannot do</caption>
+          <thead><tr><th scope="col">Can</th><th scope="col">Cannot</th></tr></thead>
+          <tbody>
+            <tr><td>Explain a risk score, mechanism, and affected SKUs with citations</td><td>Change the score, threshold, or fused risk</td></tr>
+            <tr><td>Answer a fixed portfolio-question catalog</td><td>Run arbitrary SQL/Python/DataFrame queries</td></tr>
+            <tr><td>Draft a supplier/customer message for manual copy</td><td>Send or execute any action automatically</td></tr>
+            <tr><td>Say "unknown" when evidence is missing</td><td>Invent a fact, SKU, vendor, or number not in the packet</td></tr>
+          </tbody>
+        </table>
+        <div class="callout">A citation/decision validator (<code>copilot_validation.py</code>) rejects any response citing an unknown fact id, missing a citation on a factual claim, failing to preserve the persisted decision, or asserting an inconsistent status — falling back to the deterministic response on any failure, so the Copilot never presents an ungrounded claim as grounded.</div>
+        <div class="callout warn">This does not prove an upstream LLM can never hallucinate — only that unsupported claims are made visible and blocked from reaching a planner. The evaluation harness (<code>copilot_evaluation.py</code>) reports only mechanical metrics — citation validity, decision preservation, section completeness, fallback success, latency/tokens — against a deterministic representative-order set, never a claimed BLEU/factuality/human-preference score, since no labeled explanation dataset exists for this prototype.</div>
+        <p>Every request is appended to <code>copilot_audit.jsonl</code>: request id/timestamp, order id or portfolio query type, provider/model/mode, an evidence-packet hash (not its contents), latency, token usage when reported, validation status/fallback reason, and cited fact ids — never the API key, the full response text, or hidden reasoning.</p>
+      </div>
+    </section>
+
+    <section id="sec-ui" data-toc="Streamlit control-tower UI" class="reveal">
+      <div class="section-inner">
+        <p class="eyebrow">Section 22</p>
+        <h2>The Streamlit control tower: nine views</h2>
+        <p>All UI views load only <em>persisted</em> artifacts — nothing is recomputed at render time. The AI Copilot view is the one exception that may call an external API (OpenAI), and only to explain/draft text; it never writes back a score, decision, or resource allocation.</p>
         <div class="quad">
           <div class="quad-card in"><h4>Order lookup</h4><p>Search any order: fused score, decision status, priority, penalty exposure, structured narrative, affected-SKU table, CONTESTED warning, and a planner-feedback form.</p></div>
           <div class="quad-card happens"><h4>Ranked portfolio</h4><p>Every scored order ranked by priority, filterable, for a portfolio-wide view of risk.</p></div>
           <div class="quad-card out"><h4>Hotspots + impact</h4><p>Vendor/DC/lane/customer/SKU rollups and aggregate financial-impact assumptions.</p></div>
           <div class="quad-card why"><h4>Operations</h4><p>The daily replay's queues, closures, drift signals, and the versioned model registry.</p></div>
+          <div class="quad-card why"><h4>Model health</h4><p>Benchmark PR-AUC/Brier/recall across the 5-seed range, fusion-weight/threshold rationale, and mechanism-fidelity diagnostics.</p></div>
           <div class="quad-card in"><h4>Causal intelligence</h4><p>The 10-node mechanism graph, evidence attribution, do-operator intervention scenarios, and diagnostics — the "Causal Intelligence Studio."</p></div>
           <div class="quad-card happens"><h4>Policy value</h4><p>The 25%/50%/100% capacity selector, per-policy avoided-penalty table, paired seed win/tie/loss, the value-density formula, and the Bayesian ablation shown honestly.</p></div>
           <div class="quad-card out"><h4>Governance</h4><p>The manifest trust card, lifecycle timeline, champion/challenger metric-delta table, decision ledger + observational cohorts, monitoring/SLO cards, and parity status.</p></div>
+          <div class="quad-card in"><h4>AI Copilot</h4><p>Order Copilot (evidence-packet preview, cited question chips, per-order chat history, copy-only draft text) and Portfolio Copilot (fixed question catalog), plus a live/fallback mode badge and an audit health card. Read-only: it explains and drafts, never decides.</p></div>
         </div>
       </div>
     </section>
 
     <section id="sec-results" data-toc="Results dashboard" class="reveal">
       <div class="section-inner">
-        <p class="eyebrow">Section 22 · Evidence</p>
+        <p class="eyebrow">Section 23 · Evidence</p>
         <h2>Results dashboard</h2>
         <p>All figures below are pulled directly from regenerated local artifacts. <strong>5-seed medians</strong> (range in parentheses) describe how the system behaves across randomness; <strong>seed-42 canonical run</strong> figures describe one specific, fully-inspectable run; <strong>governed replay</strong> figures come from the 90-day operations replay's Stage-2 governance artifacts. They are not interchangeable, so each number below says which one it is.</p>
 
@@ -1129,7 +1162,7 @@ value_density     = expected_benefit / normalized_resource_fraction</code></pre>
 
     <section id="sec-real-vs-simulated" data-toc="What is real vs. simulated" class="reveal">
       <div class="section-inner">
-        <p class="eyebrow">Section 23 · Honesty</p>
+        <p class="eyebrow">Section 24 · Honesty</p>
         <h2>What is real vs. simulated</h2>
         <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(260px,1fr)); gap:1.2em;">
           <div class="quad-card in">
@@ -1145,8 +1178,8 @@ value_density     = expected_benefit / normalized_resource_fraction</code></pre>
             <p><strong>Bayesian do-interventions are fixed-structure scenario analysis, not proven treatment effects.</strong> SHAP/perturbation factors are associations, not causes. Evidence attribution is leave-one-out sensitivity, explicitly not SHAP and not a causal estimate. The observational cohort report is non-causal by construction (the replay closes every order against its pre-generated outcome regardless of the decision made). None of these limitations are hidden — every one is labeled in the persisted artifacts themselves.</p>
           </div>
           <div class="quad-card out">
-            <h4>Production interfaces, mocked</h4>
-            <p>ERP/WMS/TMS/SRM adapters are typed local-CSV implementations of a real interface contract — proven to have offline/batch parity, but deliberately not a web framework, database, message broker, or cloud deployment. The LLM-style narrative layer is a deterministic template, not a live LLM.</p>
+            <h4>Production interfaces, mocked (except one, clearly labeled)</h4>
+            <p>ERP/WMS/TMS/SRM adapters are typed local-CSV implementations of a real interface contract — proven to have offline/batch parity, but deliberately not a web framework, database, message broker, or cloud deployment. The one real external call this prototype can make is the <strong>AI Copilot's optional live OpenAI Responses API request</strong> (Section 21) — used only to explain/draft cited text from an already-governed decision, never to score, decide, or write back; with no <code>OPENAI_API_KEY</code> configured it runs entirely on its deterministic, offline fallback.</p>
           </div>
         </div>
       </div>
@@ -1154,7 +1187,7 @@ value_density     = expected_benefit / normalized_resource_fraction</code></pre>
 
     <section id="sec-90-second" data-toc="How to explain it in 90 seconds" class="reveal">
       <div class="section-inner">
-        <p class="eyebrow">Section 24</p>
+        <p class="eyebrow">Section 25</p>
         <h2>How to explain it in 90 seconds</h2>
         <blockquote style="border-left:5px solid var(--blue); margin:0; padding:0.2em 1.2em; font-family:var(--font-display); font-size:1.08rem; font-style:italic;">
         <p>"This system takes a noisy, realistic supply-chain simulation and, for every open order, produces one risk score, one plain-language explanation, and one resource-aware recommendation. The score blends a gradient-boosted model with a small Bayesian network that splits 'late' from 'short' failures, so we know not just <em>that</em> an order is at risk but <em>what kind</em> of risk it is. A value-aware formula then ranks every feasible action by expected avoided penalty per unit of scarce recovery capacity — so the busiest vendor slot goes to the order that needs it most, and the loser is told explicitly who it's competing with.</p>
@@ -1165,7 +1198,7 @@ value_density     = expected_benefit / normalized_resource_fraction</code></pre>
 
     <section id="sec-glossary" data-toc="Glossary" class="reveal">
       <div class="section-inner">
-        <p class="eyebrow">Section 25</p>
+        <p class="eyebrow">Section 26</p>
         <h2>Glossary</h2>
         <dl class="glossary-term">
           <dt>As-of timestamp</dt><dd>The single point in time a snapshot is "taken" — only data that existed at or before this timestamp may be used as a feature.</dd>
@@ -1221,10 +1254,10 @@ uv run otif-policy-benchmark --seeds 1 2 3 4 5 --orders 2500 \
 uv run otif-ops --orders 2500 --seed 42 --replay-days 90 --output-dir artifacts \
   --policy-value-reference-path artifacts/policy_benchmark.json
 
-# Streamlit control tower (all 7 views, reads persisted artifacts only)
+# Streamlit control tower (all 9 views, reads persisted artifacts only)
 uv run streamlit run src/otif_risk/app.py</code></pre>
     <p style="font-size:0.85rem; color:var(--paper-2);">Full design notes, honest limitations, and every module referenced above: <code>README.md</code>, <code>docs/model-card.md</code>, <code>docs/demo-script.md</code>, <code>docs/architecture/current.mmd</code>. This walkthrough (<code>docs/system-walkthrough.html</code>) is a standalone explainer — it does not replace those documents.</p>
-    <p style="font-size:0.8rem; color:var(--paper-2); margin-top:1.6em;">© OTIF Risk Intelligence prototype — a local, self-contained demonstration. No production data, no live external services.</p>
+    <p style="font-size:0.8rem; color:var(--paper-2); margin-top:1.6em;">© OTIF Risk Intelligence prototype — a local, self-contained demonstration. No production data; the only optional live external call is the AI Copilot's OpenAI request, which never scores or decides anything.</p>
   </div>
 </footer>
 

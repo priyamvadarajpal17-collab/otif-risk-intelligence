@@ -7,3 +7,8 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 *.py[cod]
+
+# Local secrets -- never commit an OpenAI key or any other credential.
+.env
+.env.*
+!.env.example

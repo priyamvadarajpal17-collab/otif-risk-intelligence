@@ -261,6 +261,33 @@ Open **Governance** -- the sharpest end-to-end judge flow in this prototype:
    pipeline run's `parity_check.json` -- the same order/as-of snapshot scored identically
    offline and through the adapter/service boundary.
 
+## 6e. AI Copilot view: grounded explanation, cited fallback, forced-failure proof
+
+Open **AI Copilot**. This view never changes the decisions already shown above -- it only
+explains, answers a fixed catalog of questions, and drafts text for a planner to copy manually.
+
+1. **Mode badge.** With no `OPENAI_API_KEY` set, the badge reads "Deterministic fallback" --
+   the demo is fully functional offline. Setting `OPENAI_API_KEY` and `OTIF_LLM_MODE=auto` (or
+   `live`) switches it to "Live OpenAI ready."
+2. **Order Copilot.** Pick a contested order, expand "Evidence packet preview" to show the
+   allowlisted, cited facts (risk scores, SHAP factors labeled `association_not_causation`,
+   Bayesian route/scenario labeled a fixed-structure scenario, affected SKUs, resource
+   contention, business impact) -- then ask "Explain this order simply." The answer's every
+   claim carries a clickable citation badge resolving back to the exact fact above.
+3. Ask "Draft a supplier escalation." The Copilot drafts a message in a copy-only code block --
+   there is no send/execute button -- and the "Recommended next step" section explicitly states
+   the persisted decision/status is unchanged.
+4. **Forced-failure proof.** Point `OPENAI_API_KEY` at an invalid value (or unset it) and ask
+   again: the mode badge and the answer's own badge both read "FALLBACK," with a
+   `fallback_reason` explaining why (e.g. an authentication error or "no API key") --
+   never a blank page.
+5. **Audit.** Expand the Copilot health card's "Recent Copilot audit entries" -- each request's
+   request ID, evidence-packet hash, mode/provider, validation status, latency, and cited fact
+   IDs are logged to `copilot_audit.jsonl`; the raw API key and the full response text are never
+   written there.
+6. **Portfolio Copilot.** Ask "Where should planners focus today?" from the fixed question
+   catalog -- there is no free-form DataFrame/SQL access, only pre-coded aggregations.
+
 ## 7. What to look for as a skeptical judge
 
 - `docs/model-card.md` states the measured numbers and the honest limitations

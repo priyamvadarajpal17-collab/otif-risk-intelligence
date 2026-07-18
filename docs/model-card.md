@@ -21,8 +21,10 @@ Artifacts themselves are gitignored; this document summarizes what a fresh run p
   scenarios, and resource-aware conflict handling.
 - Trained and evaluated entirely on a **synthetic digital twin** (`src/otif_risk/data.py`);
   it is not fitted on, or validated against, real operational data.
-- Not a production forecasting service: no live ERP/WMS/TMS integration, no live LLM, no
-  cloud deployment, no message broker, no feature store.
+- Not a production forecasting service: no live ERP/WMS/TMS integration, no
+  cloud deployment, no message broker, no feature store. The optional AI Copilot layer
+  (below) is the one place this prototype can call a real external API (OpenAI), and only
+  to explain/draft text -- it never scores, decides, or writes back to the pipeline.
 
 
 ## Data: the noisy digital twin
@@ -499,6 +501,40 @@ All numbers below are from the canonical `uv run otif-ops --orders 2500 --seed 4
   active rather than promoting any noisier later retrain (see "Honest limitations"
   below).
 
+## AI Copilot: read-only explanation/drafting layer
+
+A grounded LLM copilot (`copilot_context.py`/`copilot_fallback.py`/`copilot_validation.py`/
+`llm_copilot.py`/`copilot_audit.py`/`copilot_evaluation.py`) sits over the already-governed
+decision documented above and **cannot change it**: no score, threshold, `RECOMMENDED`/
+`CONTESTED`/`MONITOR` status, resource allocation, or model/policy promotion is ever written by
+the Copilot. It only reads a deterministic, allowlisted, cited evidence packet built from the
+same persisted `scored_orders.csv`/`metrics.json`/`run_manifest.json` this card already describes,
+and answers a fixed order-question catalog or fixed portfolio-question catalog -- never
+unrestricted DataFrame/SQL/code execution.
+
+- **Two interchangeable providers, one schema.** A deterministic fallback
+  (`copilot_fallback.py`) produces the same structured, cited JSON response with plain Python --
+  no network, no key. An optional live path (`llm_copilot.py`) calls the official `openai` SDK's
+  Responses API (Structured Outputs, strict JSON schema) when `OPENAI_API_KEY` is configured
+  (`OPENAI_MODEL` default `gpt-5-mini`; `OTIF_LLM_MODE=auto|live|fallback`). Any import, timeout,
+  API, parsing, or validation failure falls back to the deterministic response -- never a blank
+  page or ungrounded free text.
+- **Validated, not just prompted** (`copilot_validation.py`): rejects unknown citation IDs,
+  requires a citation per factual claim, requires `preserves_persisted_decision: true`, rejects a
+  response whose text asserts a different decision status than the persisted one, rejects
+  non-finite/oversized output, and strips unsupported HTML/URLs.
+- **Evaluated mechanically, not with unearned quality claims** (`copilot_evaluation.py`, `uv run
+  otif-copilot-eval`): a deterministic representative-order set (high-risk inventory miss,
+  timing-driven miss, multi-cause, contested action, low-confidence, safe/monitor, unknown-cause)
+  is checked for citation validity, decision preservation, section completeness, fallback success,
+  and latency/token usage, written to `artifacts/copilot_evaluation.json`. **No BLEU, factuality,
+  or human-preference score is claimed** -- there is no human-labeled explanation dataset for this
+  prototype.
+- **Audited** (`copilot_audit.py`): every request appends one JSON line to `copilot_audit.jsonl`
+  with request ID/timestamp, scope/query type, provider/model/mode, an evidence-packet hash,
+  latency, token usage when reported, validation status/fallback reason, and cited fact IDs --
+  never the API key, the full response text, or hidden reasoning.
+
 ## Honest limitations
 
 - **Bayesian standalone quality remains below XGBoost** (median PR-AUC 0.475 vs. 0.700):
@@ -584,3 +620,12 @@ All numbers below are from the canonical `uv run otif-ops --orders 2500 --seed 4
   cause-lookup policy chose to prioritize, not a measured treatment effect -- the report
   is explicitly labeled `observational_not_causal` and is a separate, weaker claim than
   the Decision Value Lab's exact, common-random-number potential-outcome policy value.
+- **The AI Copilot's validation guards against unsupported claims; it does not prove an
+  upstream LLM can never hallucinate.** The citation/decision/finite/size checks in
+  `copilot_validation.py` make ungrounded output visible and force a fallback rather than
+  presenting it as grounded, but they cannot verify that a live model's phrasing is a
+  perfectly faithful paraphrase of a cited fact, only that every cited fact ID exists and
+  the persisted decision is preserved. The evaluation harness reports only mechanical
+  metrics (citation validity, decision preservation, completeness, fallback success,
+  latency/tokens) -- never a claimed factuality, BLEU, or human-preference score, since no
+  labeled explanation dataset exists for this prototype.

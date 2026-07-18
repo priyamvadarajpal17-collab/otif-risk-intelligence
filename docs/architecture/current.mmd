@@ -21,7 +21,11 @@
 %% lifecycle events, and rolling monitoring/SLO/data-quality reporting. The
 %% governance layer is strictly downstream/evaluation+audit-only: it never
 %% feeds score fusion (G), the operating threshold (H), or the unified
-%% intervention record (J) -- it reads from them.
+%% intervention record (J) -- it reads from them. A read-only AI Copilot (P1)
+%% sits alongside the product views: it reads the persisted intervention
+%% record (J) and manifest versions (N2) to build a cited, allowlisted
+%% evidence packet, then explains/drafts via live OpenAI or a deterministic
+%% fallback -- it never writes back to J, G, H, or any governance node.
 flowchart TB
     subgraph SIM[Noisy supply-chain digital twin]
       A1[Stable vendor, SKU, lane, DC, customer traits]
@@ -103,3 +107,7 @@ flowchart TB
     N5 --> K5
     M2 --> K4[Policy value view]
     M3 --> K4
+
+    J -.->|persisted decision/evidence, read-only| P1[AI Copilot: cited explain/draft, live OpenAI or deterministic fallback]
+    N2 -.->|model/policy/manifest versions| P1
+    K5 -.-> P1
