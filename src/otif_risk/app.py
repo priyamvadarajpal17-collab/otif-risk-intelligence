@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import statistics
 from html import escape
 from pathlib import Path
 from typing import Any
@@ -12,6 +13,13 @@ import pandas as pd
 import streamlit as st
 
 from otif_risk.bayesian import CHAIN_PARENTS, IN_FULL_FAILURE, LATE_DELIVERY
+from otif_risk.copilot_audit import default_audit_path, read_audit_records
+from otif_risk.copilot_context import (
+    PORTFOLIO_QUESTIONS,
+    EvidencePacket,
+    build_order_evidence_packet,
+)
+from otif_risk.copilot_fallback import ORDER_QUESTIONS
 from otif_risk.decisions import (
     DEFAULT_RISK_THRESHOLD,
     build_rollups,
@@ -19,6 +27,12 @@ from otif_risk.decisions import (
     service_impact_summary,
 )
 from otif_risk.feedback import append_feedback
+from otif_risk.llm_copilot import (
+    CopilotAnswer,
+    get_order_copilot_response,
+    get_portfolio_copilot_response,
+    is_live_configured,
+)
 from otif_risk.manifest import verify_manifest
 from otif_risk.narratives import order_narrative
 
@@ -65,6 +79,17 @@ def _find_policy_benchmark_path(artifacts_root: str | Path) -> Path | None:
 
 def _load_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _load_run_manifest(run_directory: str | Path) -> dict[str, Any] | None:
+    """Best-effort load of run_manifest.json for Copilot version facts."""
+    manifest_path = Path(run_directory) / "run_manifest.json"
+    if not manifest_path.is_file():
+        return None
+    try:
+        return _load_json(manifest_path)
+    except (OSError, json.JSONDecodeError):
+        return None
 
 
 def _badge(text: str, kind: str) -> str:
@@ -1304,6 +1329,228 @@ def _governance_view(artifacts_root: str) -> None:
         st.info("No parity_check.json found for the latest canonical pipeline run.")
 
 
+# ==========================================================================
+# AI Copilot view (read-only, grounded, cited explanation layer).
+# ==========================================================================
+
+
+def _truncate_badge_value(value: Any, limit: int = 90) -> str:
+    if isinstance(value, (dict, list)):
+        text = json.dumps(value, default=str)
+    else:
+        text = str(value)
+    text = text.strip()
+    if len(text) <= limit:
+        return text
+    return text[: limit - 1].rstrip() + "\u2026"
+
+
+def _render_citation_badges(citation_ids: list[str], packet: EvidencePacket) -> None:
+    if not citation_ids:
+        return
+    badges = []
+    for citation_id in citation_ids:
+        fact = packet.get(citation_id)
+        if fact is not None:
+            value_text = _truncate_badge_value(fact.value)
+            badges.append(_badge(f"{citation_id} · {fact.label} = {value_text}", "info"))
+        else:
+            badges.append(_badge(f"{citation_id} · unresolved", "warn"))
+    st.markdown(" ".join(badges), unsafe_allow_html=True)
+
+
+def _render_cited_list(title: str, items: list[dict[str, Any]], packet: EvidencePacket) -> None:
+    if not items:
+        return
+    st.markdown(f"**{title}**")
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        st.write(f"- {item.get('text', '')}")
+        _render_citation_badges(item.get("citations", []) or [], packet)
+
+
+def _render_copilot_answer(question_label: str, answer: CopilotAnswer) -> None:
+    packet = answer.packet
+    response = answer.response
+    mode_kind = "pass" if answer.mode_used == "live" else "info"
+    validation_kind = "pass" if answer.validation_status == "passed" else "fail"
+    st.markdown(f"##### Q: {question_label}")
+    st.markdown(
+        _badge(f"{answer.mode_used.upper()} · {answer.provider}", mode_kind)
+        + " "
+        + _badge(f"validation: {answer.validation_status}", validation_kind)
+        + (f" {_badge(answer.model, 'info')}" if answer.model else ""),
+        unsafe_allow_html=True,
+    )
+    st.markdown(f"**{response.get('headline', '')}**")
+    for item in response.get("what_happened", []) or []:
+        st.write(f"- {item}")
+    _render_cited_list("Why flagged", response.get("why_flagged", []), packet)
+    _render_cited_list("Affected items", response.get("affected_items", []), packet)
+    next_step = response.get("recommended_next_step") or {}
+    st.markdown("**Recommended next step**")
+    st.write(next_step.get("text", ""))
+    _render_citation_badges(next_step.get("citations", []) or [], packet)
+    if next_step.get("preserves_persisted_decision") is not True:
+        st.error(
+            "This response did not preserve the persisted decision and was rejected by the "
+            "validator; the deterministic fallback is shown instead."
+        )
+    _render_cited_list("Uncertainties", response.get("uncertainties", []), packet)
+    if response.get("draft_message"):
+        st.markdown("**Draft message** (copy manually -- never sent or executed automatically)")
+        st.code(response["draft_message"], language=None)
+    st.caption(response.get("disclaimer", ""))
+    if answer.mode_used == "fallback" and answer.fallback_reason:
+        st.caption(f"Fallback reason: {answer.fallback_reason}")
+    st.caption(
+        f"Evidence hash {answer.packet.evidence_hash()[:16]}\u2026 · "
+        f"{len(packet.facts)} cited facts · latency {answer.latency_ms:.0f} ms"
+    )
+
+
+def _copilot_mode_badge() -> None:
+    mode_configured = os.environ.get("OTIF_LLM_MODE", "auto").strip().lower() or "auto"
+    live_ready = is_live_configured()
+    if live_ready:
+        st.markdown(
+            _badge(f"Live OpenAI ready \u00b7 mode={mode_configured}", "pass"),
+            unsafe_allow_html=True,
+        )
+    else:
+        st.markdown(
+            _badge(f"Deterministic fallback \u00b7 mode={mode_configured} \u00b7 no OPENAI_API_KEY", "info"),
+            unsafe_allow_html=True,
+        )
+    st.caption(
+        "The Copilot only explains, answers questions, and drafts text from the evidence below -- "
+        "it never changes a score, threshold, decision, or resource allocation."
+    )
+
+
+def _order_copilot_tab(decisions: pd.DataFrame, metrics: dict[str, Any], run_directory: str) -> None:
+    manifest = _load_run_manifest(run_directory)
+    order_ids = decisions["order_id"].astype(str).tolist()
+    selected_id = st.selectbox("Order ID", order_ids, key="copilot_order_select")
+    order_row = decisions.loc[decisions["order_id"].astype(str) == selected_id].iloc[0]
+    packet = build_order_evidence_packet(order_row.to_dict(), metrics=metrics, manifest=manifest)
+
+    columns = st.columns(3)
+    columns[0].metric("Decision status", str(order_row.get("decision_status", "n/a")))
+    columns[1].metric("Combined risk", f"{float(order_row.get('combined_risk_score', 0.0)):.1%}")
+    columns[2].metric("Cited facts available", len(packet.facts))
+
+    with st.expander("Evidence packet preview (facts the Copilot may cite)"):
+        st.caption(
+            "Allowlisted, deterministically built, and size-limited -- the same facts back both "
+            "live and fallback answers below."
+        )
+        st.json(packet.to_dict())
+
+    question_label_to_id = {label: qid for qid, label in ORDER_QUESTIONS.items()}
+    question_label = st.selectbox(
+        "Ask the copilot", list(question_label_to_id.keys()), key="copilot_order_question"
+    )
+    question_id = question_label_to_id[question_label]
+
+    history_key = f"copilot_history_{selected_id}"
+    if st.button("Ask", key="copilot_order_ask", type="primary"):
+        answer = get_order_copilot_response(
+            order_row.to_dict(),
+            question_id,
+            metrics=metrics,
+            manifest=manifest,
+            run_directory=run_directory,
+        )
+        st.session_state.setdefault(history_key, [])
+        st.session_state[history_key].append({"question": question_label, "answer": answer})
+
+    history = st.session_state.get(history_key, [])
+    if not history:
+        st.info("Ask a question above to see a grounded, cited answer scoped to this order.")
+        return
+    st.caption(f"{len(history)} question(s) asked for order {selected_id} in this session.")
+    for turn in reversed(history):
+        _render_copilot_answer(turn["question"], turn["answer"])
+        st.divider()
+
+
+def _portfolio_copilot_tab(decisions: pd.DataFrame, metrics: dict[str, Any], run_directory: str) -> None:
+    st.caption(
+        "Fixed question catalog only -- no unrestricted DataFrame/SQL access. Each question maps "
+        "to one reviewable, deterministic aggregation."
+    )
+    question_label_to_id = {label: qid for qid, label in PORTFOLIO_QUESTIONS.items()}
+    question_label = st.selectbox(
+        "Portfolio question", list(question_label_to_id.keys()), key="copilot_portfolio_question"
+    )
+    question_id = question_label_to_id[question_label]
+
+    if st.button("Ask portfolio copilot", key="copilot_portfolio_ask", type="primary"):
+        answer = get_portfolio_copilot_response(
+            question_id, decisions, metrics=metrics, run_directory=run_directory
+        )
+        st.session_state["copilot_portfolio_last"] = {"question": question_label, "answer": answer}
+
+    turn = st.session_state.get("copilot_portfolio_last")
+    if turn is None:
+        st.info("Ask a portfolio question above.")
+        return
+    _render_copilot_answer(turn["question"], turn["answer"])
+
+
+def _copilot_health_card(run_directory: str) -> None:
+    st.subheader("Copilot health")
+    records = read_audit_records(default_audit_path(run_directory))
+    if not records:
+        st.caption("No Copilot requests recorded yet for this run.")
+        return
+    total = len(records)
+    live_count = sum(1 for record in records if record.get("mode_used") == "live")
+    fallback_count = total - live_count
+    passed = sum(1 for record in records if record.get("validation_status") == "passed")
+    latencies = [
+        record.get("latency_ms") for record in records if isinstance(record.get("latency_ms"), (int, float))
+    ]
+    median_latency = statistics.median(latencies) if latencies else None
+    total_tokens = sum(
+        (record.get("input_tokens") or 0) + (record.get("output_tokens") or 0) for record in records
+    )
+    columns = st.columns(5)
+    columns[0].metric("Total requests", total)
+    columns[1].metric("Live", live_count)
+    columns[2].metric("Fallback", fallback_count)
+    columns[3].metric("Validation pass", f"{passed}/{total}")
+    columns[4].metric(
+        "Median latency (ms)", f"{median_latency:.0f}" if median_latency is not None else "n/a"
+    )
+    st.caption(
+        f"Estimated token usage (when reported by the provider): {total_tokens:,}. "
+        "The validator rejects any response that fails to preserve the persisted decision, so no "
+        "unsupported decision override can reach this log."
+    )
+    with st.expander("Recent Copilot audit entries"):
+        st.dataframe(pd.DataFrame(records[-25:]), hide_index=True, use_container_width=True)
+
+
+def _ai_copilot_view(decisions: pd.DataFrame, metrics: dict[str, Any], run_directory: str) -> None:
+    st.header("AI Copilot")
+    st.caption(
+        "Read-only planning copilot: explains, drafts, and cites evidence -- it never decides. "
+        "The order decision, governance, and operations views above remain the authoritative "
+        "operational surfaces."
+    )
+    _copilot_mode_badge()
+    tabs = st.tabs(["Order Copilot", "Portfolio Copilot"])
+    with tabs[0]:
+        _order_copilot_tab(decisions, metrics, run_directory)
+    with tabs[1]:
+        _portfolio_copilot_tab(decisions, metrics, run_directory)
+    st.divider()
+    _copilot_health_card(run_directory)
+
+
 def main(artifacts_root: str | Path | None = None) -> None:
     """Render the control-tower prototype application."""
 
@@ -1335,6 +1582,7 @@ def main(artifacts_root: str | Path | None = None) -> None:
                 "Causal intelligence",
                 "Policy value",
                 "Governance",
+                "AI Copilot",
             ],
             label_visibility="collapsed",
         )
@@ -1353,6 +1601,8 @@ def main(artifacts_root: str | Path | None = None) -> None:
         _policy_value_view(str(root.resolve()))
     elif view == "Governance":
         _governance_view(str(root.resolve()))
+    elif view == "AI Copilot":
+        _ai_copilot_view(decisions, metrics, run_directory)
     else:
         _model_health_view(str(root.resolve()), metrics)
 

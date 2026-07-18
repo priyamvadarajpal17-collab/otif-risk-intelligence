@@ -253,8 +253,9 @@ CURRENT_DIAGRAM = Diagram(
         "Shipped OTIF risk intelligence + Decision Value + Governance architecture: "
         "noisy digital twin, 10-node mechanism Bayesian network, XGBoost + validated "
         "fusion, a Decision Value Lab measuring policy value against baselines and an "
-        "evaluation-only oracle, and a governed production lifecycle (manifests, "
-        "adapters/service contracts, decision ledger, champion/challenger promotion)."
+        "evaluation-only oracle, a governed production lifecycle (manifests, "
+        "adapters/service contracts, decision ledger, champion/challenger promotion), "
+        "and a read-only, cited AI Copilot that explains/drafts but never decides."
     ),
     nodes=(
         Node("A1", "Stable vendor/SKU/lane/DC/customer traits", 0, 0, "loop"),
@@ -345,6 +346,15 @@ CURRENT_DIAGRAM = Diagram(
         ),
         Node("K4", "Policy value view", 0.8, 20.6, "product"),
         Node("K5", "Governance view", 2.2, 20.6, "product"),
+        Node(
+            "P1",
+            "AI Copilot: allowlisted evidence packet -> cited explain/draft (live OpenAI or "
+            "deterministic fallback), read-only",
+            0.7,
+            21.8,
+            "product",
+            col_span=1.8,
+        ),
     ),
     edges=(
         Edge("A1", "A4"),
@@ -402,6 +412,9 @@ CURRENT_DIAGRAM = Diagram(
         Edge("N5", "K5"),
         Edge("M2", "K4"),
         Edge("M3", "K4"),
+        Edge("J", "P1", "loop", label="persisted decision/evidence read-only"),
+        Edge("N2", "P1", "loop", label="model/policy/manifest versions"),
+        Edge("K5", "P1", "loop"),
     ),
     bands=(
         Band("Noisy supply-chain digital twin", ("A1", "A2", "A3", "A4", "A5"), "twin"),

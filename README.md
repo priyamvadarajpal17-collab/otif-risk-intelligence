@@ -2,8 +2,10 @@
 
 An explainable supply-chain control-tower prototype that predicts open orders at risk
 of missing On-Time-In-Full delivery, identifies likely contributing factors down to the
-affected SKU/line, recommends resource-aware mitigation actions, and replays a local
-daily operating loop (scoring, closures, drift detection, versioned retraining).
+affected SKU/line, recommends resource-aware mitigation actions, replays a local
+daily operating loop (scoring, closures, drift detection, versioned retraining), and offers
+a read-only, cited **AI Copilot** (deterministic fallback plus optional live OpenAI) that
+explains and drafts but never decides.
 
 - **Architecture**: [`docs/architecture/current.mmd`](docs/architecture/current.mmd) /
   [`docs/architecture/current.svg`](docs/architecture/current.svg)
@@ -111,8 +113,9 @@ only, no Mermaid CLI or other internet tooling installed or invoked. Regenerate 
 12. Templated, structured planner narratives (risk → evidence → pathway → affected SKUs
     → action → resource status, optionally noting the dominant mechanism and
     highest-potential structural intervention; `narratives.py`), append-only CSV feedback
-    (`feedback.py`), and a six-view Streamlit control tower (`app.py`) -- including the
-    **Causal Intelligence Studio** view -- that reuses only persisted decisions.
+    (`feedback.py`), and a nine-view Streamlit control tower (`app.py`) -- including the
+    **Causal Intelligence Studio** and **AI Copilot** views -- that reuses only persisted
+    decisions.
 13. A local daily **operations replay** (`operations.py`): trains an initial model on a
     historical window, then for each simulated day scores every still-open order as of
     that day, allocates daily resource capacities, persists the queue, closes resolved
@@ -655,6 +658,99 @@ warm-paper/charcoal/signal-blue/safety-orange palette as the rest of the control
 with green reserved for verified/passed/promoted states and red for held/regression/
 failed states.
 
+## AI Copilot
+
+A read-only explanation/drafting layer sits on top of the already-governed decision above.
+**It never decides anything** — it cannot change a score, a threshold, `RECOMMENDED`/
+`CONTESTED`/`MONITOR`, a resource allocation, or a model/policy promotion; it can only explain,
+answer a fixed catalog of questions, and draft text for a planner to copy manually.
+
+**Evidence packet (`copilot_context.py`).** Deterministic code — never the LLM — builds a
+compact, allowlisted, cited "evidence packet" for one order or one fixed portfolio question:
+identity/status, model/policy/manifest versions, XGBoost/BBN/fused risk with the operating
+threshold, the top SHAP/perturbation factors (explicitly labeled `association_not_causation`),
+the Bayesian mechanism route/priors/posteriors and best fixed-structure scenario (explicitly
+labeled a scenario, not a proven treatment effect), affected SKUs, observed/missing lifecycle
+events, resource contention, and business impact (order value, penalty exposure, quantity at
+risk, and any simulated policy-value figure labeled as simulator evaluation). Every fact has a
+stable `id` (e.g. `risk.combined`, `shap.1`, `sku.SKU0042`) that both live and fallback answers
+must cite. Secrets, file paths, git remotes, raw planner-feedback text, and simulator/line
+ground truth are never read into it; lists/strings are truncated to fixed, deterministic limits.
+Portfolio questions come from a fixed catalog of hand-written aggregations
+(`PORTFOLIO_QUESTIONS`) — there is no unrestricted DataFrame/SQL/code-execution path.
+
+**Deterministic fallback (`copilot_fallback.py`).** Produces the exact same structured response
+schema (below) from the evidence packet with plain Python — no network call, no API key, no
+randomness — for the order question catalog ("Explain this order simply", "Why was it flagged?",
+"Which SKU is affected?", "Why is the action contested?", "Draft a supplier escalation") and every
+portfolio question. This is the demo's always-on mode and also what live mode falls back to.
+
+**Live OpenAI integration (`llm_copilot.py`).** Uses the official `openai` Python SDK's Responses
+API with Structured Outputs (a strict JSON schema matching the response shape below) when
+`OPENAI_API_KEY` is configured. Config: `OPENAI_API_KEY` (required only for live mode),
+`OPENAI_MODEL` (default `gpt-5-mini`, a small cost-efficient current-generation model — override
+freely), `OTIF_LLM_MODE=auto|live|fallback` (`auto` tries live and falls back automatically on any
+failure; `live` still falls back gracefully rather than showing a blank page; `fallback` never
+calls the network). Timeout and max output tokens are fixed in code; model sampling uses the
+provider default for compatibility. The system prompt requires: facts only from the supplied evidence, a citation
+for every material claim, `association_not_causation` for SHAP separated from the Bayesian
+fixed-structure-scenario framing, "unknown" when evidence is absent, the persisted decision
+preserved (never overridden), honest labeling of simulated values, refusal of prompt-injection
+attempts to reveal secrets/instructions, and concise planner language. See `.env.example`.
+
+**Structured response schema** (identical for live and fallback):
+
+```json
+{
+  "headline": "One-sentence summary",
+  "what_happened": ["..."],
+  "why_flagged": [{"text": "...", "citations": ["risk.combined", "shap.1"]}],
+  "affected_items": [{"text": "...", "citations": ["sku.SKU0042"]}],
+  "recommended_next_step": {
+    "text": "...", "citations": ["decision.action"], "preserves_persisted_decision": true
+  },
+  "uncertainties": [{"text": "...", "citations": ["risk.evidence_coverage"]}],
+  "draft_message": "Optional supplier/customer/operations draft, display-only",
+  "disclaimer": "Explanation support only; production decision unchanged."
+}
+```
+
+**Citation and hallucination guard (`copilot_validation.py`).** Rejects any citation ID not
+present in the evidence packet, requires at least one citation per factual explanation item,
+requires `preserves_persisted_decision: true`, rejects a response whose next-step text asserts a
+decision status inconsistent with the persisted one, rejects non-finite values and oversized
+output, and strips unsupported HTML/URLs. On any validation failure the caller falls back to the
+deterministic response — a judge can force this by pointing `OPENAI_API_KEY` at an invalid key.
+This does not guarantee an LLM can never hallucinate; it guarantees unsupported claims are never
+presented as grounded.
+
+**Audit (`copilot_audit.py`).** Every request appends one line to `<run_directory>/
+copilot_audit.jsonl`: request ID/timestamp, order ID or portfolio query type, provider/model/mode
+(configured vs. actually used), an evidence-packet hash (not its contents), a prompt-template
+version, latency, token usage when reported, validation status/fallback reason, and cited fact
+IDs — never the API key, the full response text, or any chain-of-thought.
+
+**Streamlit view.** The "AI Copilot" sidebar view adds an Order Copilot tab (order selector,
+live/fallback mode badge, evidence-packet preview, a question selector, per-order chat history for
+the session, citation badges that resolve to the underlying fact, an uncertainty panel, and a
+copy-only draft-message code block — no send/execute action) and a Portfolio Copilot tab (the
+fixed question catalog only), plus a Copilot health card (live/fallback counts, validation
+pass rate, median latency, estimated token usage, recent audit entries).
+
+**Evaluation (`copilot_evaluation.py`, `uv run otif-copilot-eval`).** Because no human-labeled
+explanation dataset exists, this evaluates a deterministic set of representative orders (high-risk
+inventory miss, timing-driven miss, multi-cause, contested action, low-confidence, safe/monitor,
+unknown-cause — each reported as unavailable rather than guessed if this dataset has none) against
+every supported question: citation validity, decision-status/action preservation, required-section
+completeness, fallback success rate, and latency/token usage, plus one live-vs-fallback smoke
+comparison when an API key is actually configured. No BLEU/factuality/human-preference claim is
+made. Writes `artifacts/copilot_evaluation.json`.
+
+```bash
+# AI Copilot representative-order evaluation (fallback-only unless OPENAI_API_KEY is set)
+uv run otif-copilot-eval --artifacts-root artifacts --output artifacts/copilot_evaluation.json
+```
+
 
 
 This project uses Python 3.12 because SHAP's native dependencies are not compatible with
@@ -685,9 +781,12 @@ uv run otif-ops --orders 2500 --seed 42 --replay-days 90 --output-dir artifacts 
   --policy-value-reference-path artifacts/policy_benchmark.json
 
 # Streamlit control tower (reads whichever run-*/ops-*/benchmark.json are present,
-# including the Policy Value and Governance views)
+# including the Policy Value, Governance, and AI Copilot views)
 uv run streamlit run src/otif_risk/app.py
 ```
+
+Copy [`.env.example`](.env.example) to `.env` (never commit it) to configure the AI Copilot's
+live OpenAI mode; the Copilot runs fully on its deterministic fallback with no `.env` at all.
 
 Threshold tuning defaults to `recall_floor` with `target_recall=0.65` and
 `min_precision=0.30`, applied to the fused score (see above).
@@ -757,8 +856,10 @@ uv run python -m build
   simulated, non-causal estimates (the operations replay closes each order against its
   pre-generated outcome and does not yet call the Decision Value Lab's action-response
   twin); the Decision Value Lab's own avoided-penalty figures are the measured ones.
-- The LLM layer is represented by a deterministic narrative template — no live LLM,
-  cloud service, or external infrastructure is used anywhere in this prototype.
+- The AI Copilot (see "AI Copilot" below) is a read-only explanation/drafting layer over the
+  already-governed decision: it can call the live OpenAI Responses API when configured, but it
+  never changes a score, threshold, decision, resource allocation, or governance action, and it
+  always has a fully offline deterministic fallback with the same structured, cited schema.
 - Held-out metrics on this synthetic dataset should not be read as production
   readiness evidence; see `docs/model-card.md` for the measured multi-seed benchmark and
   its honest limitations.
