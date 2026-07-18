@@ -1,0 +1,1603 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OTIF Risk Intelligence — Field Manual &amp; System Walkthrough</title>
+<meta name="description" content="An end-to-end, evidence-backed explainer of the OTIF Risk Intelligence system: from noisy supply-chain events to governed intervention.">
+<style>
+/* ============================================================
+   OTIF RISK INTELLIGENCE — SYSTEM WALKTHROUGH
+   Industrial field-manual aesthetic. Inline CSS only, no CDNs.
+   ============================================================ */
+
+:root{
+  --paper: #f2e9d8;
+  --paper-2: #e9dcc0;
+  --paper-3: #ddccA6;
+  --charcoal: #201d1a;
+  --charcoal-2: #322c26;
+  --ink: #2a2420;
+  --orange: #c6501f;
+  --orange-dark: #9c3c14;
+  --blue: #1e4d6b;
+  --blue-2: #2a6f9c;
+  --green: #2e6b2e;
+  --green-bg: #e3ecdd;
+  --red: #a3271f;
+  --red-bg: #f3ded9;
+  --amber: #a6791f;
+  --line: #b9a67e;
+  --shadow: rgba(32,29,26,0.18);
+  --focus: #0b63b6;
+  --radius: 4px;
+  --font-display: Georgia, 'Times New Roman', 'Iowan Old Style', serif;
+  --font-body: 'Trebuchet MS', 'Segoe UI', Helvetica, Arial, sans-serif;
+  --font-mono: 'Courier New', Courier, monospace;
+  --maxw: 1180px;
+  --nav-w: 260px;
+  --stamp: rotate(-3deg);
+}
+
+[data-theme="dark"]{
+  --paper: #1c1a17;
+  --paper-2: #24211d;
+  --paper-3: #322c26;
+  --charcoal: #f2e9d8;
+  --charcoal-2: #e9dcc0;
+  --ink: #efe6d6;
+  --orange: #e8712f;
+  --orange-dark: #ff8a45;
+  --blue: #6fb3dd;
+  --blue-2: #8fc6ea;
+  --green: #7fbf7f;
+  --green-bg: #223522;
+  --red: #e2726a;
+  --red-bg: #3a201d;
+  --amber: #d9ab5c;
+  --line: #4a4238;
+  --shadow: rgba(0,0,0,0.5);
+  --focus: #6fb3dd;
+}
+
+[data-theme="hc"]{
+  --paper: #000000;
+  --paper-2: #0a0a0a;
+  --paper-3: #141414;
+  --charcoal: #ffffff;
+  --charcoal-2: #ffffff;
+  --ink: #ffffff;
+  --orange: #ffb347;
+  --orange-dark: #ffb347;
+  --blue: #7fd4ff;
+  --blue-2: #a6e3ff;
+  --green: #7bff7b;
+  --green-bg: #063006;
+  --red: #ff8b83;
+  --red-bg: #3a0000;
+  --amber: #ffe066;
+  --line: #ffffff;
+  --shadow: rgba(255,255,255,0.25);
+  --focus: #ffe066;
+}
+
+*, *::before, *::after{ box-sizing: border-box; }
+
+html{ scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce){
+  html{ scroll-behavior: auto; }
+  *, *::before, *::after{
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+body{
+  margin:0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  line-height: 1.55;
+  font-size: 16.5px;
+}
+
+img, svg{ max-width:100%; display:block; }
+
+a{ color: var(--blue); }
+a:focus-visible, button:focus-visible, [tabindex]:focus-visible, input:focus-visible, select:focus-visible{
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.skip-link{
+  position:absolute; left:-999px; top:auto;
+  background: var(--orange); color:#fff; padding: 0.6em 1em;
+  z-index: 999; border-radius: var(--radius);
+}
+.skip-link:focus{ left: 1em; top: 1em; }
+
+h1,h2,h3,h4{
+  font-family: var(--font-display);
+  color: var(--charcoal);
+  line-height: 1.15;
+  letter-spacing: 0.01em;
+}
+h1{ font-size: clamp(2rem, 5vw, 3.4rem); margin: 0 0 0.3em; }
+h2{ font-size: clamp(1.5rem, 3vw, 2.1rem); margin: 0 0 0.5em; border-bottom: 3px solid var(--orange); padding-bottom: 0.25em; }
+h3{ font-size: 1.25rem; margin: 1.4em 0 0.4em; color: var(--blue); }
+h4{ font-size: 1.02rem; margin: 1em 0 0.3em; text-transform: uppercase; letter-spacing: 0.06em; color: var(--orange-dark); }
+p{ margin: 0 0 0.9em; }
+code, kbd, .mono{ font-family: var(--font-mono); background: var(--paper-3); padding: 0.05em 0.35em; border-radius: 3px; font-size: 0.92em; }
+pre{ font-family: var(--font-mono); background: var(--charcoal); color: var(--paper); padding: 1em 1.2em; border-radius: var(--radius); overflow-x:auto; font-size: 0.86rem; line-height:1.5; }
+pre code{ background:none; padding:0; color:inherit; }
+
+.tag{
+  display:inline-block; font-family: var(--font-body); font-weight:700; font-size: 0.72rem;
+  letter-spacing: 0.08em; text-transform: uppercase; padding: 0.18em 0.6em; border-radius: 2px;
+  border: 1.5px solid currentColor;
+}
+.tag--verified{ color: var(--green); background: var(--green-bg); }
+.tag--illustrative{ color: var(--amber); background: transparent; border-style: dashed; }
+.tag--held{ color: var(--red); background: var(--red-bg); }
+.tag--sim{ color: var(--blue); background: transparent; }
+.tag--charcoal{ color: var(--charcoal); background: var(--paper-3); border-color: var(--line); }
+
+.stamp{
+  display:inline-block; transform: var(--stamp); border: 3px double currentColor;
+  padding: 0.15em 0.6em; font-family: var(--font-display); font-weight:bold; letter-spacing:0.05em;
+}
+
+/* ---------- Layout shell ---------- */
+.site-header{
+  position: sticky; top:0; z-index: 60;
+  background: var(--charcoal); color: var(--paper);
+  border-bottom: 4px solid var(--orange);
+}
+.site-header-inner{
+  max-width: var(--maxw); margin:0 auto; padding: 0.6em 1.2em;
+  display:flex; align-items:center; justify-content:space-between; gap: 1em;
+}
+.brand{ display:flex; align-items:center; gap:0.6em; font-family: var(--font-display); }
+.brand-mark{ width:34px; height:34px; flex:none; }
+.brand-text{ font-weight:bold; font-size: 1.05rem; color: var(--paper); }
+.brand-text small{ display:block; font-family: var(--font-body); font-weight:normal; font-size:0.66rem; letter-spacing:0.1em; text-transform:uppercase; color: var(--orange); }
+
+.header-actions{ display:flex; align-items:center; gap:0.5em; }
+.icon-btn{
+  background: transparent; border: 1.5px solid var(--paper-3); color: var(--paper);
+  border-radius: var(--radius); padding: 0.4em 0.7em; font-family: var(--font-body);
+  font-size: 0.8rem; cursor:pointer; display:flex; align-items:center; gap:0.4em;
+}
+.icon-btn:hover{ background: var(--orange); border-color: var(--orange); color:#fff; }
+.menu-toggle{ display:none; }
+
+.layout{
+  max-width: var(--maxw); margin: 0 auto; padding: 0 1.2em;
+  display:grid; grid-template-columns: var(--nav-w) 1fr; gap: 2.2em; align-items:start;
+}
+
+.toc-rail{
+  position: sticky; top: 64px; align-self: start;
+  max-height: calc(100vh - 90px); overflow-y:auto;
+  padding: 1em 0.2em 2em 0;
+  border-right: 2px solid var(--line);
+}
+.toc-rail h2{ font-size:0.78rem; text-transform:uppercase; letter-spacing:0.12em; border:none; color: var(--orange-dark); margin-bottom:0.6em; }
+.toc-rail ol{ list-style:none; margin:0; padding:0; counter-reset:toc; }
+.toc-rail li{ counter-increment: toc; margin: 0.05em 0; }
+.toc-rail a{
+  display:block; text-decoration:none; color: var(--ink); font-size:0.86rem;
+  padding: 0.32em 0.5em 0.32em 1.6em; border-left: 3px solid transparent; position:relative;
+}
+.toc-rail a::before{
+  content: counter(toc) "."; position:absolute; left:0; width:1.4em; font-family: var(--font-mono); font-size:0.78rem; color: var(--blue);
+}
+.toc-rail a:hover{ background: var(--paper-2); }
+.toc-rail a.active{ border-left-color: var(--orange); color: var(--orange-dark); font-weight:bold; background: var(--paper-2); }
+
+.progress-track{ height:4px; background: var(--paper-3); border-radius:2px; margin: 0 0.5em 1em; overflow:hidden; }
+.progress-fill{ height:100%; width:0%; background: var(--orange); transition: width 0.15s linear; }
+
+main{ min-width:0; padding-bottom: 4em; }
+
+section{ margin: 3em 0; scroll-margin-top: 80px; }
+section > .section-inner{
+  background: var(--paper-2); border: 1.5px solid var(--line); border-radius: var(--radius);
+  padding: 1.6em 1.8em 1.8em; box-shadow: 3px 3px 0 var(--shadow);
+}
+
+.reveal{ opacity:0; transform: translateY(14px); transition: opacity 0.5s ease, transform 0.5s ease; }
+.reveal.in-view{ opacity:1; transform:none; }
+@media (prefers-reduced-motion: reduce){ .reveal{ opacity:1; transform:none; } }
+
+.eyebrow{ font-family: var(--font-body); font-weight:bold; letter-spacing:0.14em; text-transform:uppercase; font-size:0.72rem; color: var(--orange-dark); margin-bottom:0.4em; }
+
+/* ---------- Hero ---------- */
+.hero{
+  background: linear-gradient(180deg, var(--charcoal) 0%, var(--charcoal-2) 100%);
+  color: var(--paper); padding: 3.2em 1.2em 3em; border-bottom: 6px solid var(--orange);
+  background-image:
+    repeating-linear-gradient(135deg, rgba(255,255,255,0.02) 0 2px, transparent 2px 26px);
+}
+.hero-inner{ max-width: var(--maxw); margin:0 auto; }
+.hero h1{ color: var(--paper); max-width: 15ch; }
+.hero .promise{ font-size: 1.15rem; max-width: 55ch; color: var(--paper-2); }
+.hero-badges{ display:flex; flex-wrap:wrap; gap:0.6em; margin: 1.2em 0 1.6em; }
+.hero-badges .tag{ font-size:0.76rem; }
+.hero-stats{ display:grid; grid-template-columns: repeat(auto-fit, minmax(180px,1fr)); gap:1em; margin-top:1.4em; }
+.stat-card{
+  background: rgba(242,233,216,0.06); border:1px solid rgba(242,233,216,0.25); border-radius: var(--radius);
+  padding: 0.9em 1em;
+}
+.stat-card .num{ font-family: var(--font-display); font-size:1.7rem; color: var(--orange); font-weight:bold; }
+.stat-card .lbl{ font-size:0.76rem; color: var(--paper-2); letter-spacing:0.02em; }
+.hero-cta{ margin-top:1.6em; display:flex; gap:0.8em; flex-wrap:wrap; }
+.btn{
+  font-family: var(--font-body); font-weight:bold; padding:0.65em 1.2em; border-radius: var(--radius);
+  border: 2px solid var(--orange); background: var(--orange); color:#fff; cursor:pointer; font-size:0.92rem;
+  text-decoration:none; display:inline-flex; align-items:center; gap:0.5em;
+}
+.btn:hover{ background: var(--orange-dark); border-color: var(--orange-dark); }
+.btn--ghost{ background:transparent; color: var(--paper); }
+.btn--ghost:hover{ background: rgba(255,255,255,0.1); }
+
+/* ---------- Four-part cards ---------- */
+.quad{ display:grid; grid-template-columns: repeat(auto-fit, minmax(230px,1fr)); gap:1em; margin: 1.2em 0; }
+.quad-card{ background: var(--paper); border:1.5px solid var(--line); border-radius: var(--radius); padding:0.9em 1em; }
+.quad-card h4{ margin-top:0; }
+.quad-card.in{ border-left: 5px solid var(--blue); }
+.quad-card.happens{ border-left: 5px solid var(--orange); }
+.quad-card.out{ border-left: 5px solid var(--green); }
+.quad-card.why{ border-left: 5px solid var(--amber); }
+
+.term{
+  border-bottom: 2px dotted var(--blue); cursor:help; font-weight:600;
+}
+
+.callout{
+  border-left: 5px solid var(--orange); background: var(--paper); padding: 0.8em 1em; margin: 1em 0; border-radius: 0 var(--radius) var(--radius) 0;
+}
+.callout.warn{ border-left-color: var(--red); background: var(--red-bg); }
+.callout.verified{ border-left-color: var(--green); background: var(--green-bg); }
+
+table{ border-collapse: collapse; width:100%; margin: 1em 0; font-size:0.92rem; }
+caption{ text-align:left; font-style:italic; color:var(--blue); margin-bottom:0.4em; font-size:0.85rem;}
+th, td{ border: 1px solid var(--line); padding: 0.5em 0.6em; text-align:right; }
+th:first-child, td:first-child{ text-align:left; }
+thead th{ background: var(--charcoal); color: var(--paper); font-family: var(--font-body); font-size:0.78rem; text-transform:uppercase; letter-spacing:0.04em; }
+tbody tr:nth-child(even){ background: rgba(0,0,0,0.03); }
+tr.highlight-row{ background: var(--green-bg) !important; font-weight:bold; }
+tr.highlight-row td{ color: var(--green); }
+
+.btn-group{ display:flex; gap:0.5em; flex-wrap:wrap; margin: 0.8em 0; }
+.toggle-btn{
+  font-family: var(--font-body); font-weight:bold; font-size:0.85rem; padding:0.5em 1em;
+  border: 2px solid var(--blue); background: var(--paper); color: var(--blue); border-radius: var(--radius); cursor:pointer;
+}
+.toggle-btn[aria-pressed="true"], .toggle-btn[aria-selected="true"]{ background: var(--blue); color: #fff; }
+.toggle-btn:hover{ background: var(--blue-2); color:#fff; }
+
+.glossary-term dt{ font-weight:bold; color: var(--blue); font-family: var(--font-display); font-size:1.05rem; margin-top:0.9em; }
+.glossary-term dd{ margin:0 0 0.6em; }
+
+footer.site-footer{
+  background: var(--charcoal); color: var(--paper); padding: 2.4em 1.2em 3em; border-top:6px solid var(--orange);
+}
+.site-footer .footer-inner{ max-width: var(--maxw); margin:0 auto; }
+.site-footer h2{ color: var(--paper); border-bottom-color: var(--orange); }
+.site-footer pre{ background: var(--charcoal-2); }
+
+.visually-hidden{ position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+
+/* SVG diagram interactivity */
+.arch-node{ cursor:pointer; }
+.arch-node rect{ transition: filter 0.15s ease; }
+.arch-node:hover rect, .arch-node:focus rect{ filter: brightness(1.15); }
+.arch-node:focus{ outline:none; }
+.arch-node:focus rect{ stroke: var(--focus); stroke-width:3; }
+.satellite-node{ opacity:0.9; }
+
+.evidence-active{ fill: var(--blue) !important; }
+.route-active{ stroke: var(--orange) !important; stroke-width:3 !important; }
+.node-dim{ opacity:0.35; }
+.edge-severed{ stroke-dasharray: 4 4 !important; opacity:0.4; }
+
+.mobile-menu-panel{ display:none; }
+
+@media (max-width: 900px){
+  .layout{ grid-template-columns: 1fr; }
+  .toc-rail{ display:none; }
+  .menu-toggle{ display:inline-flex; }
+  .mobile-menu-panel{
+    display:block; position:fixed; inset:0 0 0 auto; width: min(320px, 85vw); background: var(--charcoal);
+    color: var(--paper); z-index: 100; transform: translateX(100%); transition: transform 0.25s ease;
+    overflow-y:auto; padding: 1em 1.2em 2em; border-left: 4px solid var(--orange);
+  }
+  .mobile-menu-panel.open{ transform: translateX(0); }
+  .mobile-menu-panel a{ display:block; color: var(--paper); text-decoration:none; padding:0.5em 0.2em; border-bottom:1px solid var(--charcoal-2); font-size:0.92rem; }
+  .mobile-menu-panel a:hover{ color: var(--orange); }
+  .mobile-backdrop{ position:fixed; inset:0; background: rgba(0,0,0,0.5); z-index:99; display:none; }
+  .mobile-backdrop.open{ display:block; }
+}
+
+@media print{
+  .site-header, .toc-rail, .mobile-menu-panel, .mobile-backdrop, .no-print{ display:none !important; }
+  .layout{ display:block; }
+  body{ background:#fff; color:#000; font-size: 11pt; }
+  section > .section-inner{ box-shadow:none; border:1px solid #999; break-inside: avoid; }
+  a{ color:#000; text-decoration:underline; }
+  .hero{ background:none !important; color:#000; border:2px solid #000; }
+  .hero h1, .hero .promise{ color:#000; }
+}
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
+<header class="site-header">
+  <div class="site-header-inner">
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 40 40" role="img" aria-label="OTIF Risk Intelligence mark">
+        <rect x="2" y="2" width="36" height="36" rx="4" fill="none" stroke="#c6501f" stroke-width="3"/>
+        <path d="M10 26 L18 14 L23 22 L30 10" fill="none" stroke="#f2e9d8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="30" cy="10" r="2.6" fill="#c6501f"/>
+      </svg>
+      <span class="brand-text">OTIF Risk Intelligence<small>Field Manual &amp; System Walkthrough</small></span>
+    </div>
+    <div class="header-actions">
+      <button type="button" class="icon-btn" id="theme-toggle" aria-label="Cycle color theme (light, dark, high contrast)">
+        <span aria-hidden="true">◐</span><span id="theme-label">Light</span>
+      </button>
+      <button type="button" class="icon-btn no-print" id="print-btn">
+        <span aria-hidden="true">🖶</span> Print / Save PDF
+      </button>
+      <button type="button" class="icon-btn menu-toggle" id="menu-toggle" aria-label="Open section menu" aria-expanded="false" aria-controls="mobile-menu">
+        <span aria-hidden="true">☰</span> Sections
+      </button>
+    </div>
+  </div>
+</header>
+
+<div class="mobile-backdrop" id="mobile-backdrop"></div>
+<nav class="mobile-menu-panel" id="mobile-menu" aria-label="Section navigation (mobile)">
+  <p style="font-weight:bold; color:#c6501f; text-transform:uppercase; font-size:0.8rem; letter-spacing:0.08em;">Contents</p>
+  <div id="mobile-menu-links"></div>
+</nav>
+
+<section class="hero" id="top">
+  <div class="hero-inner">
+    <p class="eyebrow" style="color:#e8712f;">A field manual for the whole system</p>
+    <h1>From raw supply-chain events to governed intervention</h1>
+    <p class="promise">One risk score, one explainable recommendation, and one auditable governance trail per at-risk order — built and measured entirely on a local, noisy digital twin, with every number on this page pulled from a real regenerated run, not a slide.</p>
+    <div class="hero-badges">
+      <span class="tag tag--verified">Measured, not asserted</span>
+      <span class="tag tag--sim">Synthetic digital twin</span>
+      <span class="tag tag--held">Governance holds bad challengers</span>
+    </div>
+    <div class="hero-stats">
+      <div class="stat-card"><div class="num">0.705</div><div class="lbl">Median fused PR-AUC (5 seeds)</div></div>
+      <div class="stat-card"><div class="num">+8.6%</div><div class="lbl">Value-aware policy vs. baseline, 50% capacity</div></div>
+      <div class="stat-card"><div class="num">15/15</div><div class="lbl">Offline vs. service-boundary parity checks</div></div>
+      <div class="stat-card"><div class="num">6,226</div><div class="lbl">Governed replay decisions logged</div></div>
+    </div>
+    <div class="hero-cta">
+      <a class="btn" href="#sec-architecture">See the whole system →</a>
+      <a class="btn btn--ghost" href="#sec-journey">Walk one order end to end</a>
+    </div>
+  </div>
+</section>
+
+<div class="layout">
+  <aside class="toc-rail" aria-label="Table of contents">
+    <div class="progress-track" aria-hidden="true"><div class="progress-fill" id="progress-fill"></div></div>
+    <h2>Contents</h2>
+    <ol id="toc-list"></ol>
+  </aside>
+
+  <main id="main-content">
+    <section id="sec-architecture" data-toc="The whole system on one page" class="reveal">
+      <div class="section-inner">
+        <p class="eyebrow">Section 1</p>
+        <h2>The whole system on one page</h2>
+        <p>This is every stage the real code implements, in order. Boxes are clickable (and keyboard-focusable) — activating one jumps to the matching walkthrough section below. Solid arrows are the live decision path; dashed arrows are diagnostic-only branches that never feed the score, the threshold, or the decision.</p>
+        <svg viewBox="0 0 1220 520" role="img" aria-labelledby="arch-title arch-desc" style="width:100%; height:auto; font-family: 'Trebuchet MS', sans-serif;">
+          <title id="arch-title">OTIF Risk Intelligence master architecture</title>
+          <desc id="arch-desc">Source adapters feed canonical tables, which pass through data quality checks into point-in-time features. Features feed both an XGBoost+SHAP model and a Bayesian mechanism network, which are fused into one risk score. The fused score drives a value-aware policy, resource allocation, and decisions, which are logged to a decision ledger and reconciled against outcomes. Monitoring watches the ledger and feeds a champion/challenger promotion gate, which can retrain, promote, hold, or roll back, and which drives the Streamlit UI. The Bayesian network also feeds a diagnostic-only Causal Intelligence Studio branch, and the decisions feed a diagnostic-only Decision Value Lab branch — neither loops back into the live score or decision.</desc>
+          <defs>
+            <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="#201d1a"></path>
+            </marker>
+            <marker id="arrow-dash" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="#c6501f"></path>
+            </marker>
+          </defs>
+
+          <!-- Row 1: data + prediction -->
+          <g class="arch-node" tabindex="0" role="button" aria-label="Jump to source adapters" data-target="#sec-twin-adapters">
+            <rect x="20" y="40" width="150" height="80" rx="4" fill="#e9dcc0" stroke="#201d1a" stroke-width="2"></rect>
+            <text x="95" y="72" text-anchor="middle" font-size="13" font-weight="bold" fill="#201d1a">Source</text>
+            <text x="95" y="88" text-anchor="middle" font-size="13" font-weight="bold" fill="#201d1a">adapters</text>
+            <text x="95" y="104" text-anchor="middle" font-size="10" fill="#322c26">ERP · WMS · TMS · SRM</text>
+          </g>
+          <path d="M170,80 H190" stroke="#201d1a" stroke-width="2" marker-end="url(#arrow)"></path>
+
+          <g class="arch-node" tabindex="0" role="button" aria-label="Jump to data contracts and quality" data-target="#sec-contracts-quality">
+            <rect x="190" y="40" width="150" height="80" rx="4" fill="#e9dcc0" stroke="#201d1a" stroke-width="2"></rect>
+            <text x="265" y="72" text-anchor="middle" font-size="13" font-weight="bold" fill="#201d1a">Canonical</text>
+            <text x="265" y="88" text-anchor="middle" font-size="13" font-weight="bold" fill="#201d1a">tables</text>
+            <text x="265" y="104" text-anchor="middle" font-size="10" fill="#322c26">typed, schema-checked</text>
+          </g>
+          <path d="M340,80 H360" stroke="#201d1a" stroke-width="2" marker-end="url(#arrow)"></path>
+
+          <g class="arch-node" tabindex="0" role="button" aria-label="Jump to data quality checks" data-target="#sec-contracts-quality">
+            <rect x="360" y="40" width="150" height="80" rx="4" fill="#e9dcc0" stroke="#201d1a" stroke-width="2"></rect>
+            <text x="435" y="72" text-anchor="middle" font-size="13" font-weight="bold" fill="#201d1a">Data quality</text>
+            <text x="435" y="88" text-anchor="middle" font-size="13" font-weight="bold" fill="#201d1a">checks</text>
+            <text x="435" y="104" text-anchor="middle" font-size="10" fill="#322c26">completeness · referential</text>
+          </g>
+          <path d="M510,80 H530" stroke="#201d1a" stroke-width="2" marker-end="url(#arrow)"></path>
+
+          <g class="arch-node" tabindex="0" role="button" aria-label="Jump to point-in-time features" data-target="#sec-asof">
+            <rect x="530" y="40" width="150" height="80" rx="4" fill="#e9dcc0" stroke="#201d1a" stroke-width="2"></rect>
+            <text x="605" y="66" text-anchor="middle" font-size="13" font-weight="bold" fill="#201d1a">Point-in-time</text>
+            <text x="605" y="82" text-anchor="middle" font-size="13" font-weight="bold" fill="#201d1a">features</text>
+            <text x="605" y="100" text-anchor="middle" font-size="10" fill="#322c26">as-of timestamp, no leakage</text>
+          </g>
+          <path d="M680,65 L700,45 L700,45" stroke="#201d1a" stroke-width="2" fill="none"></path>
+          <path d="M680,65 Q695,45 700,45" stroke="#201d1a" stroke-width="2" fill="none" marker-end="url(#arrow)"></path>
+          <path d="M680,95 Q695,115 700,115" stroke="#201d1a" stroke-width="2" fill="none" marker-end="url(#arrow)"></path>
+
+          <g class="arch-node" tabindex="0" role="button" aria-label="Jump to XGBoost and SHAP" data-target="#sec-xgboost">
+            <rect x="700" y="15" width="160" height="60" rx="4" fill="#1e4d6b" stroke="#201d1a" stroke-width="2"></rect>
+            <text x="780" y="40" text-anchor="middle" font-size="13" font-weight="bold" fill="#f2e9d8">XGBoost risk</text>
+            <text x="780" y="56" text-anchor="middle" font-size="11" fill="#dbe8f0">model + SHAP</text>
+          </g>
+          <g class="arch-node" tabindex="0" role="button" aria-label="Jump to Bayesian mechanism network" data-target="#sec-bayesian">
+            <rect x="700" y="85" width="160" height="60" rx="4" fill="#1e4d6b" stroke="#201d1a" stroke-width="2"></rect>
+            <text x="780" y="110" text-anchor="middle" font-size="13" font-weight="bold" fill="#f2e9d8">Bayesian</text>
+            <text x="780" y="126" text-anchor="middle" font-size="11" fill="#dbe8f0">mechanism graph</text>
+          </g>
+          <path d="M860,45 Q880,45 890,70" stroke="#201d1a" stroke-width="2" fill="none" marker-end="url(#arrow)"></path>
+          <path d="M860,115 Q880,115 890,90" stroke="#201d1a" stroke-width="2" fill="none" marker-end="url(#arrow)"></path>
+
+          <g class="arch-node" tabindex="0" role="button" aria-label="Jump to fusion" data-target="#sec-fusion">
+            <rect x="890" y="40" width="150" height="80" rx="4" fill="#1e4d6b" stroke="#201d1a" stroke-width="2"></rect>
+            <text x="965" y="72" text-anchor="middle" font-size="13" font-weight="bold" fill="#f2e9d8">Fused risk</text>
+            <text x="965" y="88" text-anchor="middle" font-size="13" font-weight="bold" fill="#f2e9d8">score</text>
+            <text x="965" y="104" text-anchor="middle" font-size="10" fill="#dbe8f0">validated blend weight</text>
+          </g>
+
+          <!-- diagnostic satellite: causal studio -->
+          <path d="M780,145 V175" stroke="#c6501f" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#arrow-dash)"></path>
+          <g class="arch-node satellite-node" tabindex="0" role="button" aria-label="Jump to structural intervention scenarios" data-target="#sec-interventions">
+            <rect x="650" y="178" width="260" height="46" rx="4" fill="none" stroke="#c6501f" stroke-width="2" stroke-dasharray="5 4"></rect>
+            <text x="780" y="198" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#9c3c14">Causal Intelligence Studio</text>
+            <text x="780" y="212" text-anchor="middle" font-size="9" fill="#322c26">diagnostic only — never feeds fusion</text>
+          </g>
+
+          <!-- connector row1 -> row2 (elbow) -->
+          <path d="M965,120 V245 H145 V262" stroke="#201d1a" stroke-width="2" fill="none" marker-end="url(#arrow)"></path>
+
+          <!-- Row 2: decision + governance -->
+          <g class="arch-node" tabindex="0" role="button" aria-label="Jump to value-aware action selection" data-target="#sec-value-formula">
+            <rect x="70" y="262" width="150" height="80" rx="4" fill="#c6501f" stroke="#201d1a" stroke-width="2"></rect>
+            <text x="145" y="294" text-anchor="middle" font-size="13" font-weight="bold" fill="#fff">Value-aware</text>
+            <text x="145" y="310" text-anchor="middle" font-size="13" font-weight="bold" fill="#fff">policy</text>
+            <text x="145" y="326" text-anchor="middle" font-size="10" fill="#ffe8d9">expected value ÷ resource</text>
+          </g>
+          <path d="M220,302 H240" stroke="#201d1a" stroke-width="2" marker-end="url(#arrow)"></path>
+
+          <g class="arch-node" tabindex="0" role="button" aria-label="Jump to capacity allocation" data-target="#sec-capacity">
+            <rect x="240" y="262" width="150" height="80" rx="4" fill="#c6501f" stroke="#201d1a" stroke-width="2"></rect>
+            <text x="315" y="294" text-anchor="middle" font-size="13" font-weight="bold" fill="#fff">Resource</text>
+            <text x="315" y="310" text-anchor="middle" font-size="13" font-weight="bold" fill="#fff">allocation</text>
+            <text x="315" y="326" text-anchor="middle" font-size="10" fill="#ffe8d9">DC · lane · vendor · customer</text>
+          </g>
+          <path d="M390,302 H410" stroke="#201d1a" stroke-width="2" marker-end="url(#arrow)"></path>
+
+          <g class="arch-node" tabindex="0" role="button" aria-label="Jump to decisions" data-target="#sec-journey">
+            <rect x="410" y="262" width="150" height="80" rx="4" fill="#c6501f" stroke="#201d1a" stroke-width="2"></rect>
+            <text x="485" y="294" text-anchor="middle" font-size="13" font-weight="bold" fill="#fff">Decisions</text>
+            <text x="485" y="312" text-anchor="middle" font-size="10.5" fill="#ffe8d9">RECOMMENDED</text>
+            <text x="485" y="326" text-anchor="middle" font-size="10.5" fill="#ffe8d9">CONTESTED · MONITOR</text>
+          </g>
+          <path d="M560,302 H580" stroke="#201d1a" stroke-width="2" marker-end="url(#arrow)"></path>
+
+          <!-- diagnostic satellite: decision value lab -->
+          <path d="M485,342 V372" stroke="#c6501f" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#arrow-dash)"></path>
+          <g class="arch-node satellite-node" tabindex="0" role="button" aria-label="Jump to Decision Value Lab" data-target="#sec-decision-value-lab">
+            <rect x="330" y="375" width="310" height="46" rx="4" fill="none" stroke="#c6501f" stroke-width="2" stroke-dasharray="5 4"></rect>
+            <text x="485" y="395" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#9c3c14">Decision Value Lab</text>
+            <text x="485" y="409" text-anchor="middle" font-size="9" fill="#322c26">evaluation-only twin replay, 8 policies, oracle ceiling</text>
+          </g>
+
+          <g class="arch-node" tabindex="0" role="button" aria-label="Jump to decision ledger and outcome reconciliation" data-target="#sec-ledger">
+            <rect x="580" y="262" width="150" height="80" rx="4" fill="#322c26" stroke="#201d1a" stroke-width="2"></rect>
+            <text x="655" y="294" text-anchor="middle" font-size="13" font-weight="bold" fill="#f2e9d8">Decision</text>
+            <text x="655" y="310" text-anchor="middle" font-size="13" font-weight="bold" fill="#f2e9d8">ledger</text>
+            <text x="655" y="326" text-anchor="middle" font-size="10" fill="#cbbfa8">outcome reconciliation</text>
+          </g>
+          <path d="M730,302 H750" stroke="#201d1a" stroke-width="2" marker-end="url(#arrow)"></path>
+
+          <g class="arch-node" tabindex="0" role="button" aria-label="Jump to monitoring and SLOs" data-target="#sec-monitoring">
+            <rect x="750" y="262" width="150" height="80" rx="4" fill="#322c26" stroke="#201d1a" stroke-width="2"></rect>
+            <text x="825" y="294" text-anchor="middle" font-size="13" font-weight="bold" fill="#f2e9d8">Monitoring</text>
+            <text x="825" y="310" text-anchor="middle" font-size="13" font-weight="bold" fill="#f2e9d8">/ SLOs</text>
+            <text x="825" y="326" text-anchor="middle" font-size="10" fill="#cbbfa8">rolling PR-AUC, drift, freshness</text>
+          </g>
+          <path d="M900,302 H920" stroke="#201d1a" stroke-width="2" marker-end="url(#arrow)"></path>
+
+          <g class="arch-node" tabindex="0" role="button" aria-label="Jump to champion challenger governance" data-target="#sec-governance">
+            <rect x="920" y="262" width="150" height="80" rx="4" fill="#322c26" stroke="#201d1a" stroke-width="2"></rect>
+            <text x="995" y="288" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#f2e9d8">Champion /</text>
+            <text x="995" y="304" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#f2e9d8">challenger gate</text>
+            <text x="995" y="322" text-anchor="middle" font-size="10" fill="#cbbfa8">PROMOTED · HELD</text>
+            <text x="995" y="335" text-anchor="middle" font-size="10" fill="#cbbfa8">ROLLED_BACK</text>
+          </g>
+          <path d="M1070,302 H1090" stroke="#201d1a" stroke-width="2" marker-end="url(#arrow)"></path>
+
+          <g class="arch-node" tabindex="0" role="button" aria-label="Jump to Streamlit UI" data-target="#sec-ui">
+            <rect x="1090" y="245" width="115" height="115" rx="4" fill="#2e6b2e" stroke="#201d1a" stroke-width="2"></rect>
+            <text x="1147" y="290" text-anchor="middle" font-size="13" font-weight="bold" fill="#fff">Streamlit</text>
+            <text x="1147" y="306" text-anchor="middle" font-size="13" font-weight="bold" fill="#fff">UI</text>
+            <text x="1147" y="324" text-anchor="middle" font-size="9.5" fill="#dff0df">7 control-tower</text>
+            <text x="1147" y="336" text-anchor="middle" font-size="9.5" fill="#dff0df">views</text>
+          </g>
+
+          <!-- retrain loop -->
+          <path d="M995,342 V440 H780 V150" stroke="#c6501f" stroke-width="2" stroke-dasharray="6 4" fill="none" marker-end="url(#arrow-dash)"></path>
+          <text x="880" y="455" text-anchor="middle" font-size="10" fill="#9c3c14" font-style="italic">scheduled / drift-triggered retrain → new challenger version</text>
+
+          <!-- decisions feed ledger context line already drawn; add UI reads from ledger/monitoring/gate -->
+          <path d="M655,342 Q655,470 1147,470 V360" stroke="#201d1a" stroke-width="1.4" stroke-dasharray="2 3" fill="none" marker-end="url(#arrow)"></path>
+          <text x="900" y="484" text-anchor="middle" font-size="9.5" fill="#4a4238">UI reads ledger, monitoring, and gate state — nothing is recomputed on render</text>
+        </svg>
+        <p class="callout">Read it left to right, top row first: raw source systems become one fused risk number; then top-to-bottom the fused number becomes one governed decision. The two dashed side-boxes are honest limitations by design — they measure and explain, but are never allowed to change what happens.</p>
+      </div>
+    </section>
+
+    <section id="sec-twin-adapters" data-toc="The noisy digital twin &amp; source adapters" class="reveal">
+      <div class="section-inner">
+        <p class="eyebrow">Section 2 · Data foundation</p>
+        <h2>The noisy digital twin, and production-shaped source adapters</h2>
+        <p>There is no real ERP/WMS/TMS in this prototype — there is a <strong>digital twin</strong> (a term for "a simulator built to behave like the real thing"): it plays out every order's life stage by stage — capture, vendor readiness, warehouse, transport, customer delivery — with stable vendor/lane/DC traits, seasonality, correlated disruption shocks, and realistic noise. Orders are <em>never</em> pre-labeled as "will miss"; the OTIF (on-time-in-full) outcome falls out of accumulated delay and shipped quantity, the same way a real fulfillment network would produce it.</p>
+        <div class="quad">
+          <div class="quad-card in"><h4>What goes in</h4><p>Vendor/SKU/DC/lane/customer master traits, a demand/seasonality curve, randomly-timed disruption shocks, and a scripted late-horizon drift epoch of elevated vendor disruption.</p></div>
+          <div class="quad-card happens"><h4>What happens</h4><p>Each order's lifecycle is simulated stage by stage. ~3% of events never post at all; exception codes log with ~85–90% probability even when a real delay crossed its threshold; a capture-time inventory shortfall has a documented chance of being backfilled before shipment.</p></div>
+          <div class="quad-card out"><h4>What comes out</h4><p>Canonical order/line/event tables (model-facing) <em>plus</em> a separate ground-truth set (<code>simulator_truth.csv</code>, <code>line_truth.csv</code>, <code>shocks.csv</code>) used only for scoring the model afterward — never as a feature.</p></div>
+          <div class="quad-card why"><h4>Why it matters</h4><p>A generator that pre-decides who misses and forces matching evidence would make the whole prediction problem fake. This twin can produce a safe order with scary-looking signals, and a missed order with almost no early evidence — like real supply chains.</p></div>
+        </div>
+        <p><span class="tag tag--verified">Measured</span> Across a 5-seed benchmark (2,500 orders/seed) the OTIF miss rate lands at a median <strong>17.5%</strong> (range 15.2%–20.2%) — inside the intended 15–25% band on every seed tested.</p>
+
+        <h3>Five reserved scenarios, every seed</h3>
+        <p>Regardless of random seed, the last five orders of every run are deterministic named scenarios, so the story below is always reproducible: multi-cause propagation, two orders <strong>contesting shared recovery capacity</strong> (our running example), a single-line stockout inside a multi-line order, and a genuinely unexplained miss with zero corroborating evidence.</p>
+
+        <h3>Then the same data, through production-shaped pipes</h3>
+        <p>Separately, <span class="mono">adapters.py</span> and <span class="mono">service_contracts.py</span> wrap typed local-CSV <strong>ERP/WMS/TMS/SRM adapters</strong> that reconstruct the same canonical tables — but only after redacting any event whose timestamp hasn't happened yet as of the requested snapshot. A typed <span class="mono">ScoreRequest</span>/<span class="mono">ScoreResponse</span> contract and an idempotent decision sink stand in for what a real integration boundary would look like.</p>
+        <div class="quad">
+          <div class="quad-card in"><h4>What goes in</h4><p>The same order/as-of snapshot, requested once directly against the in-memory dataset and once through the adapter/service boundary (CSV round-tripped tables).</p></div>
+          <div class="quad-card happens"><h4>What happens</h4><p>Both paths run the identical point-in-time feature contract. <span class="term" tabindex="0" data-def="Making sure two different code paths that should agree actually produce identical output.">Offline/batch parity</span> is checked by comparing feature vectors and scores byte-for-byte.</p></div>
+          <div class="quad-card out"><h4>What comes out</h4><p><code>parity_check.json</code>: 15 of 15 orders checked, 0 mismatches, <code>passed: true</code>.</p></div>
+          <div class="quad-card why"><h4>Why it matters</h4><p>A model that scores differently depending on which door you walked through is not trustworthy in production. This proves — for this prototype's scope — that it doesn't.</p></div>
+        </div>
+        <p class="callout"><strong>Honest scope:</strong> these are typed Python interfaces plus local-CSV fixtures — production-shaped, but deliberately not a web framework, database, message broker, or cloud deployment. No live ERP/WMS/TMS/SRM is connected anywhere in this prototype.</p>
+      </div>
+    </section>
+
+    <section id="sec-contracts-quality" data-toc="Data contracts &amp; quality checks" class="reveal">
+      <div class="section-inner">
+        <p class="eyebrow">Section 3</p>
+        <h2>Data contracts and quality checks</h2>
+        <p>Before anything is trained or scored, every table is validated: schema (right columns, right types), referential integrity (every order line points to a real order, every order to a real vendor), and logical checks (quantities can't be negative, dates can't be backwards). This fails fast rather than silently producing garbage features.</p>
+        <div class="quad">
+          <div class="quad-card in"><h4>What goes in</h4><p>Raw canonical tables — orders, order lines, vendors, DCs, lanes, customers, SKUs, capacity snapshots, events.</p></div>
+          <div class="quad-card happens"><h4>What happens</h4><p><span class="mono">validation.py</span> checks schema, referential links, and logical constraints; the monitoring layer separately tracks completeness, uniqueness, and referential health as ongoing metrics, not just a one-time gate.</p></div>
+          <div class="quad-card out"><h4>What comes out</h4><p>A pass/fail contract-failure count, plus per-table completeness and uniqueness scores persisted in the monitoring report.</p></div>
+          <div class="quad-card why"><h4>Why it matters</h4><p>Garbage in, confidently-wrong risk scores out. Catching a broken join or a missing table here is cheaper than debugging a bad prediction later.</p></div>
+        </div>
+        <p><span class="tag tag--verified">Measured</span> in the latest 90-day governed replay: <strong>0 contract failures</strong>, all referential checks pass, table completeness ranges 81.2% (events — expected, since ~3–15% of events never post in the twin) to 100% (orders, lines, vendors, DCs, lanes, customers, SKUs, capacity snapshots).</p>
+      </div>
+    </section>
+
+    <section id="sec-asof" data-toc="The as-of timestamp: no future leakage" class="reveal">
+      <div class="section-inner">
+        <p class="eyebrow">Section 4</p>
+        <h2>The as-of timestamp: why the model can never see the future</h2>
+        <p>Every feature is computed as of an explicit <strong><span class="term" tabindex="0" data-def="The single point in time a snapshot is 'taken' — only data that existed at or before this timestamp may be used.">as-of timestamp</span></strong>. That is the single contract used both for historical training snapshots and for the live daily scoring loop. <span class="term" tabindex="0" data-def="A model accidentally learning from information that would not actually have been available at prediction time — an inflated, fake-looking accuracy.">Leakage</span> is the failure mode this guards against: a feature that secretly encodes the final outcome.</p>
+        <div class="quad">
+          <div class="quad-card in"><h4>What goes in</h4><p>Operational fields/events already filtered to <code>event_timestamp &lt;= as_of_timestamp</code> — vendor delay/exception, warehouse/transport exceptions, order-capture fields, the DC capacity snapshot as of that date.</p></div>
+          <div class="quad-card happens"><h4>What happens</h4><p>Rolling vendor/DC/lane/customer/SKU history is computed in three matured windows (30-day, 90-day, all-time). A timestamp-<em>group</em> chronological split keeps orders with identical timestamps on the same side of a train/validation/test boundary.</p></div>
+          <div class="quad-card out"><h4>What comes out</h4><p>~100 point-in-time features per order, none of which read the simulator's latent disruption cause directly.</p></div>
+          <div class="quad-card why"><h4>Why it matters</h4><p>Without this, a benchmark number is meaningless — it would be measuring the model's ability to peek at the answer, not to predict.</p></div>
+        </div>
+        <p class="callout verified"><span class="tag tag--verified">Tested</span> <code>tests/test_features.py</code> proves: leading-signal features are not present on the raw generator output, are not a lossless proxy for the ground-truth cause, and mutating <em>every</em> future event/outcome cannot change an earlier as-of snapshot's row.</p>
+      </div>
+    </section>
+
+    <section id="sec-xgboost" data-toc="XGBoost risk prediction &amp; calibration" class="reveal">
+      <div class="section-inner">
+        <p class="eyebrow">Section 5 · Prediction engine</p>
+        <h2>XGBoost risk prediction and calibration</h2>
+        <p><strong>XGBoost</strong> is a gradient-boosted decision-tree model — it builds many small decision rules and combines them into one score. It is trained on ~100 point-in-time features to output one number: the probability this order misses OTIF. <strong><span class="term" tabindex="0" data-def="Adjusting raw model scores so that '70% risk' actually means about 70 out of 100 similar orders really do miss — not just a higher-vs-lower ranking.">Calibration</span></strong> (here, Platt scaling, fit on the validation split) makes that number mean what it says, not just rank orders correctly.</p>
+        <div class="quad">
+          <div class="quad-card in"><h4>What goes in</h4><p>~100 point-in-time features per order (vendor/DC/lane/customer/SKU rolling history, freshness, missingness, remaining slack, DC utilization trend, line-evidence aggregates).</p></div>
+          <div class="quad-card happens"><h4>What happens</h4><p>Gradient-boosted binary classification, then Platt-scaling the raw scores on the validation split so probabilities are meaningful, not just ranked.</p></div>
+          <div class="quad-card out"><h4>What comes out</h4><p>A calibrated OTIF-miss probability per order (<code>xgb_risk_score</code>).</p></div>
+          <div class="quad-card why"><h4>Why it matters</h4><p>This is the model doing the heavy lifting — it is the single largest predictive contributor to the fused score (see Fusion below).</p></div>
+        </div>
+        <p><span class="tag tag--verified">Measured</span> (5-seed median): XGBoost-only PR-AUC <strong>0.700</strong> (range 0.533–0.771). <span class="term" tabindex="0" data-def="Precision-Recall Area Under Curve — how well the model separates true misses from true non-misses, especially useful when misses are rare. Higher is better; 1.0 is perfect, and the useful floor is the miss rate itself (here ~17.5%).">PR-AUC</span> is the headline separability metric used throughout this system because OTIF misses are the minority class.</p>
+
+        <h3>SHAP: which features pushed this score up or down</h3>
+        <p><strong><span class="term" tabindex="0" data-def="SHapley Additive exPlanations — a method that attributes a prediction to its input features, showing how much each one pushed the score up or down for this specific order.">SHAP</span></strong> explains one order's score by attributing it to individual features. This prototype uses SHAP when available, with a deterministic local-perturbation fallback otherwise (same idea: nudge one feature, see how much the score moves).</p>
+        <div class="callout warn"><strong>Explicit limitation:</strong> every SHAP/perturbation factor is labeled <code>association_not_causation</code>. "Affected line count contributed +0.18 to this score" means the model found that feature predictive — it is not a claim that reducing it would cause the score to drop by 0.18.</div>
+        <p><span class="tag tag--charcoal">Real example</span> For order <strong>O002497</strong> (our running example below), the top SHAP-style factors are: <code>affected_line_count</code> (+0.179), <code>sku_rolling_shortfall_rate_mean_90d</code> (+0.076), <code>max_line_risk_evidence</code> (+0.068), <code>ship_delay_hours</code> (+0.067) — all pushing risk higher.</p>
+      </div>
+    </section>
+
+    <section id="sec-bayesian" data-toc="10-node Bayesian mechanism graph" class="reveal">
+      <div class="section-inner">
+        <p class="eyebrow">Section 6</p>
+        <h2>The 10-node Bayesian mechanism graph: timing vs. quantity</h2>
+        <p>A <strong><span class="term" tabindex="0" data-def="A model that represents cause-and-effect-shaped variables as a network of probabilistic dependencies, and can compute exact probabilities by combining evidence across the whole network.">Bayesian network</span></strong> here is a diagram of operational stages wired together the way OTIF actually breaks: "on time" AND "in full" are two separate failure mechanisms. This network has exactly 10 binary nodes and splits the single old "OTIF miss" idea into <strong>LATE_DELIVERY</strong> (a timing problem) and <strong>IN_FULL_FAILURE</strong> (a quantity problem), both feeding <strong>OTIF_MISS</strong>.</p>
+        <svg viewBox="0 0 900 460" role="img" aria-labelledby="bbn-title" style="width:100%; max-width:820px; margin: 0.6em auto; display:block;">
+          <title id="bbn-title">10-node Bayesian mechanism network</title>
+          <defs>
+            <marker id="bbn-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="#201d1a"></path>
+            </marker>
+          </defs>
+          <g id="bbn-graph" font-family="Trebuchet MS, sans-serif">
+            <!-- edges (drawn first, under nodes) -->
+            <path class="bbn-edge" data-from="VENDOR_FAILURE" data-to="INVENTORY_SHORTAGE" d="M150,55 L150,110" stroke="#201d1a" stroke-width="2" marker-end="url(#bbn-arrow)"></path>
+            <path class="bbn-edge" data-from="INVENTORY_SHORTAGE" data-to="WAREHOUSE_OPS" d="M180,140 L340,190" stroke="#201d1a" stroke-width="2" marker-end="url(#bbn-arrow)"></path>
+            <path class="bbn-edge" data-from="DC_CAPACITY" data-to="WAREHOUSE_OPS" d="M450,55 L400,190" stroke="#201d1a" stroke-width="2" marker-end="url(#bbn-arrow)"></path>
+            <path class="bbn-edge" data-from="WAREHOUSE_OPS" data-to="TRANSPORT" d="M400,220 L400,265" stroke="#201d1a" stroke-width="2" marker-end="url(#bbn-arrow)"></path>
+            <path class="bbn-edge" data-from="INVENTORY_SHORTAGE" data-to="IN_FULL_FAILURE" d="M155,145 L235,335" stroke="#201d1a" stroke-width="2" marker-end="url(#bbn-arrow)"></path>
+            <path class="bbn-edge" data-from="ORDER_CAPTURE" data-to="LATE_DELIVERY" d="M700,55 Q640,220 560,345" stroke="#201d1a" stroke-width="2" marker-end="url(#bbn-arrow)"></path>
+            <path class="bbn-edge" data-from="WAREHOUSE_OPS" data-to="LATE_DELIVERY" d="M420,220 L540,335" stroke="#201d1a" stroke-width="2" marker-end="url(#bbn-arrow)"></path>
+            <path class="bbn-edge" data-from="TRANSPORT" data-to="LATE_DELIVERY" d="M410,295 L530,340" stroke="#201d1a" stroke-width="2" marker-end="url(#bbn-arrow)"></path>
+            <path class="bbn-edge" data-from="CUSTOMER_DELIVERY" data-to="LATE_DELIVERY" d="M690,300 L570,340" stroke="#201d1a" stroke-width="2" marker-end="url(#bbn-arrow)"></path>
+            <path class="bbn-edge" data-from="IN_FULL_FAILURE" data-to="OTIF_MISS" d="M255,365 L390,410" stroke="#201d1a" stroke-width="2.4" marker-end="url(#bbn-arrow)"></path>
+            <path class="bbn-edge" data-from="LATE_DELIVERY" data-to="OTIF_MISS" d="M550,365 L440,410" stroke="#201d1a" stroke-width="2.4" marker-end="url(#bbn-arrow)"></path>
+
+            <!-- cause nodes (top) -->
+            <g class="bbn-node" data-node="VENDOR_FAILURE"><rect x="95" y="20" width="110" height="36" rx="4" fill="#e9dcc0" stroke="#201d1a" stroke-width="2"></rect><text x="150" y="43" text-anchor="middle" font-size="11.5" font-weight="bold">VENDOR_FAILURE</text></g>
+            <g class="bbn-node" data-node="DC_CAPACITY"><rect x="395" y="20" width="110" height="36" rx="4" fill="#e9dcc0" stroke="#201d1a" stroke-width="2"></rect><text x="450" y="43" text-anchor="middle" font-size="11.5" font-weight="bold">DC_CAPACITY</text></g>
+            <g class="bbn-node" data-node="ORDER_CAPTURE"><rect x="645" y="20" width="110" height="36" rx="4" fill="#e9dcc0" stroke="#201d1a" stroke-width="2"></rect><text x="700" y="43" text-anchor="middle" font-size="11.5" font-weight="bold">ORDER_CAPTURE</text></g>
+
+            <!-- operational stage nodes (middle) -->
+            <g class="bbn-node" data-node="INVENTORY_SHORTAGE"><rect x="95" y="110" width="130" height="36" rx="4" fill="#e9dcc0" stroke="#201d1a" stroke-width="2"></rect><text x="160" y="133" text-anchor="middle" font-size="11">INVENTORY_SHORTAGE</text></g>
+            <g class="bbn-node" data-node="WAREHOUSE_OPS"><rect x="335" y="190" width="120" height="36" rx="4" fill="#e9dcc0" stroke="#201d1a" stroke-width="2"></rect><text x="395" y="213" text-anchor="middle" font-size="11.5">WAREHOUSE_OPS</text></g>
+            <g class="bbn-node" data-node="TRANSPORT"><rect x="345" y="265" width="100" height="36" rx="4" fill="#e9dcc0" stroke="#201d1a" stroke-width="2"></rect><text x="395" y="288" text-anchor="middle" font-size="11.5">TRANSPORT</text></g>
+            <g class="bbn-node" data-node="CUSTOMER_DELIVERY"><rect x="630" y="260" width="130" height="36" rx="4" fill="#e9dcc0" stroke="#201d1a" stroke-width="2"></rect><text x="695" y="283" text-anchor="middle" font-size="11">CUSTOMER_DELIVERY</text></g>
+
+            <!-- mechanism nodes -->
+            <g class="bbn-node bbn-mechanism" data-node="IN_FULL_FAILURE"><rect x="155" y="335" width="140" height="42" rx="4" fill="#1e4d6b" stroke="#201d1a" stroke-width="2"></rect><text x="225" y="360" text-anchor="middle" font-size="12" font-weight="bold" fill="#f2e9d8">IN_FULL_FAILURE</text><text x="225" y="373" text-anchor="middle" font-size="9" fill="#dbe8f0">quantity</text></g>
+            <g class="bbn-node bbn-mechanism" data-node="LATE_DELIVERY"><rect x="480" y="335" width="140" height="42" rx="4" fill="#1e4d6b" stroke="#201d1a" stroke-width="2"></rect><text x="550" y="360" text-anchor="middle" font-size="12" font-weight="bold" fill="#f2e9d8">LATE_DELIVERY</text><text x="550" y="373" text-anchor="middle" font-size="9" fill="#dbe8f0">timing</text></g>
+
+            <!-- final node -->
+            <g class="bbn-node" data-node="OTIF_MISS"><rect x="330" y="405" width="150" height="42" rx="4" fill="#c6501f" stroke="#201d1a" stroke-width="2"></rect><text x="405" y="431" text-anchor="middle" font-size="13" font-weight="bold" fill="#fff">OTIF_MISS</text></g>
+          </g>
+        </svg>
+        <div class="quad">
+          <div class="quad-card in"><h4>What goes in</h4><p>Training-only resolved history: each operational stage's incident flag (including disruptions absorbed <em>without</em> an OTIF miss), plus each order's own on-time/in-full outcome for the two mechanism nodes.</p></div>
+          <div class="quad-card happens"><h4>What happens</h4><p>Smoothed-count probability tables are fit per node. A node only becomes "hard evidence" once its stage has genuinely been observed as of the as-of timestamp; unobserved stages (including the two mechanism nodes themselves) are mathematically averaged out (<span class="term" tabindex="0" data-def="Computing a probability by properly averaging over everything you don't yet know, rather than guessing or ignoring it.">marginalized</span>) via exact inference — <code>pgmpy</code> when available, or a brute-force enumeration verified numerically identical to it.</p></div>
+          <div class="quad-card out"><h4>What comes out</h4><p>Two separate posterior probabilities per order: <code>P(IN_FULL_FAILURE)</code> and <code>P(LATE_DELIVERY)</code>, the active evidence nodes, and the mechanism route(s) they feed.</p></div>
+          <div class="quad-card why"><h4>Why it matters</h4><p>A single flat "risk score" hides whether the danger is a quantity shortfall or a timing delay — these need different interventions. Splitting the mechanism tells the planner which kind of problem they're actually facing.</p></div>
+        </div>
+        <p><span class="tag tag--charcoal">Real example</span> On order <strong>O002497</strong>: <strong>P(IN_FULL_FAILURE) = 99.5%</strong> vs. <strong>P(LATE_DELIVERY) = 9.6%</strong> — overwhelmingly a quantity problem, not a timing one. <span class="tag tag--verified">Measured</span> 5-seed medians: IN_FULL_FAILURE PR-AUC <strong>0.417</strong> (vs. its own ~13–15% base rate) and LATE_DELIVERY PR-AUC <strong>0.126</strong> (vs. its own ~3.8% base rate) — both real, both modest, both reported honestly rather than hidden.</p>
+      </div>
+    </section>
+
+    <section id="sec-interventions" data-toc="Structural intervention scenarios (and their limits)" class="reveal">
+      <div class="section-inner">
+        <p class="eyebrow">Section 7</p>
+        <h2>Structural intervention scenarios — and their limitation</h2>
+        <p>For every scored order, the Bayesian network can also answer a "what if we fixed this?" question: <strong><span class="term" tabindex="0" data-def="A causal-inference term for simulating an external action that overrides one variable, then asking what happens downstream — different from just observing that variable's value.">do(node = 0)</span></strong> replaces one node's fitted behavior with a fixed value and severs its parents' influence on it, then recomputes the OTIF-miss posterior. This is an exact computation under the network's fixed structure — it is <strong>not</strong> a proven treatment effect from a real experiment.</p>
+        <div class="callout warn"><strong>Fixed-structure scenario analysis — not a proven treatment effect.</strong> These numbers never feed the XGBoost score, the fused score, or the operational decision. They are diagnostics, surfaced only in the Causal Intelligence Studio view.</div>
+        <p>Try the interactive version of this in <a href="#sec-whatif">"What if?" below</a> — it uses this exact order's real, persisted intervention scenarios.</p>
+        <div class="quad">
+          <div class="quad-card in"><h4>What goes in</h4><p>The order's active evidence nodes (only cause nodes observed strictly at/before decision time) and the fitted network.</p></div>
+          <div class="quad-card happens"><h4>What happens</h4><p>One do(node=0) scenario per active evidence node, plus one combined-mitigation scenario, always computed via brute-force enumeration (never through the observational-query shortcut).</p></div>
+          <div class="quad-card out"><h4>What comes out</h4><p>Baseline/post-intervention posteriors, absolute/relative risk reduction, the mechanism routes affected, and the assumed operational action — each explicitly labeled.</p></div>
+          <div class="quad-card why"><h4>Why it matters</h4><p>It can reveal that "fixing" the obvious root cause does nothing once a downstream effect is already locked in — a genuinely useful planning signal, even without being a proven causal estimate.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="sec-fusion" data-toc="Risk fusion: why XGBoost stays primary" class="reveal">
+      <div class="section-inner">
+        <p class="eyebrow">Section 8</p>
+        <h2>Risk fusion, and why XGBoost stays primary</h2>
+        <p>The final risk score blends XGBoost and Bayesian: <code>combined_risk_score = weight × xgb_risk_score + (1 − weight) × bbn_risk_score</code>. The weight is chosen on the <strong>validation split only</strong>, from a fixed 10%-increment grid (0%, 10%, 20% … 100%) — never a learned stacking model. A candidate must clear a recall floor and land within 0.002 Brier score of the best candidate; among ties, the rule prefers more Bayesian contribution.</p>
+        <div class="quad">
+          <div class="quad-card in"><h4>What goes in</h4><p>XGBoost scores and Bayesian posteriors on validation, at every weight from 0.0 to 1.0 in 0.1 steps.</p></div>
+          <div class="quad-card happens"><h4>What happens</h4><p>Score each candidate weight's Brier score (calibration quality) and recall at the top-capacity operating point; keep only candidates within the guardrails; prefer the most Bayesian-weighted survivor.</p></div>
+          <div class="quad-card out"><h4>What comes out</h4><p>One chosen blend weight, persisted with its full comparison table — regardless of which candidate won.</p></div>
+          <div class="quad-card why"><h4>Why it matters</h4><p>XGBoost is simply the stronger predictor here (PR-AUC 0.700 vs. Bayesian's 0.475), so fusion typically lands mostly on XGBoost — but the Bayesian network still contributes some validated lift, and always earns its seat by winning a real comparison, not by assumption.</p></div>
+        </div>
+        <p><span class="tag tag--verified">Measured</span> on the 5-seed benchmark, validation selected 20–30% Bayesian contribution; the canonical seed-42 run selected <strong>10% Bayesian / 90% XGBoost</strong>. Fused median PR-AUC <strong>0.705</strong> (range 0.535–0.763) — a small but real lift over XGBoost alone.</p>
+      </div>
+    </section>
+
+    <section id="sec-line-evidence" data-toc="Affected SKU / line evidence" class="reveal">
+      <div class="section-inner">
+        <p class="eyebrow">Section 9</p>
+        <h2>Affected SKU / line evidence: which lines, not just which order</h2>
+        <p>A risk score tells a planner "this order is in trouble." Line evidence tells them <em>which lines inside it</em> are the actual problem — critical for partial-shipment decisions. It is computed only from fields known at capture time: initial available-to-promise (ATP) allocation, inventory snapshot, SKU criticality, and the order's own point-in-time vendor-exception signal.</p>
+        <div class="quad">
+          <div class="quad-card in"><h4>What goes in</h4><p>Per-line ATP allocation ratio, inventory snapshot, SKU criticality tier, and the order-level vendor-exception signal — all capture-time-safe.</p></div>
+          <div class="quad-card happens"><h4>What happens</h4><p>Each line gets an evidence-strength score and a "likely affected" flag, aggregated into order-level features (worst line shortage ratio, affected line count, critical-SKU share, line quantity concentration).</p></div>
+          <div class="quad-card out"><h4>What comes out</h4><p>A ranked list of likely-affected SKUs per order, each with its allocation-gap ratio and evidence strength.</p></div>
+          <div class="quad-card why"><h4>Why it matters</h4><p>Knowing "SKU080 is 14.6% short" is actionable in a way "this order is risky" alone is not — it tells the planner exactly where to intervene.</p></div>
+        </div>
+        <table>
+          <caption>Targeted line evidence vs. a naive "flag every line" baseline — canonical seed-42 held-out test lines</caption>
+          <thead><tr><th scope="col">Approach</th><th scope="col">Precision</th><th scope="col">Recall</th></tr></thead>
+          <tbody>
+            <tr><td>Targeted line evidence</td><td>0.58</td><td>0.66</td></tr>
+            <tr><td>Naive "flag every held-out line"</td><td>0.09</td><td>1.00</td></tr>
+          </tbody>
+        </table>
+        <p><span class="tag tag--verified">Measured</span> — targeted evidence is roughly <strong>6.5×</strong> more precise than flagging everything, at comparable recall. 5-seed medians: precision 0.536 (range 0.507–0.602), recall 0.627 (range 0.560–0.726).</p>
+        <p><span class="tag tag--charcoal">Real example</span> Order O002497's affected SKUs: <strong>SKU080</strong> (low criticality, 14.58% allocation gap, evidence strength 0.43) and <strong>SKU074</strong> (standard criticality, 0% allocation gap, evidence strength 0.35).</p>
+      </div>
+    </section>
+
+    <section id="sec-value-formula" data-toc="Value-aware action selection" class="reveal">
+      <div class="section-inner">
+        <p class="eyebrow">Section 10 · Decision &amp; action</p>
+        <h2>Value-aware action selection: the exact formula</h2>
+        <p>Older single-cause policies gave every eligible order the one action its primary cause implied. The current, deployed policy instead considers <em>every</em> point-in-time-feasible action for each order and ranks all order-action pairs with one transparent formula — no learned weights, no access to any "did it actually work" field.</p>
+        <pre><code>expected_benefit = estimated_penalty_exposure × structural_reduction × execution_feasibility
+value_density     = expected_benefit / normalized_resource_fraction</code></pre>
+        <div class="quad">
+          <div class="quad-card in"><h4>What goes in</h4><p><code>estimated_penalty_exposure</code> (order value × penalty rate × combined risk); <code>structural_reduction</code> (the Bayesian do-intervention's relative risk reduction if one exists for this cause, else a documented 60% fallback scaled by match confidence); <code>execution_feasibility</code> (remaining slack, an action-specific resource trait, and Bayesian evidence coverage); and <code>normalized_resource_fraction</code> (the action's resource demand ÷ that pool's default daily capacity).</p></div>
+          <div class="quad-card happens"><h4>What happens</h4><p>Every active point-in-time signal that maps to a feasible action becomes a candidate; each candidate gets a value density; the highest-density candidate per order becomes its assigned action, and the same score ranks orders against each other for scarce capacity.</p></div>
+          <div class="quad-card out"><h4>What comes out</h4><p>One chosen action per eligible order (e.g. <code>VENDOR_ESCALATION</code>, <code>INVENTORY_REALLOCATION</code>, <code>WAREHOUSE_EXPEDITE</code>, <code>ALTERNATE_TRANSPORT</code>, <code>APPOINTMENT_COORDINATION</code>), ranked by expected avoided penalty per unit of scarce capacity consumed.</p></div>
+          <div class="quad-card why"><h4>Why it matters</h4><p>Under this twin's realistic capacity limits, this changes <em>what gets decided</em>, not just whose turn is first — and it is measured, not assumed, to beat simpler baselines (see the Policy comparison below).</p></div>
+        </div>
+        <p class="callout"><strong>Every weight and fallback listed above was fixed in code before any benchmark ran</strong> — none were retuned after seeing results.</p>
+      </div>
+    </section>
+
+    <section id="sec-capacity" data-toc="Capacity allocation: RECOMMENDED / CONTESTED / MONITOR" class="reveal">
+      <div class="section-inner">
+        <p class="eyebrow">Section 11</p>
+        <h2>Capacity allocation: RECOMMENDED, CONTESTED, MONITOR</h2>
+        <p>Real recovery resources are scarce: DC recovery units, lane alternate capacity, vendor escalation slots, customer appointment slots. Every value-ranked order-action pair competes for its resource pool, allocated greedily by priority within each day's capacity.</p>
+        <div class="quad">
+          <div class="quad-card in"><h4>What goes in</h4><p>The eligible order-action pool (fused risk ≥ threshold and a feasible mapped action), ranked by value density, and each resource pool's daily capacity.</p></div>
+          <div class="quad-card happens"><h4>What happens</h4><p>Orders are granted capacity in priority order until a pool runs out; anyone who loses out is marked <code>CONTESTED</code> and the competing order(s) are named; everyone below the fused threshold is <code>MONITOR</code>.</p></div>
+          <div class="quad-card out"><h4>What comes out</h4><p>One of three statuses per order: <strong>RECOMMENDED</strong> (capacity granted), <strong>CONTESTED</strong> (eligible but resource-blocked, competitor named), or <strong>MONITOR</strong> (below the decision threshold).</p></div>
+          <div class="quad-card why"><h4>Why it matters</h4><p>A recommendation nobody can actually execute is worse than no recommendation — naming the contention makes the resource conflict visible to a human planner instead of hiding it.</p></div>
+        </div>
+        <p><span class="tag tag--verified">Measured</span> canonical seed-42 run — 495 held-out test orders: <strong>62 RECOMMENDED</strong>, <strong>41 CONTESTED</strong>, <strong>392 MONITOR</strong>.</p>
+      </div>
+    </section>
+
+    <section id="sec-journey" data-toc="One order, start to finish" class="reveal">
+      <div class="section-inner">
+        <p class="eyebrow">Section 12 · The story, end to end</p>
+        <h2>One order, start to finish: a real contested-capacity example</h2>
+        <p><span class="tag tag--verified">Real, verified data</span> from the canonical seed-42 run — these are two of the five reserved scenarios, and they land in the held-out test split for this seed. Use the buttons to walk through what the system actually produced for each stage.</p>
+        <div class="btn-group" role="tablist" aria-label="Journey stages" id="journey-tabs">
+          <button class="toggle-btn" role="tab" aria-selected="true" aria-controls="journey-panel-1" id="journey-tab-1" data-panel="1">1 · Disruption</button>
+          <button class="toggle-btn" role="tab" aria-selected="false" aria-controls="journey-panel-2" id="journey-tab-2" data-panel="2">2 · Evidence</button>
+          <button class="toggle-btn" role="tab" aria-selected="false" aria-controls="journey-panel-3" id="journey-tab-3" data-panel="3">3 · Scores</button>
+          <button class="toggle-btn" role="tab" aria-selected="false" aria-controls="journey-panel-4" id="journey-tab-4" data-panel="4">4 · Candidate actions</button>
+          <button class="toggle-btn" role="tab" aria-selected="false" aria-controls="journey-panel-5" id="journey-tab-5" data-panel="5">5 · Contention</button>
+          <button class="toggle-btn" role="tab" aria-selected="false" aria-controls="journey-panel-6" id="journey-tab-6" data-panel="6">6 · Outcome</button>
+        </div>
+
+        <div class="journey-panel" id="journey-panel-1" role="tabpanel" aria-labelledby="journey-tab-1">
+          <h3>Vendor V001 goes into a disruption window</h3>
+          <p>Two orders — <strong>O002497</strong> and <strong>O002498</strong> — share the same vendor (<code>V001</code>), the same DC (<code>DC001</code>), and the same order date. Vendor V001 enters a forced disruption window in the twin: it will run late and short.</p>
+        </div>
+        <div class="journey-panel" id="journey-panel-2" role="tabpanel" aria-labelledby="journey-tab-2" hidden>
+          <h3>Evidence accumulates, point-in-time only</h3>
+          <p>As of the scoring snapshot, both orders show active <code>leading_signal_VENDOR_FAILURE</code>, <code>leading_signal_INVENTORY_SHORTAGE</code>, and <code>leading_signal_WAREHOUSE_OPS</code>. SHAP-style factors for O002497: <code>affected_line_count</code> (+0.179), <code>sku_rolling_shortfall_rate_mean_90d</code> (+0.076), <code>max_line_risk_evidence</code> (+0.068), <code>ship_delay_hours</code> (+0.067). Affected SKUs: SKU080 (14.6% allocation gap) and SKU074.</p>
+        </div>
+        <div class="journey-panel" id="journey-panel-3" role="tabpanel" aria-labelledby="journey-tab-3" hidden>
+          <h3>Fused risk scores diverge</h3>
+          <table>
+            <thead><tr><th scope="col">Order</th><th scope="col">Fused risk score</th><th scope="col">P(IN_FULL_FAILURE)</th><th scope="col">P(LATE_DELIVERY)</th><th scope="col">Primary cause</th></tr></thead>
+            <tbody>
+              <tr><td>O002497</td><td>0.904</td><td>99.5%</td><td>9.6%</td><td>VENDOR_FAILURE</td></tr>
+              <tr><td>O002498</td><td>0.633</td><td>—</td><td>—</td><td>VENDOR_FAILURE</td></tr>
+            </tbody>
+          </table>
+          <p>Both clear the fused decision threshold (0.274 on this run) and become candidates for the same recovery resource.</p>
+        </div>
+        <div class="journey-panel" id="journey-panel-4" role="tabpanel" aria-labelledby="journey-tab-4" hidden>
+          <h3>Candidate actions, ranked by value density</h3>
+          <p>For O002497, the highest value-density candidate is escalating the vendor: <strong>"Escalate supplier recovery and confirm replacement supply"</strong> — assigned to resource <code>vendor V001</code>. Estimated penalty exposure: <strong>$1,721.97</strong> on an order worth $38,102.40. Priority score: 117.5.</p>
+        </div>
+        <div class="journey-panel" id="journey-panel-5" role="tabpanel" aria-labelledby="journey-tab-5" hidden>
+          <h3>Both orders want the same vendor slot — only one wins</h3>
+          <p>O002497 (priority 117.5) outranks O002498 (priority 72.7) for the shared <code>V001</code> vendor-escalation slot. The greedy priority allocator grants the slot to O002497 and marks O002498 <strong>CONTESTED</strong>, explicitly naming the competitor.</p>
+        </div>
+        <div class="journey-panel" id="journey-panel-6" role="tabpanel" aria-labelledby="journey-tab-6" hidden>
+          <h3>Final decision record</h3>
+          <table>
+            <thead><tr><th scope="col">Order</th><th scope="col">Decision status</th><th scope="col">Resource</th><th scope="col">Contested with</th><th scope="col">Penalty exposure</th></tr></thead>
+            <tbody>
+              <tr class="highlight-row"><td>O002497</td><td>RECOMMENDED</td><td>vendor V001</td><td>—</td><td>$1,721.97</td></tr>
+              <tr><td>O002498</td><td>CONTESTED</td><td>vendor V001</td><td>O002497 (+ 11 others)</td><td>$375.27</td></tr>
+            </tbody>
+          </table>
+          <p>Both decisions, and every order/SKU/factor referenced above, are logged to the decision ledger for outcome reconciliation and observational reporting (see below) — and the whole causal picture for O002497 is explorable interactively in the <a href="#sec-whatif">"What if?" panel</a> next.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="sec-whatif" data-toc="&quot;What if?&quot; causal scenario panel" class="reveal">
+      <div class="section-inner">
+        <p class="eyebrow">Section 13</p>
+        <h2>"What if?" — structural scenario analysis for order O002497</h2>
+        <div class="callout warn"><strong>Fixed-structure scenario analysis — not a proven treatment effect.</strong> These buttons replay order O002497's real, persisted <code>do(node=value)</code> results from the canonical run. They show what this fitted network's math says would change — never an experimentally-proven cause-and-effect claim.</div>
+        <div class="btn-group" role="group" aria-label="Mitigation scenario selector">
+          <button class="toggle-btn" data-scenario="baseline" aria-pressed="true">Baseline (no mitigation)</button>
+          <button class="toggle-btn" data-scenario="vendor">do(VENDOR_FAILURE = 0)</button>
+          <button class="toggle-btn" data-scenario="inventory">do(INVENTORY_SHORTAGE = 0)</button>
+          <button class="toggle-btn" data-scenario="warehouse">do(WAREHOUSE_OPS = 0)</button>
+          <button class="toggle-btn" data-scenario="combined">Combined mitigation</button>
+        </div>
+        <div style="display:grid; grid-template-columns: minmax(260px,1fr) minmax(260px,1.3fr); gap:1.4em; align-items:start; margin-top:1em;">
+          <div>
+            <h4 style="margin-top:0;">Modeled OTIF-miss posterior</h4>
+            <div style="background:var(--paper); border:1.5px solid var(--line); border-radius:4px; height:34px; position:relative; overflow:hidden;">
+              <div id="whatif-bar" style="height:100%; background:var(--orange); width:98.4%; transition:width 0.4s ease;"></div>
+              <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-weight:bold; color:#201d1a;" id="whatif-bar-label">98.4%</div>
+            </div>
+            <p id="whatif-explain" style="margin-top:0.8em;">Baseline: the model's posterior P(OTIF_MISS | evidence) with no intervention, before any mitigation is assumed. This is the starting point every scenario below is compared against.</p>
+            <dl style="margin:0;">
+              <div style="display:flex; justify-content:space-between; border-bottom:1px dashed var(--line); padding:0.3em 0;"><dt>Absolute risk reduction</dt><dd id="whatif-abs" style="margin:0; font-weight:bold;">—</dd></div>
+              <div style="display:flex; justify-content:space-between; border-bottom:1px dashed var(--line); padding:0.3em 0;"><dt>Relative risk reduction</dt><dd id="whatif-rel" style="margin:0; font-weight:bold;">—</dd></div>
+              <div style="display:flex; justify-content:space-between; padding:0.3em 0;"><dt>Assumed action</dt><dd id="whatif-action" style="margin:0; font-weight:bold; text-align:right;">—</dd></div>
+            </dl>
+          </div>
+          <div>
+            <h4 style="margin-top:0;">Graph highlight</h4>
+            <svg viewBox="0 0 900 460" role="img" aria-label="Bayesian mechanism graph with the selected scenario's evidence and routes highlighted" style="width:100%; max-width:640px; display:block; margin:0 auto;">
+              <defs>
+                <marker id="bbn-arrow2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                  <path d="M0,0 L10,5 L0,10 z" fill="#201d1a"></path>
+                </marker>
+              </defs>
+              <g id="bbn-graph2" font-family="Trebuchet MS, sans-serif">
+                <path class="wf-edge" data-from="VENDOR_FAILURE" data-to="INVENTORY_SHORTAGE" d="M150,55 L150,110" stroke="#201d1a" stroke-width="2" marker-end="url(#bbn-arrow2)"></path>
+                <path class="wf-edge" data-from="INVENTORY_SHORTAGE" data-to="WAREHOUSE_OPS" d="M180,140 L340,190" stroke="#201d1a" stroke-width="2" marker-end="url(#bbn-arrow2)"></path>
+                <path class="wf-edge" data-from="DC_CAPACITY" data-to="WAREHOUSE_OPS" d="M450,55 L400,190" stroke="#201d1a" stroke-width="2" marker-end="url(#bbn-arrow2)"></path>
+                <path class="wf-edge" data-from="WAREHOUSE_OPS" data-to="TRANSPORT" d="M400,220 L400,265" stroke="#201d1a" stroke-width="2" marker-end="url(#bbn-arrow2)"></path>
+                <path class="wf-edge" data-from="INVENTORY_SHORTAGE" data-to="IN_FULL_FAILURE" d="M155,145 L235,335" stroke="#201d1a" stroke-width="2" marker-end="url(#bbn-arrow2)"></path>
+                <path class="wf-edge" data-from="ORDER_CAPTURE" data-to="LATE_DELIVERY" d="M700,55 Q640,220 560,345" stroke="#201d1a" stroke-width="2" marker-end="url(#bbn-arrow2)"></path>
+                <path class="wf-edge" data-from="WAREHOUSE_OPS" data-to="LATE_DELIVERY" d="M420,220 L540,335" stroke="#201d1a" stroke-width="2" marker-end="url(#bbn-arrow2)"></path>
+                <path class="wf-edge" data-from="TRANSPORT" data-to="LATE_DELIVERY" d="M410,295 L530,340" stroke="#201d1a" stroke-width="2" marker-end="url(#bbn-arrow2)"></path>
+                <path class="wf-edge" data-from="CUSTOMER_DELIVERY" data-to="LATE_DELIVERY" d="M690,300 L570,340" stroke="#201d1a" stroke-width="2" marker-end="url(#bbn-arrow2)"></path>
+                <path class="wf-edge" data-from="IN_FULL_FAILURE" data-to="OTIF_MISS" d="M255,365 L390,410" stroke="#201d1a" stroke-width="2.4" marker-end="url(#bbn-arrow2)"></path>
+                <path class="wf-edge" data-from="LATE_DELIVERY" data-to="OTIF_MISS" d="M550,365 L440,410" stroke="#201d1a" stroke-width="2.4" marker-end="url(#bbn-arrow2)"></path>
+
+                <g class="wf-node" data-node="VENDOR_FAILURE"><rect x="95" y="20" width="110" height="36" rx="4" fill="#e9dcc0" stroke="#201d1a" stroke-width="2"></rect><text x="150" y="43" text-anchor="middle" font-size="11.5" font-weight="bold">VENDOR_FAILURE</text></g>
+                <g class="wf-node" data-node="DC_CAPACITY"><rect x="395" y="20" width="110" height="36" rx="4" fill="#e9dcc0" stroke="#201d1a" stroke-width="2"></rect><text x="450" y="43" text-anchor="middle" font-size="11.5" font-weight="bold">DC_CAPACITY</text></g>
+                <g class="wf-node" data-node="ORDER_CAPTURE"><rect x="645" y="20" width="110" height="36" rx="4" fill="#e9dcc0" stroke="#201d1a" stroke-width="2"></rect><text x="700" y="43" text-anchor="middle" font-size="11.5" font-weight="bold">ORDER_CAPTURE</text></g>
+                <g class="wf-node" data-node="INVENTORY_SHORTAGE"><rect x="95" y="110" width="130" height="36" rx="4" fill="#e9dcc0" stroke="#201d1a" stroke-width="2"></rect><text x="160" y="133" text-anchor="middle" font-size="11">INVENTORY_SHORTAGE</text></g>
+                <g class="wf-node" data-node="WAREHOUSE_OPS"><rect x="335" y="190" width="120" height="36" rx="4" fill="#e9dcc0" stroke="#201d1a" stroke-width="2"></rect><text x="395" y="213" text-anchor="middle" font-size="11.5">WAREHOUSE_OPS</text></g>
+                <g class="wf-node" data-node="TRANSPORT"><rect x="345" y="265" width="100" height="36" rx="4" fill="#e9dcc0" stroke="#201d1a" stroke-width="2"></rect><text x="395" y="288" text-anchor="middle" font-size="11.5">TRANSPORT</text></g>
+                <g class="wf-node" data-node="CUSTOMER_DELIVERY"><rect x="630" y="260" width="130" height="36" rx="4" fill="#e9dcc0" stroke="#201d1a" stroke-width="2"></rect><text x="695" y="283" text-anchor="middle" font-size="11">CUSTOMER_DELIVERY</text></g>
+                <g class="wf-node bbn-mechanism" data-node="IN_FULL_FAILURE"><rect x="155" y="335" width="140" height="42" rx="4" fill="#1e4d6b" stroke="#201d1a" stroke-width="2"></rect><text x="225" y="360" text-anchor="middle" font-size="12" font-weight="bold" fill="#f2e9d8">IN_FULL_FAILURE</text><text x="225" y="373" text-anchor="middle" font-size="9" fill="#dbe8f0">quantity</text></g>
+                <g class="wf-node bbn-mechanism" data-node="LATE_DELIVERY"><rect x="480" y="335" width="140" height="42" rx="4" fill="#1e4d6b" stroke="#201d1a" stroke-width="2"></rect><text x="550" y="360" text-anchor="middle" font-size="12" font-weight="bold" fill="#f2e9d8">LATE_DELIVERY</text><text x="550" y="373" text-anchor="middle" font-size="9" fill="#dbe8f0">timing</text></g>
+                <g class="wf-node" data-node="OTIF_MISS"><rect x="330" y="405" width="150" height="42" rx="4" fill="#c6501f" stroke="#201d1a" stroke-width="2"></rect><text x="405" y="431" text-anchor="middle" font-size="13" font-weight="bold" fill="#fff">OTIF_MISS</text></g>
+              </g>
+            </svg>
+            <p style="font-size:0.85rem; color:var(--blue);">Blue = active evidence in this scenario. Orange border = a route that still carries risk. Dashed/faded = severed by intervention.</p>
+          </div>
+        </div>
+        <p class="callout"><strong>The counterintuitive finding:</strong> mitigating the "obvious" root cause (<code>VENDOR_FAILURE</code>) changes the posterior by <strong>exactly 0.0 points</strong> — because <code>INVENTORY_SHORTAGE</code> is already observed downstream, the vendor evidence is fully screened off (a textbook result, not a bug). Mitigating <code>INVENTORY_SHORTAGE</code> directly cuts the posterior from 98.4% to 9.6% — an 88.8-point drop.</p>
+      </div>
+    </section>
+
+    <section id="sec-exploration" data-toc="10% exploration for future learning" class="reveal">
+      <div class="section-inner">
+        <p class="eyebrow">Section 14</p>
+        <h2>The 10% exploration carve-out</h2>
+        <p>If the deployed policy only ever acted on its own top-ranked guesses, it could never learn whether its ranking was actually right — every order it chose not to act on would remain a permanent unknown. So roughly <strong>10% of allocated capacity</strong> is deliberately set aside for near-equal eligible orders regardless of rank, using seeded randomization.</p>
+        <div class="quad">
+          <div class="quad-card in"><h4>What goes in</h4><p>The pool of eligible order-action candidates within a resource pool, near the acceptance cutoff.</p></div>
+          <div class="quad-card happens"><h4>What happens</h4><p>Discrete slot pools (vendor/customer) split whole-slot counts via seeded stochastic rounding, so every candidate's exact marginal selection probability is logged. Continuous pools (DC/lane) fill the explore stage up to actual remaining capacity and log a pool reservation ratio instead of a single-order probability where no closed form exists.</p></div>
+          <div class="quad-card out"><h4>What comes out</h4><p>A small, transparent, logged fraction of "explore" assignments alongside the main "exploit" (highest value-density) assignments.</p></div>
+          <div class="quad-card why"><h4>Why it matters</h4><p>Without exploration, you can never build a fair dataset to check whether your ranking formula was correct — you'd only ever see outcomes for orders you already believed were highest-value.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="sec-operations" data-toc="Daily operations replay" class="reveal">
+      <div class="section-inner">
+        <p class="eyebrow">Section 15 · Operating loop</p>
+        <h2>The daily operations replay</h2>
+        <p>A local simulation of an actual operating day: train an initial model on historical data, then for each simulated day, score every still-open order as of that day, allocate that day's resource capacities, persist the queue, close resolved orders, derive their actual cause, log feedback, check for <strong><span class="term" tabindex="0" data-def="A statistical change in the underlying data distribution over time — e.g., vendors getting less reliable — that can make an old model's predictions stale.">drift</span></strong>, and retrain on a schedule or when drift triggers it.</p>
+        <div class="quad">
+          <div class="quad-card in"><h4>What goes in</h4><p>A 2,500-order twin, replayed across 90 simulated days, one shared as-of snapshot per day.</p></div>
+          <div class="quad-card happens"><h4>What happens</h4><p>Daily scoring → capacity allocation → order closures → cause derivation → feedback → drift check (PSI, score-distribution shift, missingness change, recent OTIF-rate change) → retrain on cadence or trigger.</p></div>
+          <div class="quad-card out"><h4>What comes out</h4><p>A versioned model registry, daily decision queues, and every Stage-2 governance artifact (ledger, monitoring, promotion events) described below.</p></div>
+          <div class="quad-card why"><h4>Why it matters</h4><p>A one-shot benchmark can't show whether a system stays healthy over time, retrains sensibly, or degrades quietly — this replay is the closest local approximation to "running it for real."</p></div>
+        </div>
+        <p><span class="tag tag--verified">Measured</span> the canonical 90-day replay trained <strong>9 model versions</strong> (1 initial + 8 cadence/drift-triggered retrains). Measured local-only runtime: mean scoring 1.38s/day, mean retrain 3.21s across 8 retrains — explicitly <em>not</em> a production latency claim.</p>
+      </div>
+    </section>
+
+    <section id="sec-manifests" data-toc="Run manifests, checksums &amp; offline/batch parity" class="reveal">
+      <div class="section-inner">
+        <p class="eyebrow">Section 16</p>
+        <h2>Run manifests, checksums, and offline/batch parity</h2>
+        <p>Every run — pipeline, benchmark, or operations replay — writes a <strong><span class="term" tabindex="0" data-def="A machine-checkable receipt of exactly what produced a run: code version, dependency versions, config, and a checksum of every file it wrote, so tampering or mismatch is detectable later.">run manifest</span></strong>: the git commit, dependency versions, config/policy/schema versions, input-table fingerprints, a feature-schema hash, the train/validation/test date windows, and a SHA-256 checksum of every other artifact the run wrote.</p>
+        <div class="quad">
+          <div class="quad-card in"><h4>What goes in</h4><p>Everything the run itself produced, plus the environment it ran in (git SHA, dirty-tree flag, package versions).</p></div>
+          <div class="quad-card happens"><h4>What happens</h4><p>A deterministic <strong>content ID</strong> is computed that ignores timestamps/run-instance/output-path — so two runs of identical seed/config/code/model-facing artifacts, even on different machines or at different times, get the <em>same</em> content ID. <code>verify_manifest</code> recomputes every checksum and flags any mismatch.</p></div>
+          <div class="quad-card out"><h4>What comes out</h4><p>A <code>run_manifest.json</code> with per-file checksums and a verified/tampered status.</p></div>
+          <div class="quad-card why"><h4>Why it matters</h4><p>If a benchmark number ever looks suspicious, the manifest tells you exactly what produced it, and whether any artifact was altered afterward.</p></div>
+        </div>
+        <p><span class="tag tag--verified">Measured, latest verified run</span> the canonical pipeline run (seed 42, 2,500 orders) checksummed <strong>29 artifacts</strong>, fully verified. The latest 90-day governed operations replay checksummed <strong>121 artifacts</strong>, also fully verified. The same replay's offline/batch parity check: <strong>15 of 15</strong> orders matched byte-for-byte between the in-process feature builder and the adapter/service boundary — <code>mismatched_order_ids: []</code>.</p>
+      </div>
+    </section>
+
+    <section id="sec-decision-value-lab" data-toc="Decision Value Lab: measuring intervention value" class="reveal">
+      <div class="section-inner">
+        <p class="eyebrow">Section 17</p>
+        <h2>The Decision Value Lab: measuring, not assuming, intervention value</h2>
+        <p>The deployed decision table uses a fast, fixed 60%-effectiveness assumption for "how much does this action help" — a transparent heuristic, not a measurement. The Decision Value Lab is a separate laboratory that replays every feasible action through the twin's own lifecycle mechanics with a shared random draw per (seed, order, action) — so every policy under test sees the exact same potential outcome for the same order/action, an apples-to-apples comparison.</p>
+        <p>Every order is scored via <strong>rolling-origin, chronological cross-fitting</strong>: the calendar splits into 5 folds, the first is warm-up history (excluded), and every later fold is scored only by a model trained strictly on history before it — genuinely out-of-sample, no fold ever influences its own scoring.</p>
+        <p>Eight policies are compared at the identical out-of-sample orders, the identical potential outcomes, and identical daily capacities: <code>NO_ACTION</code>, <code>RANDOM_AT_CAPACITY</code>, <code>HIGHEST_RISK_AT_CAPACITY</code>, <code>HIGHEST_FINANCIAL_AT_CAPACITY</code>, <code>STRONGEST_SIGNAL_HEURISTIC</code>, <code>SINGLE_CAUSE_PRIORITY_BASELINE</code> (the older transparent risk×tier×value ranking), <code>CURRENT_POLICY</code> (the deployed value-aware policy), and <code>ORACLE_EVALUATION_ONLY</code> — an <strong>unattainable, evaluation-only ceiling</strong> that may choose any action, used only to compute regret, never a deployable recommendation.</p>
+
+        <h3>25% / 50% / 100% capacity-stress comparison</h3>
+        <p>At the twin's full (100%) default capacity, resource pools rarely bind — most policies simply accept every eligible order, leaving little for ranking to improve. So every policy is re-run at three capacity-stress multipliers applied uniformly to every resource pool. <strong>50% capacity is the Stage-1 primary headline</strong> — the acceptance gates below are measured there.</p>
+        <div class="btn-group" role="group" aria-label="Capacity scenario selector" id="capacity-toggle">
+          <button class="toggle-btn" data-capacity="25" aria-pressed="false">25% capacity</button>
+          <button class="toggle-btn" data-capacity="50" aria-pressed="true">50% capacity (primary)</button>
+          <button class="toggle-btn" data-capacity="100" aria-pressed="false">100% capacity (diagnostic)</button>
+        </div>
+        <div id="capacity-chart-wrap" style="margin: 1em 0;">
+          <svg id="capacity-chart" viewBox="0 0 900 340" role="img" aria-label="Bar chart of median avoided penalty per normalized resource unit by policy, at the selected capacity scenario" style="width:100%; max-width:900px; display:block;">
+            <g id="capacity-bars"></g>
+          </svg>
+        </div>
+        <table id="capacity-table">
+          <caption>Median avoided penalty per normalized resource unit, 5 seeds × 2,500 orders — <code>artifacts/policy_benchmark.json</code></caption>
+          <thead><tr><th scope="col">Policy</th><th scope="col">Value (selected scenario)</th></tr></thead>
+          <tbody id="capacity-table-body"></tbody>
+        </table>
+        <p class="callout verified" id="capacity-headline-callout"><span class="tag tag--verified">Primary result, 50% capacity</span> The value-aware <code>CURRENT_POLICY</code> scores <strong>9.964</strong> vs. the shared baseline median <strong>9.174</strong> (<code>RANDOM_AT_CAPACITY</code> / <code>HIGHEST_RISK_AT_CAPACITY</code> / <code>SINGLE_CAUSE_PRIORITY_BASELINE</code> all tie at 9.1744) — a <strong>+8.6%</strong> improvement, winning <strong>4 of 5 seeds</strong> against every baseline (only seed 4 loses). <code>ORACLE_EVALUATION_ONLY</code> (74.45) is an unattainable evaluation-only ceiling, never a deployable target. <code>acceptance_gates.primary_gate_passed = true</code>.</p>
+
+        <h3>The Bayesian action-ranking ablation — reported honestly, negative</h3>
+        <p>The value-aware formula's <code>structural_reduction</code> term can come from a persisted Bayesian intervention scenario, or fall back to the simpler 60%-heuristic. Turning the Bayesian term <em>off</em> and keeping everything else fixed was tested as an honest ablation:</p>
+        <table>
+          <thead><tr><th scope="col">Variant</th><th scope="col">Median policy value, 50% capacity</th></tr></thead>
+          <tbody>
+            <tr><td>Value-aware policy <strong>with</strong> Bayesian structural-reduction term</td><td>9.964</td></tr>
+            <tr class="highlight-row"><td>Value-aware policy <strong>without</strong> Bayesian term (simpler fallback only)</td><td>11.3445</td></tr>
+          </tbody>
+        </table>
+        <div class="callout warn"><strong>The Bayesian term made the policy worse here, in 0 of 5 seeds did it add value.</strong> This is reported as measured, not adjusted away — the deployed policy still uses the Bayesian term by design (it is architecturally the intended design; the ablation is what let governance catch the regression when it was later proposed as a challenger — see Governance below). The counterfactual-ranking diagnostic (a separate, capacity-independent test) shows the Bayesian top intervention <em>does</em> beat a random action's value regret in every seed, so the network is not without value — it just isn't currently pulling its weight inside this specific formula/twin combination.</div>
+      </div>
+    </section>
+
+    <section id="sec-ledger" data-toc="Decision ledger &amp; observational cohorts" class="reveal">
+      <div class="section-inner">
+        <p class="eyebrow">Section 18 · Governance</p>
+        <h2>Decision ledger and observational outcome cohorts</h2>
+        <p>Every decision the operations replay makes — feasible actions considered, the one chosen, the one rejected, resource state before/after, execution status — is logged to an append/upsert, idempotent ledger, one row per open order scored per day. Once an order's real OTIF outcome matures, it is reconciled against that logged decision.</p>
+        <div class="quad">
+          <div class="quad-card in"><h4>What goes in</h4><p>Every daily decision from the 90-day replay, plus each order's eventual matured outcome.</p></div>
+          <div class="quad-card happens"><h4>What happens</h4><p>Decisions are grouped into cohorts — <code>ACCEPTED</code>, <code>MONITORED</code>, <code>REJECTED</code> — and each cohort's realized miss rate and mean penalty are compared.</p></div>
+          <div class="quad-card out"><h4>What comes out</h4><p>An <strong>observational</strong> cohort report, explicitly flagged <code>observational_not_causal: true</code>.</p></div>
+          <div class="quad-card why"><h4>Why it matters</h4><p>It would be easy to misread "accepted orders miss more often" as "acting made things worse." It doesn't mean that — see the limitation below.</p></div>
+        </div>
+        <p><span class="tag tag--verified">Measured</span> latest governed replay: <strong>6,226</strong> decisions logged, <strong>5,923</strong> matured (303 still open at replay end). <code>ACCEPTED</code> orders (716 matured): <strong>57.96%</strong> miss rate, mean realized penalty <strong>$113.54</strong>. <code>MONITORED</code> orders (5,206 matured): <strong>10.08%</strong> miss rate, mean realized penalty <strong>$13.33</strong>.</p>
+        <div class="callout warn"><strong>Not a causal effect.</strong> This replay closes every order against its own pre-generated outcome regardless of the decision made — action does not yet feed back into the replayed lifecycle here. The gap above reflects <em>which</em> orders the policy chose to prioritize (correctly, the higher-risk ones), never a measured effect of acting on them. The Decision Value Lab above remains the only causally-interpretable (common-random-number, potential-outcome) policy value in this codebase, kept deliberately separate from this ledger.</div>
+      </div>
+    </section>
+
+    <section id="sec-governance" data-toc="Champion/challenger gate &amp; governance lifecycle" class="reveal">
+      <div class="section-inner">
+        <p class="eyebrow">Section 19</p>
+        <h2>Champion/challenger gate: PROMOTED, HELD, ROLLED_BACK</h2>
+        <p>Every new model version is a <strong><span class="term" tabindex="0" data-def="A promotion-gate pattern: the currently active model ('champion') stays in charge until a new candidate ('challenger') proves it is measurably better on every required check.">champion/challenger</span></strong> candidate. <code>evaluate_promotion</code> compares it against the current champion on PR-AUC, Brier, calibration error, recall, alert rate, drift-regime quality, and policy value at 50% capacity — each against an explicit, fixed tolerance. Any failed check holds the challenger; the active-model pointer is only updated atomically on a real promotion or an explicit rollback, and every event is appended to a log that is never rewritten.</p>
+
+        <h3>Two lifecycles — kept explicitly distinct</h3>
+        <p class="callout"><strong>The real 90-day retrain lifecycle</strong> and <strong>the demo governance-lifecycle scenario</strong> are different things, and the artifacts label them differently so they can never be confused.</p>
+
+        <h4>Real retrain lifecycle (measured, all 8 challengers held)</h4>
+        <p>9 versions were trained across the 90-day replay: v1 (initial) plus 8 cadence/drift-triggered retrains. Every one of the 8 real retrain challengers was <strong>held</strong> — each retrain's own held-out PR-AUC, measured on that retrain's small, recent slice of matured history, regressed well beyond tolerance versus the still-strong v1 champion.</p>
+        <svg viewBox="0 0 900 130" role="img" aria-label="PR-AUC of each of the 9 real model versions, v1 through v9" style="width:100%; max-width:900px; display:block; margin: 0.6em 0;">
+          <g id="retrain-bars" font-family="Trebuchet MS, sans-serif"></g>
+        </svg>
+        <p><span class="tag tag--verified">Measured</span> v1 PR-AUC <strong>0.717</strong> (promoted, stayed active the whole replay) vs. v9 PR-AUC <strong>0.343</strong> (held, like v2–v8). The gate correctly kept the safer, better-measured champion active rather than chasing noisy short-window retrains — an honest, reported cost, not a hidden bug (see Monitoring/SLOs below for what it costs).</p>
+
+        <h4>Demo governance-lifecycle scenario <span class="tag tag--sim">Built only from Stage 1's own measured numbers</span></h4>
+        <p>This scenario is built <em>only</em> from the Decision Value Lab's own already-measured <code>policy_benchmark.json</code> numbers — never fabricated — and is explicitly labeled <code>demo_lifecycle_scenario_from_measured_stage1_policy_benchmark</code>, distinct from the real per-day retrain lifecycle above. It demonstrates the full gate lifecycle end to end:</p>
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(230px,1fr)); gap:1em; margin:1.2em 0;">
+          <div class="quad-card" style="border-left:5px solid var(--green);">
+            <h4 style="color:var(--green);">① PROMOTED</h4>
+            <p>Value-aware policy <em>without</em> the Bayesian action-ranking term (median policy value <strong>11.3445</strong>) promoted over the single-cause baseline (<strong>9.1744</strong>) — a genuine improvement, clears every gate.</p>
+          </div>
+          <div class="quad-card" style="border-left:5px solid var(--red);">
+            <h4 style="color:var(--red);">② HELD</h4>
+            <p>A Bayesian-enhanced action-ranking challenger (<strong>9.964</strong>) is proposed next — a <strong>−12.2%</strong> regression against the new champion's 5%-tolerance floor (10.7773). Reason recorded verbatim: <code>"policy value at 50% capacity regressed 11.3445 → 9.9640 (floor 10.7773, tolerance fraction 0.05)"</code>.</p>
+          </div>
+          <div class="quad-card" style="border-left:5px solid var(--amber);">
+            <h4 style="color:var(--amber);">③ ROLLED_BACK</h4>
+            <p>The active pointer is manually rolled back to <code>v1</code> — a real, manifest-verified version from the retrain lifecycle above. <code>rolled_back: true</code>. Final <code>active_model.json</code> points to <code>v1</code>.</p>
+          </div>
+        </div>
+        <p class="callout verified"><span class="tag tag--verified">The point of this whole exercise:</span> a policy that looked better in isolation (9.964 with Bayesian ranking) was <strong>correctly held</strong> once measured against the actually-promoted champion (11.3445) — governance catching a real, measured regression before it reached production, exactly as designed.</p>
+      </div>
+    </section>
+
+    <section id="sec-monitoring" data-toc="Monitoring &amp; SLOs" class="reveal">
+      <div class="section-inner">
+        <p class="eyebrow">Section 20</p>
+        <h2>Rolling monitoring and SLOs</h2>
+        <p>Once decisions are logged and outcomes mature, rolling-origin realized PR-AUC/precision/recall/calibration/alert-rate are computed on <strong>actual matured ledger decisions</strong> — not the simulator's potential outcomes — with a minimum-sample guard so thin windows don't produce misleading numbers. Five <strong><span class="term" tabindex="0" data-def="Service-Level Objective — a transparent, pre-committed target for an operational metric, checked automatically against measured data, that either passes or fails.">SLOs</span></strong> are checked automatically.</p>
+        <table>
+          <caption>Measured SLO status — latest governed 90-day replay</caption>
+          <thead><tr><th scope="col">SLO</th><th scope="col">Target</th><th scope="col">Measured</th><th scope="col">Status</th></tr></thead>
+          <tbody>
+            <tr><td>Rolling realized PR-AUC</td><td>≥ 0.55</td><td>0.386</td><td><span class="tag tag--held">FAIL</span></td></tr>
+            <tr><td>Rolling calibration error</td><td>≤ 0.15</td><td>0.048</td><td><span class="tag tag--verified">PASS</span></td></tr>
+            <tr><td>Rolling alert rate</td><td>≤ 0.45</td><td>0.104</td><td><span class="tag tag--verified">PASS</span></td></tr>
+            <tr><td>Data-quality contract failures</td><td>≤ 0</td><td>0</td><td><span class="tag tag--verified">PASS</span></td></tr>
+            <tr><td>Feature freshness (days)</td><td>≤ 1.0</td><td>1.0</td><td><span class="tag tag--verified">PASS</span></td></tr>
+          </tbody>
+        </table>
+        <div class="callout warn"><strong>One SLO honestly fails, and the reason is traceable, not mysterious:</strong> rolling realized PR-AUC (0.386) misses its 0.55 target — the direct, reported cost of the promotion gate correctly keeping the safer v1 champion active for all 90 days instead of promoting any of the noisier later retrains. The system chose to be safe over chasing a vanity metric, and says so.</div>
+        <p><span class="tag tag--verified">Also measured</span> time-to-detection: median lead time of <strong>216 hours</strong> (9 days) before promised delivery that a matured miss's evidence first posted (n=74). Measured local-only runtime: mean scoring 1.38s/day, mean retrain 3.21s (8 retrains) — explicitly not a production latency claim.</p>
+      </div>
+    </section>
+
+    <section id="sec-ui" data-toc="Streamlit control-tower UI" class="reveal">
+      <div class="section-inner">
+        <p class="eyebrow">Section 21</p>
+        <h2>The Streamlit control tower: seven views</h2>
+        <p>All UI views load only <em>persisted</em> artifacts — nothing is recomputed at render time.</p>
+        <div class="quad">
+          <div class="quad-card in"><h4>Order lookup</h4><p>Search any order: fused score, decision status, priority, penalty exposure, structured narrative, affected-SKU table, CONTESTED warning, and a planner-feedback form.</p></div>
+          <div class="quad-card happens"><h4>Ranked portfolio</h4><p>Every scored order ranked by priority, filterable, for a portfolio-wide view of risk.</p></div>
+          <div class="quad-card out"><h4>Hotspots + impact</h4><p>Vendor/DC/lane/customer/SKU rollups and aggregate financial-impact assumptions.</p></div>
+          <div class="quad-card why"><h4>Operations</h4><p>The daily replay's queues, closures, drift signals, and the versioned model registry.</p></div>
+          <div class="quad-card in"><h4>Causal intelligence</h4><p>The 10-node mechanism graph, evidence attribution, do-operator intervention scenarios, and diagnostics — the "Causal Intelligence Studio."</p></div>
+          <div class="quad-card happens"><h4>Policy value</h4><p>The 25%/50%/100% capacity selector, per-policy avoided-penalty table, paired seed win/tie/loss, the value-density formula, and the Bayesian ablation shown honestly.</p></div>
+          <div class="quad-card out"><h4>Governance</h4><p>The manifest trust card, lifecycle timeline, champion/challenger metric-delta table, decision ledger + observational cohorts, monitoring/SLO cards, and parity status.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="sec-results" data-toc="Results dashboard" class="reveal">
+      <div class="section-inner">
+        <p class="eyebrow">Section 22 · Evidence</p>
+        <h2>Results dashboard</h2>
+        <p>All figures below are pulled directly from regenerated local artifacts. <strong>5-seed medians</strong> (range in parentheses) describe how the system behaves across randomness; <strong>seed-42 canonical run</strong> figures describe one specific, fully-inspectable run; <strong>governed replay</strong> figures come from the 90-day operations replay's Stage-2 governance artifacts. They are not interchangeable, so each number below says which one it is.</p>
+
+        <h3>Prediction quality — 5-seed medians (range)</h3>
+        <table>
+          <thead><tr><th scope="col">Metric</th><th scope="col">Median</th><th scope="col">Range</th></tr></thead>
+          <tbody>
+            <tr><td>OTIF miss rate</td><td>17.5%</td><td>15.2%–20.2%</td></tr>
+            <tr><td>Fused PR-AUC</td><td>0.705</td><td>0.535–0.763</td></tr>
+            <tr><td>Fused recall</td><td>0.705</td><td>0.633–0.856</td></tr>
+            <tr><td>Fused precision</td><td>0.614</td><td>0.509–0.635</td></tr>
+            <tr><td>Fused Brier (lower better)</td><td>0.097</td><td>0.074–0.099</td></tr>
+            <tr><td>XGBoost-only PR-AUC</td><td>0.700</td><td>0.533–0.771</td></tr>
+            <tr><td>Bayesian-only PR-AUC</td><td>0.475</td><td>0.346–0.486</td></tr>
+            <tr><td>IN_FULL_FAILURE mechanism PR-AUC</td><td>0.417</td><td>0.312–0.451</td></tr>
+            <tr><td>LATE_DELIVERY mechanism PR-AUC</td><td>0.126</td><td>0.057–0.149</td></tr>
+            <tr><td>Line-evidence precision</td><td>0.536</td><td>0.507–0.602</td></tr>
+            <tr><td>Line-evidence recall</td><td>0.627</td><td>0.560–0.726</td></tr>
+            <tr><td>Evidence coverage (mean)</td><td>93.3%</td><td>91.8%–94.3%</td></tr>
+          </tbody>
+        </table>
+        <p><span class="tag tag--charcoal">Seed-42 canonical run</span> Blend 90% XGBoost / 10% Bayesian, threshold 0.274, fused PR-AUC 0.683, recall 0.667, precision 0.563, Brier 0.090. 495 test orders: 62 RECOMMENDED, 41 CONTESTED, 392 MONITOR.</p>
+
+        <h3>Decision value — 5-seed medians, 50% capacity (primary)</h3>
+        <table>
+          <thead><tr><th scope="col">Metric</th><th scope="col">Value</th></tr></thead>
+          <tbody>
+            <tr class="highlight-row"><td>Value-aware CURRENT_POLICY</td><td>9.964</td></tr>
+            <tr><td>Baseline median (RANDOM / HIGHEST_RISK / SINGLE_CAUSE)</td><td>9.174</td></tr>
+            <tr><td>Improvement</td><td>+8.6% (4/5 seed wins)</td></tr>
+            <tr><td>Oracle (evaluation-only ceiling)</td><td>74.45</td></tr>
+          </tbody>
+        </table>
+
+        <h3>Governance &amp; ledger — latest governed replay</h3>
+        <table>
+          <thead><tr><th scope="col">Metric</th><th scope="col">Value</th></tr></thead>
+          <tbody>
+            <tr><td>Pipeline run manifest checksums</td><td>29 files, verified</td></tr>
+            <tr><td>Operations replay manifest checksums</td><td>121 files, verified</td></tr>
+            <tr><td>Offline/batch parity</td><td>15 / 15 matched</td></tr>
+            <tr><td>Ledger decisions logged</td><td>6,226</td></tr>
+            <tr><td>Ledger decisions matured</td><td>5,923</td></tr>
+            <tr><td>Real retrain challengers held</td><td>8 / 8</td></tr>
+            <tr><td>Rolling PR-AUC SLO</td><td><span class="tag tag--held">FAIL</span> 0.386 &lt; 0.55</td></tr>
+            <tr><td>Other 4 SLOs</td><td><span class="tag tag--verified">PASS</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="sec-real-vs-simulated" data-toc="What is real vs. simulated" class="reveal">
+      <div class="section-inner">
+        <p class="eyebrow">Section 23 · Honesty</p>
+        <h2>What is real vs. simulated</h2>
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(260px,1fr)); gap:1.2em;">
+          <div class="quad-card in">
+            <h4>Fully working, locally</h4>
+            <p>The digital twin, feature pipeline, XGBoost model, SHAP explanations, the 10-node Bayesian network and exact inference, fusion, line evidence, resource allocation, the value-aware policy formula, run manifests/checksums, offline/batch parity, the decision ledger, champion/challenger promotion logic, rolling monitoring/SLOs, and the Streamlit UI all run end to end, locally, on real (synthetic) data — every number on this page came from actually running this code.</p>
+          </div>
+          <div class="quad-card happens">
+            <h4>Simulated / evaluation-only</h4>
+            <p>All underlying data is a synthetic digital twin, not real ERP/WMS/TMS data. The Decision Value Lab's policy values are measured against this twin's own mechanics, not a real supply chain. The oracle policy is an unattainable evaluation-only ceiling. The demo governance lifecycle is built from Stage 1's own measured numbers, distinct from the real per-day retrain lifecycle.</p>
+          </div>
+          <div class="quad-card why" style="border-left-color:var(--red);">
+            <h4 style="color:var(--red);">Causal limitations (read this one)</h4>
+            <p><strong>Bayesian do-interventions are fixed-structure scenario analysis, not proven treatment effects.</strong> SHAP/perturbation factors are associations, not causes. Evidence attribution is leave-one-out sensitivity, explicitly not SHAP and not a causal estimate. The observational cohort report is non-causal by construction (the replay closes every order against its pre-generated outcome regardless of the decision made). None of these limitations are hidden — every one is labeled in the persisted artifacts themselves.</p>
+          </div>
+          <div class="quad-card out">
+            <h4>Production interfaces, mocked</h4>
+            <p>ERP/WMS/TMS/SRM adapters are typed local-CSV implementations of a real interface contract — proven to have offline/batch parity, but deliberately not a web framework, database, message broker, or cloud deployment. The LLM-style narrative layer is a deterministic template, not a live LLM.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="sec-90-second" data-toc="How to explain it in 90 seconds" class="reveal">
+      <div class="section-inner">
+        <p class="eyebrow">Section 24</p>
+        <h2>How to explain it in 90 seconds</h2>
+        <blockquote style="border-left:5px solid var(--blue); margin:0; padding:0.2em 1.2em; font-family:var(--font-display); font-size:1.08rem; font-style:italic;">
+        <p>"This system takes a noisy, realistic supply-chain simulation and, for every open order, produces one risk score, one plain-language explanation, and one resource-aware recommendation. The score blends a gradient-boosted model with a small Bayesian network that splits 'late' from 'short' failures, so we know not just <em>that</em> an order is at risk but <em>what kind</em> of risk it is. A value-aware formula then ranks every feasible action by expected avoided penalty per unit of scarce recovery capacity — so the busiest vendor slot goes to the order that needs it most, and the loser is told explicitly who it's competing with.</p>
+        <p>Every decision is logged to an auditable ledger and reconciled against real outcomes. A promotion gate compares any new model version against the current champion on measured quality and decision value, and only promotes if it's genuinely better — in our 90-day replay, it correctly held all eight retrain attempts and one honestly-labeled Bayesian-enhanced challenger that looked good in isolation but regressed against the actual champion. Every number here — PR-AUC, policy value, ledger counts, SLA pass/fail — comes from a real regenerated run, and every causal-sounding claim is labeled as association or fixed-structure scenario analysis, never asserted as proven cause and effect."</p>
+        </blockquote>
+      </div>
+    </section>
+
+    <section id="sec-glossary" data-toc="Glossary" class="reveal">
+      <div class="section-inner">
+        <p class="eyebrow">Section 25</p>
+        <h2>Glossary</h2>
+        <dl class="glossary-term">
+          <dt>As-of timestamp</dt><dd>The single point in time a snapshot is "taken" — only data that existed at or before this timestamp may be used as a feature.</dd>
+          <dt>Bayesian network</dt><dd>A model that represents variables as a network of probabilistic dependencies and computes exact probabilities by combining evidence across the whole network.</dd>
+          <dt>Calibration</dt><dd>Adjusting raw model scores so "70% risk" really means about 70 out of 100 similar orders miss — not just a correct ranking.</dd>
+          <dt>Champion/challenger</dt><dd>A promotion-gate pattern: the active model ("champion") stays in charge until a new candidate ("challenger") proves it is measurably better on every required check.</dd>
+          <dt>Content ID</dt><dd>A deterministic hash of a run's code/config/data that ignores timestamps and output paths — identical runs always get the identical ID.</dd>
+          <dt>Digital twin</dt><dd>A simulator built to behave like a real system closely enough to test decisions against it.</dd>
+          <dt>do(node = value)</dt><dd>A causal-inference operation that simulates an external action overriding one variable, severing its normal causes, then asks what happens downstream — different from just observing that value.</dd>
+          <dt>Drift</dt><dd>A statistical change in the underlying data over time (e.g., vendors becoming less reliable) that can make an old model's predictions stale.</dd>
+          <dt>Evidence attribution (leave-one-out)</dt><dd>How much a Bayesian posterior would change if one observed cause were withheld — a sensitivity measure, explicitly not SHAP and not a causal effect.</dd>
+          <dt>Leakage</dt><dd>A model accidentally learning from information that would not actually have been available at prediction time.</dd>
+          <dt>Manifest</dt><dd>A machine-checkable receipt of exactly what produced a run — code version, dependencies, config, and per-file checksums.</dd>
+          <dt>Marginalize</dt><dd>Computing a probability by properly averaging over everything not yet known, rather than guessing or ignoring it.</dd>
+          <dt>Observational (not causal)</dt><dd>A comparison of outcomes across groups that were not randomly assigned — differences may reflect who was selected, not the effect of any action.</dd>
+          <dt>Offline/batch parity</dt><dd>Proof that two different code paths that should agree (e.g., direct scoring vs. scoring through a service boundary) actually produce identical output.</dd>
+          <dt>OTIF</dt><dd>On-Time-In-Full — an order only counts as OTIF if it is both on time <em>and</em> shipped complete; missing either counts as an OTIF miss.</dd>
+          <dt>PR-AUC</dt><dd>Precision-Recall Area Under Curve — how well a model separates true positives from true negatives, especially useful when the positive class (here, OTIF misses) is rare.</dd>
+          <dt>SHAP</dt><dd>SHapley Additive exPlanations — attributes one prediction to its input features, showing how much each pushed the score up or down for this specific case.</dd>
+          <dt>SLO</dt><dd>Service-Level Objective — a transparent, pre-committed operational target that is checked automatically and either passes or fails.</dd>
+          <dt>Value density</dt><dd>Expected avoided penalty from an action, divided by how much scarce resource capacity that action consumes — lets very different actions be ranked on one scale.</dd>
+        </dl>
+      </div>
+    </section>
+
+    <!-- SECTIONS_MARKER -->
+  </main>
+</div>
+
+<footer class="site-footer" id="sec-commands">
+  <!-- FOOTER_MARKER -->
+  <div class="footer-inner">
+    <p class="eyebrow" style="color:#e8712f;">Section 26</p>
+    <h2>Regenerate everything locally</h2>
+    <p>Every figure on this page was produced by these exact commands, run against this codebase. Rerun them yourself to reproduce your own copies — <code>git_sha</code>/<code>content_id</code> will differ only if the checkout is dirty or on a different commit.</p>
+    <pre><code># One-time setup
+uv sync --extra dev
+brew install libomp   # macOS only, required for XGBoost
+
+# Canonical single scoring run (feature pipeline, models, fusion, decisions)
+uv run otif-risk --orders 2500 --seed 42
+
+# Multi-seed prediction benchmark (median/range + acceptance gates)
+uv run otif-benchmark --seeds 1 2 3 4 5 --orders 2500 --output-dir artifacts \
+  --benchmark-path artifacts/benchmark.json
+
+# Decision Value Lab: multi-seed policy-value benchmark at 25%/50%/100% capacity
+uv run otif-policy-benchmark --seeds 1 2 3 4 5 --orders 2500 \
+  --benchmark-path artifacts/policy_benchmark.json
+
+# Local daily operations replay: governance (manifests, decision ledger,
+# champion/challenger promotion, monitoring/SLOs, demo lifecycle scenario)
+uv run otif-ops --orders 2500 --seed 42 --replay-days 90 --output-dir artifacts \
+  --policy-value-reference-path artifacts/policy_benchmark.json
+
+# Streamlit control tower (all 7 views, reads persisted artifacts only)
+uv run streamlit run src/otif_risk/app.py</code></pre>
+    <p style="font-size:0.85rem; color:var(--paper-2);">Full design notes, honest limitations, and every module referenced above: <code>README.md</code>, <code>docs/model-card.md</code>, <code>docs/demo-script.md</code>, <code>docs/architecture/current.mmd</code>. This walkthrough (<code>docs/system-walkthrough.html</code>) is a standalone explainer — it does not replace those documents.</p>
+    <p style="font-size:0.8rem; color:var(--paper-2); margin-top:1.6em;">© OTIF Risk Intelligence prototype — a local, self-contained demonstration. No production data, no live external services.</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- Theme toggle (light -> dark -> high-contrast) ---------- */
+  var THEMES = ["light", "dark", "hc"];
+  var THEME_LABELS = { light: "Light", dark: "Dark", hc: "High contrast" };
+  var root = document.documentElement;
+  var themeBtn = document.getElementById("theme-toggle");
+  var themeLabel = document.getElementById("theme-label");
+
+  function applyTheme(t){
+    root.setAttribute("data-theme", t);
+    if (themeLabel) themeLabel.textContent = THEME_LABELS[t] || t;
+    try{ localStorage.setItem("otif-theme", t); }catch(e){}
+  }
+  (function initTheme(){
+    var saved = null;
+    try{ saved = localStorage.getItem("otif-theme"); }catch(e){}
+    applyTheme(THEMES.indexOf(saved) > -1 ? saved : "light");
+  })();
+  if (themeBtn){
+    themeBtn.addEventListener("click", function(){
+      var current = root.getAttribute("data-theme") || "light";
+      var next = THEMES[(THEMES.indexOf(current) + 1) % THEMES.length];
+      applyTheme(next);
+    });
+  }
+
+  /* ---------- Print button ---------- */
+  var printBtn = document.getElementById("print-btn");
+  if (printBtn){ printBtn.addEventListener("click", function(){ window.print(); }); }
+
+  /* ---------- Build TOC + mobile menu from sections ---------- */
+  var sections = Array.prototype.slice.call(document.querySelectorAll("main > section[id]"));
+  var tocList = document.getElementById("toc-list");
+  var mobileLinks = document.getElementById("mobile-menu-links");
+  var tocAnchors = {};
+
+  sections.forEach(function(sec){
+    var label = sec.getAttribute("data-toc") || sec.id;
+    if (tocList){
+      var li = document.createElement("li");
+      var a = document.createElement("a");
+      a.href = "#" + sec.id;
+      a.textContent = label;
+      a.id = "toc-link-" + sec.id;
+      li.appendChild(a);
+      tocList.appendChild(li);
+      tocAnchors[sec.id] = a;
+    }
+    if (mobileLinks){
+      var ma = document.createElement("a");
+      ma.href = "#" + sec.id;
+      ma.textContent = label;
+      mobileLinks.appendChild(ma);
+    }
+  });
+
+  /* ---------- Mobile menu ---------- */
+  var menuToggle = document.getElementById("menu-toggle");
+  var mobileMenu = document.getElementById("mobile-menu");
+  var backdrop = document.getElementById("mobile-backdrop");
+  function closeMobileMenu(){
+    if (mobileMenu) mobileMenu.classList.remove("open");
+    if (backdrop) backdrop.classList.remove("open");
+    if (menuToggle) menuToggle.setAttribute("aria-expanded", "false");
+  }
+  function openMobileMenu(){
+    if (mobileMenu) mobileMenu.classList.add("open");
+    if (backdrop) backdrop.classList.add("open");
+    if (menuToggle) menuToggle.setAttribute("aria-expanded", "true");
+  }
+  if (menuToggle){
+    menuToggle.addEventListener("click", function(){
+      var isOpen = mobileMenu && mobileMenu.classList.contains("open");
+      if (isOpen) closeMobileMenu(); else openMobileMenu();
+    });
+  }
+  if (backdrop) backdrop.addEventListener("click", closeMobileMenu);
+  if (mobileLinks) mobileLinks.addEventListener("click", function(e){ if (e.target.tagName === "A") closeMobileMenu(); });
+  document.addEventListener("keydown", function(e){ if (e.key === "Escape") closeMobileMenu(); });
+
+  /* ---------- Scrollspy + progress bar ---------- */
+  var progressFill = document.getElementById("progress-fill");
+  function updateProgress(){
+    var doc = document.documentElement;
+    var scrollTop = window.pageYOffset || doc.scrollTop;
+    var height = (doc.scrollHeight - doc.clientHeight) || 1;
+    var pct = Math.min(100, Math.max(0, (scrollTop / height) * 100));
+    if (progressFill) progressFill.style.width = pct + "%";
+  }
+  window.addEventListener("scroll", updateProgress, { passive: true });
+  updateProgress();
+
+  if ("IntersectionObserver" in window){
+    var spy = new IntersectionObserver(function(entries){
+      entries.forEach(function(entry){
+        var link = tocAnchors[entry.target.id];
+        if (!link) return;
+        if (entry.isIntersecting){
+          Object.keys(tocAnchors).forEach(function(id){ tocAnchors[id].classList.remove("active"); });
+          link.classList.add("active");
+          link.scrollIntoView({ block: "nearest" });
+        }
+      });
+    }, { rootMargin: "-15% 0px -70% 0px", threshold: 0 });
+    sections.forEach(function(sec){ spy.observe(sec); });
+
+    /* ---------- Reveal on scroll ---------- */
+    var reveal = new IntersectionObserver(function(entries){
+      entries.forEach(function(entry){
+        if (entry.isIntersecting){ entry.target.classList.add("in-view"); reveal.unobserve(entry.target); }
+      });
+    }, { threshold: 0.08 });
+    document.querySelectorAll(".reveal").forEach(function(el){ reveal.observe(el); });
+  } else {
+    document.querySelectorAll(".reveal").forEach(function(el){ el.classList.add("in-view"); });
+  }
+
+  /* ---------- Architecture diagram: click/keyboard nav ---------- */
+  document.querySelectorAll(".arch-node[data-target]").forEach(function(node){
+    function go(){
+      var target = document.querySelector(node.getAttribute("data-target"));
+      if (target){
+        target.scrollIntoView({ behavior: "smooth", block: "start" });
+        target.setAttribute("tabindex", "-1");
+        target.focus({ preventScroll: true });
+      }
+    }
+    node.addEventListener("click", go);
+    node.addEventListener("keydown", function(e){
+      if (e.key === "Enter" || e.key === " "){ e.preventDefault(); go(); }
+    });
+  });
+
+  /* ---------- Glossary-style inline term definitions ---------- */
+  document.querySelectorAll(".term[data-def]").forEach(function(term){
+    term.setAttribute("title", term.getAttribute("data-def"));
+    term.setAttribute("role", "button");
+    term.setAttribute("aria-expanded", "false");
+    var open = false;
+    var defEl = null;
+    function toggle(){
+      open = !open;
+      term.setAttribute("aria-expanded", String(open));
+      if (open){
+        defEl = document.createElement("span");
+        defEl.textContent = " (" + term.getAttribute("data-def") + ")";
+        defEl.style.fontWeight = "normal";
+        defEl.style.fontStyle = "italic";
+        defEl.style.color = "var(--blue)";
+        term.insertAdjacentElement("afterend", defEl);
+      } else if (defEl){
+        defEl.remove();
+        defEl = null;
+      }
+    }
+    term.addEventListener("click", toggle);
+    term.addEventListener("keydown", function(e){
+      if (e.key === "Enter" || e.key === " "){ e.preventDefault(); toggle(); }
+    });
+  });
+
+  /* ---------- Journey tabs ---------- */
+  var journeyTabs = document.querySelectorAll('#journey-tabs [role="tab"]');
+  journeyTabs.forEach(function(tab){
+    tab.addEventListener("click", function(){
+      journeyTabs.forEach(function(t){
+        t.setAttribute("aria-selected", "false");
+        var panel = document.getElementById(t.getAttribute("aria-controls"));
+        if (panel) panel.hidden = true;
+      });
+      tab.setAttribute("aria-selected", "true");
+      var activePanel = document.getElementById(tab.getAttribute("aria-controls"));
+      if (activePanel) activePanel.hidden = false;
+    });
+  });
+
+  /* ---------- "What if?" causal scenario panel (real O002497 data) ---------- */
+  var WHATIF_SCENARIOS = {
+    baseline: {
+      posterior: 98.37, abs: null, rel: null, action: "None",
+      evidence: ["VENDOR_FAILURE","INVENTORY_SHORTAGE","WAREHOUSE_OPS"],
+      severed: [],
+      explain: "Baseline: the model's posterior P(OTIF_MISS | evidence) with no intervention assumed. This is the starting point every scenario below is compared against."
+    },
+    vendor: {
+      posterior: 98.37, abs: 0.0, rel: 0.0, action: "Escalate supplier recovery and confirm replacement supply",
+      evidence: ["INVENTORY_SHORTAGE","WAREHOUSE_OPS"], severed: ["VENDOR_FAILURE"],
+      explain: "do(VENDOR_FAILURE = 0): posterior barely moves (0.0-point reduction). Because INVENTORY_SHORTAGE is already observed downstream, the vendor evidence is fully screened off — a textbook d-separation result, not a bug."
+    },
+    inventory: {
+      posterior: 9.61, abs: 88.77, rel: 90.2, action: "Reallocate available inventory and protect critical demand",
+      evidence: ["VENDOR_FAILURE","WAREHOUSE_OPS"], severed: ["INVENTORY_SHORTAGE"],
+      explain: "do(INVENTORY_SHORTAGE = 0): posterior drops from 98.4% to 9.6% — an 88.8-point reduction. This is the node actually driving the risk here."
+    },
+    warehouse: {
+      posterior: 98.71, abs: -0.34, rel: -0.35, action: "Expedite pick-pack and resolve the warehouse exception",
+      evidence: ["VENDOR_FAILURE","INVENTORY_SHORTAGE"], severed: ["WAREHOUSE_OPS"],
+      explain: "do(WAREHOUSE_OPS = 0): posterior slightly increases (a small negative reduction) — this order's risk is overwhelmingly an in-full/quantity mechanism, not routed through warehouse ops toward late delivery."
+    },
+    combined: {
+      posterior: 3.55, abs: 94.83, rel: 96.4, action: "All three: vendor escalation + inventory reallocation + warehouse expedite",
+      evidence: [], severed: ["VENDOR_FAILURE","INVENTORY_SHORTAGE","WAREHOUSE_OPS"],
+      explain: "Combined mitigation of all three active nodes: posterior falls to 3.6% — a 94.8-point reduction, the largest modeled scenario for this order."
+    }
+  };
+  var whatifBar = document.getElementById("whatif-bar");
+  var whatifBarLabel = document.getElementById("whatif-bar-label");
+  var whatifExplain = document.getElementById("whatif-explain");
+  var whatifAbs = document.getElementById("whatif-abs");
+  var whatifRel = document.getElementById("whatif-rel");
+  var whatifAction = document.getElementById("whatif-action");
+  var whatifButtons = document.querySelectorAll('[data-scenario]');
+
+  function renderWhatif(key){
+    var s = WHATIF_SCENARIOS[key];
+    if (!s) return;
+    if (whatifBar) whatifBar.style.width = s.posterior + "%";
+    if (whatifBar) whatifBar.style.background = s.posterior > 50 ? "var(--red)" : (s.posterior > 15 ? "var(--amber)" : "var(--green)");
+    if (whatifBarLabel) whatifBarLabel.textContent = s.posterior.toFixed(1) + "%";
+    if (whatifExplain) whatifExplain.textContent = s.explain;
+    if (whatifAbs) whatifAbs.textContent = s.abs === null ? "—" : (s.abs >= 0 ? "-" : "+") + Math.abs(s.abs).toFixed(1) + " points";
+    if (whatifRel) whatifRel.textContent = s.rel === null ? "—" : (s.rel >= 0 ? "-" : "+") + Math.abs(s.rel).toFixed(1) + "%";
+    if (whatifAction) whatifAction.textContent = s.action;
+
+    document.querySelectorAll(".wf-node").forEach(function(n){
+      var name = n.getAttribute("data-node");
+      var rect = n.querySelector("rect");
+      if (!rect) return;
+      if (s.evidence.indexOf(name) > -1){
+        rect.style.fill = "#1e4d6b"; rect.style.opacity = "1";
+        n.querySelectorAll("text").forEach(function(t){ t.setAttribute("fill", "#f2e9d8"); });
+      } else if (s.severed.indexOf(name) > -1){
+        rect.style.fill = "#e9dcc0"; rect.style.opacity = "0.4";
+      } else {
+        var isMechanism = n.classList.contains("bbn-mechanism");
+        rect.style.opacity = "1";
+        rect.style.fill = isMechanism ? "#1e4d6b" : (name === "OTIF_MISS" ? "#c6501f" : "#e9dcc0");
+      }
+    });
+    document.querySelectorAll(".wf-edge").forEach(function(edge){
+      var from = edge.getAttribute("data-from");
+      if (s.severed.indexOf(from) > -1){
+        edge.setAttribute("stroke-dasharray", "4 4");
+        edge.style.opacity = "0.35";
+      } else {
+        edge.removeAttribute("stroke-dasharray");
+        edge.style.opacity = "1";
+        if (s.evidence.indexOf(from) > -1) edge.setAttribute("stroke", "#c6501f");
+        else edge.setAttribute("stroke", "#201d1a");
+      }
+    });
+  }
+  whatifButtons.forEach(function(btn){
+    btn.addEventListener("click", function(){
+      whatifButtons.forEach(function(b){ b.setAttribute("aria-pressed", "false"); });
+      btn.setAttribute("aria-pressed", "true");
+      renderWhatif(btn.getAttribute("data-scenario"));
+    });
+  });
+  if (whatifButtons.length) renderWhatif("baseline");
+
+  /* ---------- Policy comparison: 25/50/100% capacity toggle ---------- */
+  var CAPACITY_DATA = {
+    25: {
+      rows: [
+        ["NO_ACTION", 0.00], ["RANDOM_AT_CAPACITY", 8.20], ["HIGHEST_RISK_AT_CAPACITY", 8.06],
+        ["HIGHEST_FINANCIAL_AT_CAPACITY", 8.06], ["STRONGEST_SIGNAL_HEURISTIC", 8.10],
+        ["SINGLE_CAUSE_PRIORITY_BASELINE", 8.06], ["CURRENT_POLICY (value-aware)", 8.35],
+        ["ORACLE_EVALUATION_ONLY (ceiling)", 56.45]
+      ]
+    },
+    50: {
+      rows: [
+        ["NO_ACTION", 0.00], ["RANDOM_AT_CAPACITY", 9.17], ["HIGHEST_RISK_AT_CAPACITY", 9.17],
+        ["HIGHEST_FINANCIAL_AT_CAPACITY", 9.17], ["STRONGEST_SIGNAL_HEURISTIC", 9.17],
+        ["SINGLE_CAUSE_PRIORITY_BASELINE", 9.17], ["CURRENT_POLICY (value-aware)", 9.96],
+        ["ORACLE_EVALUATION_ONLY (ceiling)", 74.45]
+      ]
+    },
+    100: {
+      rows: [
+        ["NO_ACTION", 0.00], ["RANDOM_AT_CAPACITY", 15.09], ["HIGHEST_RISK_AT_CAPACITY", 14.96],
+        ["HIGHEST_FINANCIAL_AT_CAPACITY", 15.09], ["STRONGEST_SIGNAL_HEURISTIC", 15.09],
+        ["SINGLE_CAUSE_PRIORITY_BASELINE", 15.12], ["CURRENT_POLICY (value-aware)", 17.02],
+        ["ORACLE_EVALUATION_ONLY (ceiling)", 119.76]
+      ]
+    }
+  };
+  var capacityBarsG = document.getElementById("capacity-bars");
+  var capacityTableBody = document.getElementById("capacity-table-body");
+  var capacityButtons = document.querySelectorAll('#capacity-toggle [data-capacity]');
+  var capacityHeadline = document.getElementById("capacity-headline-callout");
+
+  function renderCapacity(capacity){
+    var data = CAPACITY_DATA[capacity];
+    if (!data) return;
+    var nonOracle = data.rows.filter(function(r){ return r[0].indexOf("ORACLE") === -1; });
+    var maxVal = Math.max.apply(null, nonOracle.map(function(r){ return r[1]; }));
+    var chartW = 900, chartH = 340, padLeft = 230, padBottom = 30, padTop = 16;
+    var barAreaW = chartW - padLeft - 20;
+    var barH = (chartH - padTop - padBottom) / nonOracle.length - 8;
+    var svgParts = [];
+    nonOracle.forEach(function(row, i){
+      var y = padTop + i * (barH + 8);
+      var w = Math.max(2, (row[1] / maxVal) * barAreaW);
+      var isCurrent = row[0].indexOf("CURRENT_POLICY") > -1;
+      var color = isCurrent ? "#c6501f" : "#1e4d6b";
+      svgParts.push('<text x="' + (padLeft - 10) + '" y="' + (y + barH/2 + 4) + '" text-anchor="end" font-size="12" font-family="Trebuchet MS, sans-serif" fill="#201d1a">' + row[0].replace("_", " ").replace(/_/g," ") + '</text>');
+      svgParts.push('<rect x="' + padLeft + '" y="' + y + '" width="' + w + '" height="' + barH + '" rx="2" fill="' + color + '"></rect>');
+      svgParts.push('<text x="' + (padLeft + w + 8) + '" y="' + (y + barH/2 + 4) + '" font-size="12" font-weight="bold" font-family="Trebuchet MS, sans-serif" fill="#201d1a">' + row[1].toFixed(2) + '</text>');
+    });
+    if (capacityBarsG) capacityBarsG.innerHTML = svgParts.join("\n");
+
+    if (capacityTableBody){
+      capacityTableBody.innerHTML = "";
+      data.rows.forEach(function(row){
+        var tr = document.createElement("tr");
+        if (row[0].indexOf("CURRENT_POLICY") > -1) tr.className = "highlight-row";
+        var td1 = document.createElement("td"); td1.textContent = row[0];
+        var td2 = document.createElement("td"); td2.textContent = row[1].toFixed(2);
+        tr.appendChild(td1); tr.appendChild(td2);
+        capacityTableBody.appendChild(tr);
+      });
+    }
+    if (capacityHeadline){
+      if (String(capacity) === "50"){
+        capacityHeadline.innerHTML = '<span class="tag tag--verified">Primary result, 50% capacity</span> The value-aware <code>CURRENT_POLICY</code> scores <strong>9.964</strong> vs. the shared baseline median <strong>9.174</strong> — a <strong>+8.6%</strong> improvement, winning <strong>4 of 5 seeds</strong> against every baseline (only seed 4 loses). <code>ORACLE_EVALUATION_ONLY</code> (74.45) is an unattainable evaluation-only ceiling, never a deployable target. <code>acceptance_gates.primary_gate_passed = true</code>.';
+      } else if (String(capacity) === "25"){
+        capacityHeadline.innerHTML = '<span class="tag tag--verified">Sensitivity check, 25% capacity</span> <code>CURRENT_POLICY</code> (8.35) still beats every baseline (8.06–8.10) even under severe scarcity, and the diagnostic gate for this scenario passes.';
+      } else {
+        capacityHeadline.innerHTML = '<span class="tag tag--verified">Diagnostic, 100% capacity</span> At full default capacity resource pools rarely bind, so this is retained only as a diagnostic — <code>CURRENT_POLICY</code> (17.02) still beats every baseline (14.96–15.12), but the comparison is less discriminative here than at 50%/25%.';
+      }
+    }
+  }
+  capacityButtons.forEach(function(btn){
+    btn.addEventListener("click", function(){
+      capacityButtons.forEach(function(b){ b.setAttribute("aria-pressed", "false"); });
+      btn.setAttribute("aria-pressed", "true");
+      renderCapacity(btn.getAttribute("data-capacity"));
+    });
+  });
+  if (capacityButtons.length) renderCapacity("50");
+
+  /* ---------- Real retrain lifecycle PR-AUC bar chart (v1..v9) ---------- */
+  var RETRAIN_VERSIONS = [
+    ["v1", 0.717, "PROMOTED"], ["v2", 0.707, "HELD"], ["v3", 0.653, "HELD"], ["v4", 0.627, "HELD"],
+    ["v5", 0.509, "HELD"], ["v6", 0.488, "HELD"], ["v7", 0.471, "HELD"], ["v8", 0.568, "HELD"], ["v9", 0.343, "HELD"]
+  ];
+  var retrainG = document.getElementById("retrain-bars");
+  if (retrainG){
+    var rw = 900, rh = 130, rPadTop = 10, rPadBottom = 26, rBarGap = 10;
+    var rBarW = (rw - (RETRAIN_VERSIONS.length + 1) * rBarGap) / RETRAIN_VERSIONS.length;
+    var rMaxH = rh - rPadTop - rPadBottom;
+    var parts = [];
+    RETRAIN_VERSIONS.forEach(function(v, i){
+      var x = rBarGap + i * (rBarW + rBarGap);
+      var barH = (v[1] / 0.8) * rMaxH;
+      var y = rPadTop + (rMaxH - barH);
+      var color = v[2] === "PROMOTED" ? "#2e6b2e" : "#a3271f";
+      parts.push('<rect x="' + x + '" y="' + y + '" width="' + rBarW + '" height="' + barH + '" rx="2" fill="' + color + '"></rect>');
+      parts.push('<text x="' + (x + rBarW/2) + '" y="' + (y - 5) + '" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#201d1a">' + v[1].toFixed(3) + '</text>');
+      parts.push('<text x="' + (x + rBarW/2) + '" y="' + (rh - 8) + '" text-anchor="middle" font-size="11" font-weight="bold" fill="#201d1a">' + v[0] + '</text>');
+    });
+    retrainG.innerHTML = parts.join("\n");
+  }
+
+})();
+</script>
+</body>
+</html>

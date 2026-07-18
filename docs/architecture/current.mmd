@@ -1,11 +1,27 @@
-%% OTIF Risk Intelligence -- current (shipped, pre-causal-intelligence-studio) architecture.
+%% OTIF Risk Intelligence -- current architecture (single source of truth;
+%% no separate "target"/prior-iteration diagram is maintained).
 %% Canonical source: kept in sync with docs/architecture/diagrams.py and rendered
 %% to docs/architecture/current.svg by docs/architecture/generate.py.
-%% This is the realistic-OTIF-demo iteration's architecture: a noisy digital
-%% twin, an 8-node compact causal Bayesian chain (one flat OTIF_MISS endpoint),
-%% evidence-based fusion, and a resource-aware operating loop. The next
-%% iteration (see target.mmd) replaces the 8-node chain with a 10-node
-%% mechanism graph and adds structural-intervention scenario analysis.
+%%
+%% A noisy digital twin feeds a 10-node mechanism Bayesian network
+%% (IN_FULL_FAILURE / LATE_DELIVERY -> OTIF_MISS, matching the actual OTIF
+%% definition) plus exact structural do(node=value) intervention scenarios and
+%% leave-one-evidence-out attribution -- decision-support diagnostics only,
+%% routed to the Causal Intelligence Studio view, never into score fusion or
+%% the operational decision. A Decision Value Lab replays every feasible
+%% action through the twin's own mechanics under common random numbers and
+%% evaluates eight capacity-constrained policies (including an
+%% evaluation-only oracle ceiling) to measure simulated policy value instead
+%% of assuming a fixed effectiveness fraction. A governed production
+%% lifecycle wraps all of it: production-shaped source adapters and service
+%% contracts (with an offline/batch parity guarantee), a deterministic run
+%% manifest (git SHA, content ID, checksums), a decision/outcome ledger with
+%% an observational (non-causal) cohort report, a champion/challenger
+%% promotion gate with an auditable active-model pointer and append-only
+%% lifecycle events, and rolling monitoring/SLO/data-quality reporting. The
+%% governance layer is strictly downstream/evaluation+audit-only: it never
+%% feeds score fusion (G), the operating threshold (H), or the unified
+%% intervention record (J) -- it reads from them.
 flowchart TB
     subgraph SIM[Noisy supply-chain digital twin]
       A1[Stable vendor, SKU, lane, DC, customer traits]
@@ -25,8 +41,9 @@ flowchart TB
 
     D --> E1[XGBoost order-risk model]
     E1 --> E2[Calibration + SHAP]
-    D --> F1[Compact causal Bayesian chain, 8 nodes, one OTIF_MISS endpoint]
-    F1 --> F2[Exact posterior + pathway contribution]
+    D --> F1[10-node mechanism Bayesian network: IN_FULL_FAILURE / LATE_DELIVERY -> OTIF_MISS]
+    F1 --> F2[Exact posterior, mechanism split and evidence attribution]
+    F1 --> F3[Exact structural do-operator intervention scenarios]
 
     E1 --> G[Validated score fusion]
     F2 --> G
@@ -42,7 +59,8 @@ flowchart TB
 
     J --> K1[Order desk]
     J --> K2[Portfolio and hotspot views]
-    J --> K3[Model health and Bayesian network view]
+    J --> K3[Causal Intelligence Studio: mechanism graph, attribution, scenarios]
+    F3 -.->|decision-support only, never feeds G or H| K3
 
     subgraph LOOP[Local operating-loop simulation]
       L1[Daily open-order scoring] --> L2[Orders close]
@@ -52,3 +70,36 @@ flowchart TB
       L5 --> L1
     end
     J --> L1
+
+    subgraph LAB[Decision Value Lab -- evaluation-only, never feeds G/H/J]
+      M1[Heterogeneous action-response twin] --> M2[8-policy capacity-constrained evaluation]
+      M2 --> M3[Oracle regret + counterfactual action ranking]
+    end
+    A5 -.->|evaluation-only common random numbers| M1
+    I3 -.->|deployed policy under evaluation| M2
+    F3 -.->|model-scenario vs. simulator-evaluation| M3
+
+    subgraph GOV[Governed production lifecycle]
+      N1[Source adapters: ERP / WMS / TMS / SRM + service contracts]
+      N2[Deterministic run manifest: git SHA + content ID + checksums]
+      N3[Decision + outcome ledger, idempotent]
+      N4[Champion/challenger promotion gate]
+      N5[Rolling monitoring + SLO + data quality]
+      N6[Active-model pointer + append-only lifecycle events]
+    end
+    B -.->|production-shaped source boundary| N1
+    N1 -.->|offline/batch parity-tested| D
+    J --> N3
+    N1 --> N3
+    L5 -->|challenger training| N4
+    M2 -->|policy value at 50% capacity| N4
+    N2 -->|manifest verification| N4
+    N4 --> N6
+    N3 --> N5
+    N5 --> N6
+    N6 --> K5[Governance view]
+    N4 --> K5
+    N3 --> K5
+    N5 --> K5
+    M2 --> K4[Policy value view]
+    M3 --> K4

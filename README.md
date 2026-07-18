@@ -5,14 +5,12 @@ of missing On-Time-In-Full delivery, identifies likely contributing factors down
 affected SKU/line, recommends resource-aware mitigation actions, and replays a local
 daily operating loop (scoring, closures, drift detection, versioned retraining).
 
-- **Current architecture**: [`docs/architecture/current.mmd`](docs/architecture/current.mmd) /
+- **Architecture**: [`docs/architecture/current.mmd`](docs/architecture/current.mmd) /
   [`docs/architecture/current.svg`](docs/architecture/current.svg)
-- **Target architecture** (this iteration): [`docs/architecture/target.mmd`](docs/architecture/target.mmd) /
-  [`docs/architecture/target.svg`](docs/architecture/target.svg)
 - **Model card** (measured benchmark numbers, honest limitations): [`docs/model-card.md`](docs/model-card.md)
 - **Judge-facing demo script**: [`docs/demo-script.md`](docs/demo-script.md)
 
-Both SVGs are rendered by a small, checked-in, deterministic Python renderer
+The SVG is rendered by a small, checked-in, deterministic Python renderer
 (`docs/architecture/diagrams.py` + `docs/architecture/generate.py`) — standard-library
 only, no Mermaid CLI or other internet tooling installed or invoked. Regenerate with
 `uv run python docs/architecture/generate.py`.
@@ -32,12 +30,6 @@ only, no Mermaid CLI or other internet tooling installed or invoked. Regenerate 
   selection rule.
 - The benchmark target is a **range, not a tuning objective**: 5 fixed seeds, reported
   as median/range; seeds outside range are reported, not adjusted away.
-
-15. **Decision Value Lab** (`action_response.py`, `policy_evaluation.py`,
-    `policy_benchmark.py`): a heterogeneous, probabilistic action-response digital twin
-    plus capacity-constrained multi-policy evaluation that **measures** simulated
-    intervention value instead of assuming a fixed effectiveness fraction. See
-    "Decision Value Lab" below.
 
 ## Architecture
 
@@ -129,6 +121,53 @@ only, no Mermaid CLI or other internet tooling installed or invoked. Regenerate 
     on a documented cadence or drift trigger — persisting a versioned model registry.
 14. A multi-seed benchmark (`benchmark.py`) with explicit acceptance gates, including
     mechanism PR-AUC/Brier, evidence-coverage distribution, and low-confidence rate.
+15. **Decision Value Lab** (`action_response.py`, `policy_evaluation.py`,
+    `policy_benchmark.py`): a heterogeneous, probabilistic action-response digital twin
+    plus capacity-constrained multi-policy evaluation that **measures** simulated
+    intervention value instead of assuming a fixed effectiveness fraction. See
+    "Decision Value Lab" below.
+16. **Deterministic run manifests** (`manifest.py`): git SHA/dirty state, package and key
+    dependency versions, normalized config/policy/schema versions, input-table
+    row-count/schema/date-range/content-hash fingerprints, a feature-schema hash,
+    training/validation/test windows, and SHA-256 checksums of every other artifact in
+    the run — split into a **deterministic content ID** (ignores timestamps/run
+    instance/output path; identical seed/config/code/model-facing artifacts always
+    produce the same ID) and run-instance metadata. `verify_manifest` recomputes and
+    reports checksum status (tamper-evident). See "Governance" below.
+17. **Production-shaped source adapters and service contracts** (`adapters.py`,
+    `service_contracts.py`): typed local-CSV ERP/WMS/TMS/SRM adapters that redact
+    not-yet-occurred event timestamps and reconstruct a `PrototypeDataset`-compatible
+    table set; a `ScoreRequest`/`ScoreResponse` contract; an idempotent
+    upsert-by-decision-key JSONL/CSV `DecisionSink`; and a proven offline/batch parity
+    guarantee (same order/as-of snapshot -> identical feature vector and score whether
+    scored directly or through the adapter/service boundary). No web framework, database,
+    or message broker is introduced.
+18. **Decision/action/outcome ledger** (`decision_ledger.py`): an append/upsert,
+    idempotent ledger of every operations-replay decision (feasible/chosen/rejected
+    actions, risk/threshold, resource before/after, planner disposition, execution
+    status) reconciled against matured OTIF outcomes, plus an **observational** cohort
+    report (accepted/rejected/monitored miss rates and penalties, minimum-sample
+    guarded, explicitly labeled `observational_not_causal`) — kept fully separate from
+    the Decision Value Lab's exact, causally-interpretable potential-outcome policy
+    value.
+19. **Champion/challenger registry and promotion gate** (`registry.py`): immutable
+    versions, append-only lifecycle events, an atomically-written `active_model.json`
+    pointer, and `PromotionDecision` gates on PR-AUC/Brier/calibration/recall/alert-rate/
+    drift-regime quality/policy value at 50% capacity/schema-leakage/manifest
+    verification, with explicit tolerances. `PROMOTED`/`HELD`/`ROLLED_BACK` states;
+    rollback only to a verified version. See "Governance" below.
+20. **Rolling monitoring and SLO reporting** (`monitoring.py`): rolling-origin realized
+    PR-AUC/precision/recall/calibration/alert-rate and normal-vs-drift-regime quality on
+    matured ledger decisions (minimum-sample guarded), time-to-detection, feature
+    freshness, measured **local-only** scoring/retrain runtime, and soft data-quality
+    metrics (completeness, uniqueness, referential health, contract failures) with
+    transparent SLO targets.
+21. **Policy Value and Governance Streamlit views** (`app.py`): capacity-scenario
+    selector with paired seed win/tie/loss, the value-density explanation, action mix,
+    normal/drift value, and the Bayesian ablation shown honestly; a manifest trust card,
+    lifecycle timeline, champion/challenger metric-delta table, decision ledger and
+    observational cohorts, monitoring/SLO cards, and offline/batch parity status — all
+    loaded from persisted artifacts, never recomputed in the UI.
 
 
 ## Point-in-time signals, leakage, and the digital twin
@@ -354,7 +393,7 @@ this twin, not a bug, but it also means "does `CURRENT_POLICY` beat simpler base
 `resources.CAPACITY_SCENARIOS` therefore re-runs **every** policy — including the
 oracle — at three pre-specified capacity multipliers applied *uniformly* to every
 resource pool: `SCARCE_25_PERCENT` (0.25×), `SCARCE_50_PERCENT` (0.5×), and
-`BASE_100_PERCENT` (1.0×, retained for continuity with earlier reports as a diagnostic).
+`BASE_100_PERCENT` (1.0×, retained as a full-capacity diagnostic).
 **`SCARCE_50_PERCENT` is Stage 1's headline scenario** — the acceptance gates below are
 measured there, not at the unscaled baseline. Continuous pools (`dc`/`lane`) scale
 directly (`capacity * multiplier`, no rounding). Discrete pools (`vendor`: 1 slot/day,
@@ -480,31 +519,141 @@ normalizations (fixed in `policy_evaluation.py` before this benchmark ran), and 
 capacity-stress multipliers are all fixed before any benchmark run, and no seed, baseline,
 or formula term was adjusted after seeing results. Full per-seed breakdowns, the
 resource-consumption ledger, and the current-policy decision log are in
-`artifacts/policy_benchmark.json` and `artifacts/policy_evaluation_seed42.json`.
+`artifacts/policy_benchmark.json`, alongside its `policy_benchmark_manifest.json` run
+manifest.
 
-### Stage 2 recommendation: GO
+### Governance (Stage 2): production readiness without external infrastructure
 
-The unchanged Stage 1 evaluation framework (rolling-origin scoring, common potential
-outcomes, three capacity scenarios, paired win/tie/loss counts, exploration) now measures
-a `CURRENT_POLICY` that **passes every acceptance-gate condition** at the primary
-50%-capacity scenario: it beats `RANDOM_AT_CAPACITY`, `HIGHEST_RISK_AT_CAPACITY`, *and*
-`SINGLE_CAUSE_PRIORITY_BASELINE` on the 5-seed median, wins at least `⌈5 × 3/5⌉ = 3` of 5 seeds
-against both `RANDOM_AT_CAPACITY` and `SINGLE_CAUSE_PRIORITY_BASELINE` (measured: 4/5 against
-each), is positive in both the normal and drift regimes, and shows no action-precision
-collapse (0.22 points, well inside the 5-point tolerance). It also improves two
-secondary, non-gated metrics (regret vs. oracle, avoidable-miss coverage) rather than
-trading them away for the headline, and remains ahead at the 25%/100% sensitivity
-scenarios too. Given this is a genuine, non-tautological win under the same frozen
-simulator, capacities, eligibility rule, and gate definition — not a redefinition of
-what counts as passing — **Stage 2 (governance: champion/challenger promotion,
-active-model pointer, verified
-rollback, regime monitoring, and the Policy Value/Governance UI) is recommended to
-proceed.** The one honest caveat to carry into Stage 2: the Bayesian-ablation diagnostic
-above shows the persisted Bayesian structural-reduction term does not currently add value
-over the simpler leading-signal-only fallback in this twin, so Stage 2's promotion
-tooling should be able to champion/challenger *both* value-aware variants (with and
-without the Bayesian term), not assume the richer-looking formula is automatically the
-better one.
+Stage 1's GO recommendation above has been acted on. Stage 2 adds deterministic run
+manifests, production-shaped source adapters/service contracts with a proven
+offline/batch parity guarantee, a decision/outcome ledger with an observational cohort
+report, a champion/challenger promotion gate with an auditable active-model pointer and
+append-only lifecycle events, rolling monitoring/SLO reporting, and two new Streamlit
+views — all local, stdlib/existing-dependency only (no web framework, database, cloud
+service, message broker, feature store, external causal/uplift model, MILP, RL, or live
+LLM). Every number below is from a real, freshly-regenerated local run
+(`uv run python -m otif_risk.pipeline --seed 42`,
+`uv run python -m otif_risk.policy_benchmark`,
+`uv run python -m otif_risk.operations --seed 42 --replay-days 90`); rerun those commands
+to reproduce your own copies (`git_sha`/`content_id` will differ if the checkout is dirty
+or on a different commit).
+
+**Run manifests (`manifest.py`).** Every pipeline run, policy-benchmark run, and
+operations replay writes a `run_manifest.json` capturing git SHA/dirty state, package and
+key dependency versions, normalized config/policy/schema versions, input-table
+fingerprints (row counts, schema, date ranges, content hashes — the model-facing source
+tables only, never the evaluation-only truth tables), a feature-schema hash,
+training/validation/test windows, and SHA-256 checksums of every other artifact already
+written to that run's directory (never checksumming the manifest itself). The canonical
+seed-42 run's manifest recorded 29 checksummed artifacts and verified clean
+(`manifest.verify_manifest` → `verified: true`); the 90-day operations replay's manifest
+checksummed 121 artifacts, also fully verified. `content_id` is a separate, deterministic
+hash that excludes `generated_at_utc`/`run_instance_id`/`run_directory` — two runs of
+identical seed/config/code/model-facing artifacts produce the *same* `content_id` even
+run at different times or in different output directories (`test_manifest.py` proves
+this, plus tamper detection: mutating a checksummed file after the manifest is written
+flips `verified` to `false` and names the mismatched file).
+
+**Production-shaped adapters and service contracts (`adapters.py`,
+`service_contracts.py`).** Local-CSV `LocalCsvERPAdapter`/`WMSAdapter`/`TMSAdapter`/
+`SRMAdapter` implementations of a typed `SourceAdapter.load(as_of_timestamp)` protocol
+reconstruct the canonical `PrototypeDataset` source tables from persisted CSVs, redacting
+(never dropping) any event whose `event_timestamp` has not genuinely occurred yet as of
+the requested snapshot — the same point-in-time contract `features.build_feature_table`
+already enforces, applied again at the source boundary. `ScoreRequest`
+(`as_of_timestamp`, order IDs, `source_snapshot_id`, `idempotency_key`) and
+`ScoreResponse` (model/policy version, manifest content ID, risk score, threshold,
+confidence, explanation, decision/resource status) are validated dataclasses;
+`JsonlDecisionSink`/`CsvDecisionSink` upsert by decision key, so retrying an identical
+write never creates a duplicate row (`test_service_contracts`-style idempotency tests in
+`test_adapters.py`). The canonical seed-42 run's `parity_check.json` proves the explicit
+offline/batch parity claim: the same 15 orders at the same as-of snapshot, scored once
+directly against the in-memory dataset and once through the adapter/service boundary
+(CSV round-tripped tables), produced byte-identical feature vectors and scores
+(`passed: true`, `mismatched_order_ids: []`).
+
+**Decision/outcome ledger and observational cohorts (`decision_ledger.py`).** The 90-day
+operations replay logged 6,226 decisions (one per open order scored per day) to an
+idempotent, upsert-by-decision-key CSV ledger, then reconciled 5,923 of them against
+matured OTIF outcomes (303 orders were still open at the replay's end). The resulting
+**observational, non-causal** cohort report (`observational_cohort_report.json`,
+`observational_not_causal: true`) compared realized miss rates: orders the policy
+**accepted** (716 matured decisions) had a 57.96% miss rate versus 10.08% for orders left
+**monitored** (5,206 matured decisions) — expected and unremarkable on its own, since
+this prototype's daily replay closes every order against its own pre-generated outcome
+regardless of the decision made (action does not yet feed back into the replayed
+lifecycle here), so the gap reflects *which orders the policy prioritized* (correctly,
+higher-risk ones), never a measured causal effect of acting. Each ledger row also carries
+the order's real `order_value`/`penalty_rate` (from `decisions.attach_business_context`,
+captured at decision time), so `realized_penalty` reflects genuine dollar exposure rather
+than a placeholder zero — the accepted cohort's mean realized penalty ($113.54) is
+markedly higher than the monitored cohort's ($13.33), consistent with the policy
+prioritizing higher-value/higher-risk orders. `intervention_outcomes.json` breaks this
+down further by intervention type (`chosen_action`) versus a no-intervention baseline —
+e.g. `INVENTORY_REALLOCATION` (431 matured decisions, 70.3% miss rate) was chosen almost
+exclusively for the hardest, most at-risk orders. Both reports explicitly carry the same
+qualification and a minimum-sample guard (cohorts/action types below the guard, e.g. the
+lone `REJECTED`-cohort order here, have their rate withheld, not reported on too few
+observations). The Decision Value Lab above remains the only causally-interpretable
+(exact, common-random-number potential-outcome) policy value in this codebase, and is
+kept fully separate from this ledger.
+
+**Champion/challenger registry and promotion (`registry.py`).** `evaluate_promotion`
+compares a challenger against the current champion on PR-AUC, Brier, calibration error,
+recall, alert rate, drift-regime PR-AUC, and policy value at the 50%-capacity scenario,
+each against a fixed, explicit tolerance (e.g. 0.02 absolute PR-AUC, 5% relative policy
+value); any failed check holds the challenger and leaves `active_model.json` (written
+atomically) untouched, and every promotion/hold/rollback is appended to an
+append-only event log that is never rewritten. The 90-day canonical replay demonstrates
+both halves of this gate:
+
+- **Real retrain lifecycle**: 9 model versions were trained (1 initial + 8
+  cadence/drift-triggered retrains). Every one of the 8 real challengers was **held** —
+  each retrain's own held-out test PR-AUC (measured on that retrain's necessarily small,
+  recent slice of matured history in this short 90-day window) regressed well beyond the
+  0.02 tolerance versus the still-strong initial champion (e.g. v9's 0.343 PR-AUC vs.
+  v1's 0.717); the gate correctly kept the safer, better-measured champion active for the
+  entire replay rather than chasing noisy short-window retrains. This is an honest,
+  reported finding, not a bug: see "Limitations" below for what it costs.
+- **Demo governance-lifecycle scenario** (`demo_lifecycle_scenario.json`), built only from
+  Stage 1's own already-measured `policy_benchmark.json` numbers (never fabricated),
+  distinctly labeled `demo_lifecycle_scenario_from_measured_stage1_policy_benchmark` so it
+  is never confused with the real retrain lifecycle above: (1) **promotes** the
+  value-aware action policy without Bayesian action ranking (5-seed median policy value
+  11.345 at 50% capacity) over `SINGLE_CAUSE_PRIORITY_BASELINE` (9.174); (2) **holds**
+  a Bayesian action-ranking challenger (9.964) — a −12.2% relative
+  regression against the 5%-tolerance floor, so it is correctly held with the reason
+  recorded verbatim (`policy value at 50% capacity regressed 11.3445 -> 9.9640 (floor
+  10.7773, tolerance fraction 0.05)`); (3) **rolls back** the active pointer to `v1`, a
+  real, manifest-verified version from the retrain lifecycle above
+  (`rolled_back: true`). The replay's final `active_model.json` therefore points to `v1`.
+
+**Rolling monitoring and SLOs (`monitoring.py`).** The replay's `monitoring_report.json`
+reports rolling-origin realized PR-AUC/precision/recall/calibration/alert-rate on
+matured, minimum-sample-guarded ledger windows, normal-vs-drift regime quality, a 90-day
+freshness cadence (1 calendar day, structural), and measured **local-only** runtime
+(mean scoring 1.48s/day, mean retrain 3.35s over 8 retrains — explicitly labeled
+`measured_local_runtime_only_not_a_production_latency_claim`, no production-latency claim
+is made). Soft data-quality metrics (completeness, uniqueness, referential health) all
+passed with zero contract failures. One SLO honestly **failed**: rolling realized PR-AUC
+(0.386) fell short of the 0.55 target — the direct, reported cost of the promotion gate
+correctly keeping the safer `v1` champion active for the full 90 days rather than
+promoting any of the noisier later retrains (see "Limitations" below).
+
+**Policy Value and Governance Streamlit views (`app.py`).** The Policy Value view adds a
+25%/50%/100%-capacity selector over `policy_benchmark.json`, the per-policy avoided
+penalty/resource/action-precision/coverage/regret table (oracle labeled evaluation-only),
+paired per-seed win/tie/loss counts, the value-density formula explanation, action mix,
+normal/drift regime value, and the Bayesian ablation shown honestly (negative, not
+hidden). The Governance view adds a manifest trust card (git SHA, content ID, checksum
+verification, schema versions), the champion/challenger lifecycle timeline with reasons,
+a metric-delta table, the decision ledger and observational cohorts with a visible
+non-causal badge, a realized-outcomes-by-intervention-type breakdown, monitoring/SLO
+cards, and offline/batch-parity status — every number loaded from persisted artifacts,
+nothing recomputed at render time. Both use the same
+warm-paper/charcoal/signal-blue/safety-orange palette as the rest of the control tower,
+with green reserved for verified/passed/promoted states and red for held/regression/
+failed states.
 
 
 
@@ -529,10 +678,14 @@ uv run otif-benchmark --seeds 1 2 3 4 5 --orders 2500 --output-dir artifacts \
 uv run otif-policy-benchmark --seeds 1 2 3 4 5 --orders 2500 \
   --benchmark-path artifacts/policy_benchmark.json
 
-# Local daily operations replay (scoring, closures, drift, versioned retraining)
-uv run otif-ops --orders 1200 --seed 42 --replay-days 90 --output-dir artifacts
+# Local daily operations replay (scoring, closures, drift, versioned retraining,
+# Stage 2 governance: manifests, decision ledger, champion/challenger promotion,
+# monitoring/SLOs, and the demo promoted/held/rolled-back lifecycle scenario)
+uv run otif-ops --orders 2500 --seed 42 --replay-days 90 --output-dir artifacts \
+  --policy-value-reference-path artifacts/policy_benchmark.json
 
-# Streamlit control tower (reads whichever run-*/ops-*/benchmark.json are present)
+# Streamlit control tower (reads whichever run-*/ops-*/benchmark.json are present,
+# including the Policy Value and Governance views)
 uv run streamlit run src/otif_risk/app.py
 ```
 
@@ -542,9 +695,13 @@ Threshold tuning defaults to `recall_floor` with `target_recall=0.65` and
 Artifacts are written under `artifacts/run-<config-hash>/` (single pipeline runs) and
 `artifacts/ops-<config-hash>/` (operations replays), including source tables, simulator
 truth, outcomes, root causes, feature tables, scored orders and lines, fusion
-comparison, rollups, models, metrics, model registry, daily queues, and an append-only
-planner/system feedback log. Rerunning an identical configuration never overwrites a
-prior run — a monotonically increasing numeric suffix is appended.
+comparison, rollups, models, metrics, model registry, daily queues, an append-only
+planner/system feedback log, a deterministic `run_manifest.json`, a `parity_check.json`
+(pipeline runs), and — for operations replays — a `decision_ledger.csv`,
+`observational_cohort_report.json`, `intervention_outcomes.json`, `monitoring_report.json`,
+`demo_lifecycle_scenario.json`, and a `registry/` directory (`registry_versions.json`,
+`registry_events.jsonl`, `active_model.json`). Rerunning an identical configuration never
+overwrites a prior run — a monotonically increasing numeric suffix is appended.
 
 ## Validation
 
@@ -593,8 +750,9 @@ uv run python -m build
   scenarios and improves regret-vs-oracle/avoidable-miss-coverage without trading them
   away. The honest caveat: an ablation shows the policy's Bayesian structural-reduction
   term does not currently add value over its own simpler fallback in this twin (see
-  "Decision Value Lab" above for the full per-scenario table, per-seed win/tie/loss
-  counts, and the Stage 2 recommendation).
+  "Decision Value Lab" above for the full per-scenario table and per-seed win/tie/loss
+  counts; see "Governance (Stage 2)" for how the promotion gate uses this exact finding
+  to hold a Bayesian-enhanced policy challenger).
 - Intervention "avoided misses"/savings in the operations loop's daily replay remain
   simulated, non-causal estimates (the operations replay closes each order against its
   pre-generated outcome and does not yet call the Decision Value Lab's action-response
@@ -604,8 +762,22 @@ uv run python -m build
 - Held-out metrics on this synthetic dataset should not be read as production
   readiness evidence; see `docs/model-card.md` for the measured multi-seed benchmark and
   its honest limitations.
-- Governance (champion/challenger promotion, rollback, run manifests, production-shaped
-  adapters/contracts, and a polished Policy Value UI view) is explicit Stage 2 scope and
-  is not implemented here; this iteration adds only the minimal deterministic
-  fingerprint/policy-version/decision-key contracts needed for reproducible Stage 1
-  evaluation (`policy_evaluation.content_fingerprint`/`decision_key`).
+- **Governance is implemented, and its limits are reported, not hidden.** The 90-day
+  canonical operations replay's promotion gate correctly held all 8 real retrain
+  challengers (each regressed held-out PR-AUC beyond tolerance versus the initial
+  champion, on this short window's necessarily small/noisy test splits), so the active
+  model never advanced past `v1` for the whole replay — the direct, honestly-reported
+  cost is a rolling-monitoring SLO failure (realized PR-AUC 0.386 versus a 0.55 target).
+  The demo governance-lifecycle scenario (promoted/held/rolled-back) is built only from
+  Stage 1's own already-measured `policy_benchmark.json` numbers and is explicitly
+  labeled/kept distinct from the real per-day retrain lifecycle — see "Governance
+  (Stage 2)" above.
+- Real per-retrain promotion checks reuse a single reference **policy value** (Stage 1's
+  measured 5-seed median at 50% capacity for the deployed `CURRENT_POLICY`) rather than
+  re-running the full rolling-origin policy-value lab for every retrain (prohibitively
+  expensive across a 90-day replay); only the demo lifecycle scenario compares genuinely
+  different policy-value numbers (single-cause baseline, with/without the Bayesian term).
+- Adapters/service contracts are typed Python interfaces plus local-CSV fixture
+  implementations — production-shaped, but deliberately not a web framework, database,
+  message broker, or cloud deployment (none of that is needed to prove the contract or
+  the offline/batch parity guarantee locally).

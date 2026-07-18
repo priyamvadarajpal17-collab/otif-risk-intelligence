@@ -196,26 +196,27 @@ the prevalence baseline, and targeted line evidence beats the naive all-lines ba
   vendor/DC recovery capacity — the canonical judge scenario end to end (see
   `docs/demo-script.md`).
 
-## Operations replay (1,200 orders, 90 simulated days)
+## Operations replay (2,500 orders, 90 simulated days)
 
-A canonical replay (`uv run otif-ops --orders 1200 --seed 42 --replay-days 90`) trained
-8 model versions: 1 initial + 7 retrains (6 drift-triggered, 1 scheduled-cadence).
-The registry records the exact PSI/score-shift/cadence reasons for each retrain; the
-OTIF-rate trigger is ignored until at least 30 recent closures exist. Daily queues (each
-carrying the full causal-intelligence column set: `causal_attribution_json`,
-`intervention_scenarios_json`, `causal_confidence`, `evidence_coverage`,
-`late_delivery_probability`, `in_full_failure_probability`), the model registry, and
-system-generated feedback are persisted under the run's `ops-*` directory.
+A canonical replay (`uv run otif-ops --orders 2500 --seed 42 --replay-days 90
+--policy-value-reference-path artifacts/policy_benchmark.json`) trained 9 model
+versions: 1 initial + 8 retrains. The registry records the exact PSI/score-shift/cadence
+reasons for each retrain; the OTIF-rate trigger is ignored until at least 30 recent
+closures exist. Daily queues (each carrying the full causal-intelligence column set:
+`causal_attribution_json`, `intervention_scenarios_json`, `causal_confidence`,
+`evidence_coverage`, `late_delivery_probability`, `in_full_failure_probability`), the
+model registry, and system-generated feedback are persisted under the run's `ops-*`
+directory, alongside the Stage 2 governance artifacts described below.
 
 ## Decision Value Lab (Stage 1: measuring intervention value)
 
 All numbers in this section come from
 `uv run otif-policy-benchmark --seeds 1 2 3 4 5 --orders 2500` writing
-`artifacts/policy_benchmark.json`, plus the canonical seed-42 run
-(`artifacts/policy_evaluation_seed42.json`). See the README's "Decision Value Lab"
-section for the full design (action-response probability formula, capacity engine,
-headline-metric normalization, the rolling-origin out-of-sample scoring design, and the
-value-aware `CURRENT_POLICY` formula).
+`artifacts/policy_benchmark.json` (alongside its own `policy_benchmark_manifest.json` run
+manifest). See the README's "Decision Value Lab" section for the full design
+(action-response probability formula, capacity engine, headline-metric normalization,
+the rolling-origin out-of-sample scoring design, and the value-aware `CURRENT_POLICY`
+formula).
 
 Every order is scored via rolling-origin, chronological cross-fitting (5 equal folds;
 the first is warm-up history, excluded from evaluation; every later fold is scored only
@@ -447,6 +448,57 @@ threshold, so it is unaffected by the capacity-stress scenarios above.
 - This still evaluates against the synthetic twin's own potential outcomes, not observed
   real-world treatment effects -- see "Honest limitations" below.
 
+## Governance (Stage 2): manifests, ledger, promotion, monitoring
+
+All numbers below are from the canonical `uv run otif-ops --orders 2500 --seed 42
+--replay-days 90 --policy-value-reference-path artifacts/policy_benchmark.json` replay
+(see the README's "Governance (Stage 2)" section for full design detail).
+
+- **Run manifest**: `run_manifest.json` checksummed 121 artifacts for the 90-day replay
+  (29 for the canonical single-seed pipeline run) and verified clean
+  (`manifest.verify_manifest` → `verified: true`). `content_id` is deterministic and
+  excludes timestamps/run-instance/output-path fields; `test_manifest.py` proves two runs
+  of identical seed/config/code produce the same `content_id` and that tampering with a
+  checksummed artifact after the manifest is written is detected.
+- **Offline/batch parity**: the canonical pipeline run's `parity_check.json` scored the
+  same 15 orders at the same as-of snapshot directly (offline) and through the
+  adapter/service boundary (`adapters.py` reading CSV-round-tripped tables); both
+  produced byte-identical feature vectors and scores (`passed: true`).
+- **Decision ledger and observational cohorts**: 6,226 decisions logged over the replay,
+  5,923 reconciled against matured outcomes (303 still open at replay end). Cohort miss
+  rates: `ACCEPTED` 57.96% (n=716), `MONITORED` 10.08% (n=5,206), `REJECTED` withheld
+  (n=1, below the 20-decision minimum-sample guard). Each row carries its order's real
+  `order_value`/`penalty_rate` (from `decisions.attach_business_context`), so
+  `realized_penalty` is a genuine dollar figure, not a placeholder zero: mean realized
+  penalty is $113.54 for `ACCEPTED` vs. $13.33 for `MONITORED`.
+  `intervention_outcomes.json` further breaks realized outcomes down by the specific
+  intervention type taken (e.g. `INVENTORY_REALLOCATION`: n=431, 70.3% miss rate) against
+  a no-intervention baseline. The report is explicitly labeled
+  `observational_not_causal: true` -- this gap reflects which orders the policy
+  prioritized (correctly, higher-risk ones), since this replay's lifecycle does not yet
+  feed action back into the twin; the Decision Value Lab above remains the only
+  causally-interpretable measured policy value in this codebase.
+- **Champion/challenger promotion**: of 9 trained model versions (1 initial + 8 real
+  retrains), **every real retrain challenger was held** -- each retrain's own held-out
+  test PR-AUC (on that retrain's necessarily small, recent slice of matured history in
+  this 90-day window) regressed beyond the 0.02-absolute tolerance versus the initial
+  champion's 0.717 (e.g. v5 0.509, v7 0.471, v9 0.343). The active model never advanced
+  past `v1` for the entire replay. A separate demo governance-lifecycle scenario, built
+  only from Stage 1's own measured `policy_benchmark.json` numbers (never fabricated) and
+  explicitly labeled to keep it distinct from the real retrain lifecycle above,
+  demonstrates all three required transitions: the value-aware action policy without
+  Bayesian ranking **promoted** over the single-cause baseline (11.345 vs. 9.174 median
+  policy value), a Bayesian action-ranking challenger **held** (9.964 vs. 11.345, a
+  −12.2% regression beyond the 5% tolerance), and the active pointer **rolled back** to
+  `v1`, a real, manifest-verified version.
+- **Monitoring/SLOs**: soft data-quality checks (completeness, uniqueness, referential
+  health) passed with zero contract failures; measured **local-only** runtime averaged
+  1.48s/day scoring and 3.35s/retrain (explicitly not a production-latency claim). One
+  SLO failed honestly: rolling realized PR-AUC (0.386) missed its 0.55 target -- the
+  direct, reported cost of the promotion gate correctly keeping the safer `v1` champion
+  active rather than promoting any noisier later retrain (see "Honest limitations"
+  below).
+
 ## Honest limitations
 
 - **Bayesian standalone quality remains below XGBoost** (median PR-AUC 0.475 vs. 0.700):
@@ -497,8 +549,8 @@ threshold, so it is unaffected by the capacity-stress scenarios above.
   action-precision collapse. The one honest caveat: a Bayesian-ablation diagnostic shows
   the policy's Bayesian structural-reduction term does not currently add value over its
   own simpler fallback in this twin (0 of 5 seeds). See "Decision Value Lab" above for
-  the full per-scenario table, per-seed win/tie/loss counts, and the Stage 2
-  recommendation.
+  the full per-scenario table and per-seed win/tie/loss counts, and "Governance (Stage 2)"
+  below for how the promotion gate uses this exact finding.
 - **The Bayesian top intervention does not win every counterfactual-ranking axis**: it
   has a *lower* raw top-action-agreement rate than the strongest-signal heuristic in
   every benchmarked seed, and a *higher* (worse) mean value regret than the
@@ -510,3 +562,25 @@ threshold, so it is unaffected by the capacity-stress scenarios above.
   falsifiable number *within this synthetic simulation*, not evidence of a real
   operational treatment effect. The oracle policy is an explicit, unattainable ceiling,
   never a deployable recommendation.
+- **Every real retrain challenger was held in the canonical 90-day replay, and the
+  rolling PR-AUC SLO fails as a direct, reported result**: the promotion gate correctly
+  kept the initial, better-measured champion active rather than promoting any of the 8
+  real retrains (each regressed held-out PR-AUC beyond tolerance on this short window's
+  necessarily small/noisy test splits) -- this is the gate working as intended, not a
+  defect, but it means the active model's realized quality was never refreshed with more
+  recent data during this specific replay, and the honestly-reported cost is a failed
+  rolling-PR-AUC SLO (0.386 vs. 0.55 target). A longer replay window or a larger matured
+  population per retrain would likely narrow this test-split noise.
+- **Real per-retrain promotion checks reuse one reference policy-value number** (Stage
+  1's measured 5-seed median at 50% capacity for the deployed `CURRENT_POLICY`) rather
+  than re-running the full rolling-origin policy-value lab for every retrain, which would
+  be prohibitively expensive across a 90-day replay; this makes the policy-value gate
+  non-discriminative between real retrains (they share the same policy formula) by
+  construction. Only the demo governance-lifecycle scenario (see "Governance (Stage 2)"
+  above) compares genuinely different policy-value numbers (single-cause baseline vs.
+  `CURRENT_POLICY`, and with vs. without the Bayesian term).
+- **The observational decision-ledger cohort report is not a causal estimate**: accepted
+  vs. monitored miss-rate differences reflect which orders this replay's simple
+  cause-lookup policy chose to prioritize, not a measured treatment effect -- the report
+  is explicitly labeled `observational_not_causal` and is a separate, weaker claim than
+  the Decision Value Lab's exact, common-random-number potential-outcome policy value.

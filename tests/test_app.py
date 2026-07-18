@@ -467,3 +467,66 @@ def test_scenario_label_signs_a_risk_increasing_scenario_correctly() -> None:
     assert "--" not in increasing
     assert "+2%" in increasing
     assert "-30%" in decreasing
+
+
+def _build_governed_artifacts_root(tmp_path) -> Path:
+    """Generate small, real policy-benchmark and operations-replay artifacts
+    for the Policy value / Governance UI smoke tests -- exercises the real
+    Stage 2 wiring end to end, not a hand-written fixture."""
+    from otif_risk.contracts import PrototypeConfig
+    from otif_risk.operations import OperationsConfig, run_operations_replay
+    from otif_risk.pipeline import run_pipeline
+    from otif_risk.policy_benchmark import run_policy_benchmark
+
+    artifacts_root = tmp_path / "artifacts"
+    run_pipeline(PrototypeConfig(seed=3, n_orders=250, output_dir=artifacts_root))
+
+    policy_payload = run_policy_benchmark(seeds=(3, 5), n_orders=250)
+    (artifacts_root / "policy_benchmark.json").write_text(
+        json.dumps(policy_payload, indent=2, sort_keys=True), encoding="utf-8"
+    )
+
+    run_operations_replay(
+        OperationsConfig(
+            data_config=PrototypeConfig(seed=3, n_orders=250, output_dir=artifacts_root),
+            output_dir=artifacts_root,
+            replay_days=10,
+            retrain_cadence_days=5,
+            min_new_labels_for_retrain=3,
+            min_days_between_retrains=2,
+            policy_value_reference_path=artifacts_root / "policy_benchmark.json",
+        )
+    )
+    return artifacts_root
+
+
+def test_policy_value_view_smoke(tmp_path, monkeypatch):
+    artifacts_root = _build_governed_artifacts_root(tmp_path)
+    monkeypatch.setenv("OTIF_ARTIFACTS_DIR", str(artifacts_root))
+    app_path = Path(otif_risk.app.__file__)
+
+    app = AppTest.from_file(str(app_path), default_timeout=30).run()
+    assert not app.exception
+
+    navigation = next(radio for radio in app.radio if "Policy value" in radio.options)
+    navigation.set_value("Policy value").run()
+    assert not app.exception
+    assert any(header.value == "Policy value" for header in app.header)
+    assert any("ORACLE_EVALUATION_ONLY" in md.value for md in app.markdown if md.value)
+
+
+def test_governance_view_smoke(tmp_path, monkeypatch):
+    artifacts_root = _build_governed_artifacts_root(tmp_path)
+    monkeypatch.setenv("OTIF_ARTIFACTS_DIR", str(artifacts_root))
+    app_path = Path(otif_risk.app.__file__)
+
+    app = AppTest.from_file(str(app_path), default_timeout=30).run()
+    assert not app.exception
+
+    navigation = next(radio for radio in app.radio if "Governance" in radio.options)
+    navigation.set_value("Governance").run()
+    assert not app.exception
+    assert any(header.value == "Governance" for header in app.header)
+    badge_markdown = " ".join(md.value for md in app.markdown if md.value)
+    assert "gov-badge" in badge_markdown
+    assert "Observational" in badge_markdown or "observational" in badge_markdown.lower()

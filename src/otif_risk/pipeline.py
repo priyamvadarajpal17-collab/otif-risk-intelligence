@@ -49,6 +49,7 @@ from otif_risk.line_evidence import (
     build_line_evidence,
     evaluate_line_evidence,
 )
+from otif_risk.manifest import ManifestInputs, verify_manifest, write_manifest
 from otif_risk.model import RiskBundle, TrainingResult, train_risk_model
 from otif_risk.narratives import order_narrative
 from otif_risk.root_causes import calculate_outcomes, derive_root_causes
@@ -425,6 +426,33 @@ def run_pipeline(config: PrototypeConfig) -> dict[str, Any]:
     joblib.dump(trained.risk_training.bundle, model_dir / "xgboost_risk.joblib")
     joblib.dump(trained.bayesian_bundle, model_dir / "bayesian_network.joblib")
 
+    # Persisted offline/batch parity evidence (Stage 2 governance): proves
+    # the same order/as-of snapshot produces an identical feature vector and
+    # score whether read directly from the in-memory dataset (offline) or
+    # via adapters.py's CSV-round-tripped service boundary. Computed once
+    # here (a small sample is enough) and simply loaded by the Governance UI.
+    # Imported locally to avoid a module-level import cycle (service_contracts
+    # itself imports `score_orders` from this module).
+    from otif_risk.service_contracts import run_offline_batch_parity_check
+
+    parity_sample = pd.Index(split.test["order_id"].iloc[: min(15, len(split.test))])
+    parity_as_of = pd.Timestamp(split.test["as_of_timestamp"].max())
+    parity_check = run_offline_batch_parity_check(
+        dataset,
+        outcomes,
+        causes,
+        trained.risk_training.bundle,
+        trained.bayesian_bundle,
+        trained.fusion_selection.chosen_weight,
+        data_dir=data_dir,
+        as_of_timestamp=parity_as_of,
+        order_ids=parity_sample,
+        background=split.train,
+    )
+    (run_dir / "parity_check.json").write_text(
+        json.dumps(parity_check, indent=2, sort_keys=True), encoding="utf-8"
+    )
+
     model_scores = {
         "xgb": {"test_metrics": trained.xgb_test_metrics},
         "bbn": {"test_metrics": trained.bbn_test_metrics},
@@ -519,6 +547,50 @@ def run_pipeline(config: PrototypeConfig) -> dict[str, Any]:
     (run_dir / "metrics.json").write_text(
         json.dumps(report, indent=2, sort_keys=True), encoding="utf-8"
     )
+
+    # The manifest is always written last -- once every other artifact for
+    # this run directory exists -- so its artifact_checksums capture a
+    # complete, self-consistent snapshot (see manifest.write_manifest).
+    manifest_inputs = ManifestInputs(
+        run_kind="pipeline",
+        config=config,
+        dataset=dataset,
+        feature_table=feature_table,
+        schema_versions={
+            "artifact_schema_version": ARTIFACT_SCHEMA_VERSION,
+            "threshold_strategy": config.threshold_strategy,
+        },
+        training_window=(
+            split.train["as_of_timestamp"].min().isoformat(),
+            split.train["as_of_timestamp"].max().isoformat(),
+        ),
+        validation_window=(
+            split.validation["as_of_timestamp"].min().isoformat(),
+            split.validation["as_of_timestamp"].max().isoformat(),
+        ),
+        test_window=(
+            split.test["as_of_timestamp"].min().isoformat(),
+            split.test["as_of_timestamp"].max().isoformat(),
+        ),
+        model_versions={
+            "fusion_chosen_weight": trained.fusion_selection.chosen_weight,
+            "fusion_chosen_label": trained.fusion_selection.chosen_label,
+            "risk_model": trained.risk_training.bundle.model_kind,
+        },
+        extra_content={
+            "fused_threshold": trained.fused_threshold,
+            "bayesian_inference_mode": trained.bayesian_bundle.inference_mode,
+        },
+    )
+    manifest = write_manifest(run_dir, manifest_inputs)
+    report["manifest"] = {
+        "content_id": manifest["content_id"],
+        "run_instance_id": manifest["run_instance_id"],
+        "git_sha": manifest["git"]["sha"],
+        "git_dirty": manifest["git"]["dirty"],
+    }
+    verification = verify_manifest(run_dir)
+    report["manifest"]["verification"] = verification
     return report
 
 

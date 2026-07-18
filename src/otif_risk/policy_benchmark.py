@@ -20,7 +20,12 @@ from pathlib import Path
 from typing import Any
 
 from otif_risk.contracts import PrototypeConfig
-from otif_risk.policy_evaluation import run_seed_evaluation, summarize_multi_seed
+from otif_risk.manifest import ManifestInputs, verify_manifest, write_manifest
+from otif_risk.policy_evaluation import (
+    POLICY_EVALUATION_VERSION,
+    run_seed_evaluation,
+    summarize_multi_seed,
+)
 
 #: At least five seeds by default, per the Decision Value + Governance plan.
 DEFAULT_SEEDS = (1, 2, 3, 4, 5)
@@ -75,6 +80,31 @@ def main() -> None:
     payload = run_policy_benchmark(tuple(args.seeds), args.orders)
     args.benchmark_path.parent.mkdir(parents=True, exist_ok=True)
     args.benchmark_path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+
+    # Written last, in the benchmark's own shared output directory, and
+    # scoped (via only_paths) to exactly the file this run produced -- the
+    # directory may also hold unrelated sibling artifacts (other runs,
+    # benchmark.json, ...), which must never be described as this run's own.
+    manifest_inputs = ManifestInputs(
+        run_kind="policy_evaluation",
+        config=PrototypeConfig(seed=args.seeds[0], n_orders=args.orders),
+        schema_versions={"policy_evaluation_version": POLICY_EVALUATION_VERSION},
+        extra_content={
+            "seeds": list(args.seeds),
+            "primary_capacity_scenario": payload["summary"]["primary_capacity_scenario"],
+        },
+    )
+    manifest_dir = args.benchmark_path.parent
+    write_manifest(
+        manifest_dir,
+        manifest_inputs,
+        filename=f"{args.benchmark_path.stem}_manifest.json",
+        only_paths=[args.benchmark_path],
+    )
+    verification = verify_manifest(
+        manifest_dir, filename=f"{args.benchmark_path.stem}_manifest.json"
+    )
+
     gates = payload["summary"]["acceptance_gates"]
     primary_scenario = payload["summary"]["primary_capacity_scenario"]
     headline = payload["summary"]["median_headline_by_capacity_scenario"][primary_scenario]
@@ -86,6 +116,7 @@ def main() -> None:
         f"beats_highest_risk={gates['current_beats_highest_risk_at_primary_capacity']} "
         f"primary_gate_passed={gates['primary_gate_passed']} "
         f"no_action_identity={gates['no_action_identity']} "
+        f"manifest_verified={verification['verified']} "
         f"wrote {args.benchmark_path}"
     )
 
